@@ -1,6 +1,6 @@
 # Docker
 
-Run ToolNet API in a container. Published image: [`decolua/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi) — multi-platform `linux/amd64` + `linux/arm64`.
+Run ToolNet API in a container. Published image: [`toolnet/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi) — multi-platform `linux/amd64` + `linux/arm64`.
 
 ---
 
@@ -119,7 +119,6 @@ docker run --rm -p 20128:20128 \
 
 Push a git tag `v*` → GitHub Actions builds multi-platform (amd64+arm64) and pushes to:
 - `toolnet/toolnetapi:v{version}` + `:latest`
-- `decolua/toolnetapi:v{version}` + `:latest`
 
 ```bash
 # Use scripts/release.js (recommended)

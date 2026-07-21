@@ -13,7 +13,7 @@
   
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
   
   [🚀 Быстрый старт](#-quick-start) • [💡 Возможности](#-key-features) • [📖 Установка](#-setup-guide) • [🌐 Сайт](https://toolnetapi.com)
 </div>
@@ -948,7 +948,7 @@ Model: cc/claude-opus-4-6
 
 ```bash
 # Clone and install
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi
 npm install
 npm run build
@@ -1259,8 +1259,8 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 ## 📧 Поддержка
 
 - **Сайт**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 
 ---
 
@@ -1268,13 +1268,13 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 
 Спасибо всем, кто помогает делать ToolNet API лучше!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=100&columns=20&anon=1)](https://github.com/decolua/toolnetapi/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=toolnet/toolnetapi&max=100&columns=20&anon=1)](https://github.com/LBT-AI/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star Chart
 
-[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
+[![Star Chart](https://starchart.cc/toolnet/toolnetapi.svg?variant=adaptive)](https://starchart.cc/toolnet/toolnetapi)
 
 ### Как внести вклад
 
@@ -1284,7 +1284,7 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 4. Запушьте в ветку (`git push origin feature/amazing-feature`)
 5. Откройте Pull Request
 
-См. [Pull Requests](https://github.com/decolua/toolnetapi/pulls) для подробных инструкций.
+См. [Pull Requests](https://github.com/LBT-AI/toolnetapi/pulls) для подробных инструкций.
 
 ---
 

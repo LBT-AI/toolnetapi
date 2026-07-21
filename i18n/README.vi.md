@@ -15,7 +15,7 @@ Dưới đây là bản dịch tiếng Việt của tài liệu Markdown, giữ 
   
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
   
   [🚀 Bắt đầu nhanh](#-quick-start) • [💡 Tính năng](#-key-features) • [📖 Cài đặt](#-setup-guide) • [🌐 Website](https://toolnetapi.com)
 </div>
@@ -947,7 +947,7 @@ Model: cc/claude-opus-4-6
 
 ```bash
 # Clone và cài đặt
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi
 npm install
 npm run build
@@ -1258,8 +1258,8 @@ Tài liệu tham khảo kiến trúc đầy đủ: [`docs/ARCHITECTURE.md`](../d
 ## 📧 Hỗ trợ
 
 - **Website**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/9](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 
 ---
 
@@ -1267,13 +1267,13 @@ Tài liệu tham khảo kiến trúc đầy đủ: [`docs/ARCHITECTURE.md`](../d
 
 Cảm ơn tất cả những người đã đóng góp giúp ToolNet API tốt hơn!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=100&columns=20&anon=1)](https://github.com/decolua/toolnetapi/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=toolnet/toolnetapi&max=100&columns=20&anon=1)](https://github.com/LBT-AI/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star Chart
 
-[![ Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
+[![ Chart](https://starchart.cc/toolnet/toolnetapi.svg?variant=adaptive)](https://starchart.cc/toolnet/toolnetapi)
 
 ### Cách Đóng góp
 
@@ -1283,7 +1283,7 @@ Cảm ơn tất cả những người đã đóng góp giúp ToolNet API tốt h
 4. Push lên nhánh (`git push origin feature/amazing-feature`)
 5. Mở một Pull Request
 
-Xem [Pull Requests](https://github.com/decolua/toolnetapi/pulls) để biết hướng dẫn chi tiết.
+Xem [Pull Requests](https://github.com/LBT-AI/toolnetapi/pulls) để biết hướng dẫn chi tiết.
 
 ---
 

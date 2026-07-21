@@ -346,6 +346,6 @@ ToolNet API利用時の一般的な問題と解決策。
 
 ## さらにヘルプが必要?
 
-- **GitHub Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub Issues:** [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 - **ドキュメント:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
 - **FAQ:** [faq.md](faq.md)

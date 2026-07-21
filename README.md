@@ -10,10 +10,10 @@
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/toolnet/toolnetapi)
-  [![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://hub.docker.com/r/toolnet/toolnetapi)
-  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+  [![GHCR](https://img.shields.io/badge/GHCR-lbt--ai%2Ftoolnetapi-blue?logo=github)](https://github.com/LBT-AI/toolnetapi/pkgs/container/toolnetapi)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
 
-<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="toolnet%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 [🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Setup](#-setup-guide) • [🌐 Website](https://toolnetapi.com)
 
@@ -1037,7 +1037,7 @@ Model: cc/claude-opus-4-7
 
 ```bash
 # Clone and install
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi
 npm install
 npm run build
@@ -1068,8 +1068,8 @@ pm2 startup
 
 Published images (multi-platform `linux/amd64` + `linux/arm64`):
 
-- Docker Hub: [`decolua/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi)
-- GHCR: [`toolnet/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi)
+- Docker Hub: [`toolnet/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi)
+- GHCR: [`ghcr.io/lbt-ai/toolnetapi`](https://github.com/LBT-AI/toolnetapi/pkgs/container/toolnetapi)
 
 **Quick start (use published image):**
 
@@ -1087,7 +1087,7 @@ docker run -d \
 **Build from source (dev):**
 
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 docker build -t toolnetapi .
 docker run -d --name toolnetapi -p 20128:20128 \
@@ -1307,8 +1307,8 @@ Authorization: Bearer your-api-key
 ## 📧 Support
 
 - **Website**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 
 ---
 
@@ -1316,13 +1316,13 @@ Authorization: Bearer your-api-key
 
 Thanks to all contributors who helped make ToolNet API better!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/toolnetapi/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=toolnet/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/LBT-AI/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star Chart
 
-[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
+[![Star Chart](https://starchart.cc/toolnet/toolnetapi.svg?variant=adaptive)](https://starchart.cc/toolnet/toolnetapi)
 
 ## 🔀 Forks
 

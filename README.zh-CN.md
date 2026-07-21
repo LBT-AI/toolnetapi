@@ -10,9 +10,9 @@
   
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
 
-  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="toolnet%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
   
   [🚀 快速开始](#-快速开始) • [💡 功能特点](#-主要功能) • [📖 设置指南](#-设置指南) • [🌐 网站](https://toolnetapi.com)
 
@@ -173,7 +173,7 @@ PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run 
 
 </div>
 
-> 🎬 **制作了关于 ToolNet API 的视频？** 提交 [Pull Request](https://github.com/decolua/toolnetapi/pulls)，将你的视频添加到此部分 — 我们会合并它！
+> 🎬 **制作了关于 ToolNet API 的视频？** 提交 [Pull Request](https://github.com/LBT-AI/toolnetapi/pulls)，将你的视频添加到此部分 — 我们会合并它！
 
 ---
 
@@ -1022,7 +1022,7 @@ Model：cc/claude-opus-4-7
 
 ```bash
 # 克隆并安装
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi
 npm install
 npm run build
@@ -1267,8 +1267,8 @@ Authorization: Bearer your-api-key
 ## 📧 支持
 
 - **网站**：[toolnetapi.com](https://toolnetapi.com)
-- **GitHub**：[github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **问题**：[github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**：[github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **问题**：[github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 
 ---
 
@@ -1276,13 +1276,13 @@ Authorization: Bearer your-api-key
 
 感谢所有帮助改进 ToolNet API 的贡献者！
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/toolnetapi/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=toolnet/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/LBT-AI/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star 图表
 
-[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
+[![Star Chart](https://starchart.cc/toolnet/toolnetapi.svg?variant=adaptive)](https://starchart.cc/toolnet/toolnetapi)
 
 
 

@@ -172,7 +172,7 @@ Cursor Settings → Models → Advanced:
 **替代方案:** 在 VPS 上自托管,使用公开域名:
 ```bash
 # 部署到 VPS
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 npm start
@@ -206,7 +206,7 @@ toolnetapi
 
 ### VPS/云
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 
@@ -316,7 +316,7 @@ toolnetapi --version
 ```
 
 **破坏性变更:**
-- 查看 [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)
+- 查看 [CHANGELOG.md](https://github.com/LBT-AI/toolnetapi/blob/main/CHANGELOG.md)
 - 大版本更新前备份 `~/.toolnetapi`
 - 阅读大版本的迁移指南
 
@@ -329,11 +329,11 @@ toolnetapi --version
 ### 贡献方式:
 
 1. **报告 bug:**
-   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
+   - [GitHub Issues](https://github.com/LBT-AI/toolnetapi/issues)
    - 附上错误日志、复现步骤
 
 2. **功能请求:**
-   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
+   - [GitHub Discussions](https://github.com/LBT-AI/toolnetapi/discussions)
    - 描述使用场景和价值
 
 3. **提交代码:**
@@ -375,13 +375,13 @@ toolnetapi --version
 - 更新文档
 - 提交保持原子化、描述清晰
 
-详情见 [CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md)。
+详情见 [CONTRIBUTING.md](https://github.com/LBT-AI/toolnetapi/blob/main/CONTRIBUTING.md)。
 
 ---
 
 ## 需要更多帮助?
 
 - **文档:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
-- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub:** [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues:** [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 - **故障排除:** [troubleshooting.md](troubleshooting.md)

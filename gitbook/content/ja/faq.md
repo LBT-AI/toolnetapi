@@ -172,7 +172,7 @@ Cursor Settings → Models → Advanced:
 **代替案:** パブリックドメインでVPSにセルフホスト:
 ```bash
 # VPSへデプロイ
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 npm start
@@ -206,7 +206,7 @@ toolnetapi
 
 ### VPS/クラウド
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 
@@ -316,7 +316,7 @@ toolnetapi --version
 ```
 
 **破壊的変更:**
-- [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)を確認
+- [CHANGELOG.md](https://github.com/LBT-AI/toolnetapi/blob/main/CHANGELOG.md)を確認
 - メジャー更新前に`~/.toolnetapi`をバックアップ
 - メジャーバージョンの移行ガイドを確認
 
@@ -329,11 +329,11 @@ toolnetapi --version
 ### 貢献方法:
 
 1. **バグを報告:**
-   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
+   - [GitHub Issues](https://github.com/LBT-AI/toolnetapi/issues)
    - エラーログ、再現手順を含める
 
 2. **機能をリクエスト:**
-   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
+   - [GitHub Discussions](https://github.com/LBT-AI/toolnetapi/discussions)
    - ユースケースと利点を説明
 
 3. **コードを提出:**
@@ -375,13 +375,13 @@ toolnetapi --version
 - ドキュメントを更新
 - コミットは小さく、わかりやすく
 
-詳細は[CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md)を参照。
+詳細は[CONTRIBUTING.md](https://github.com/LBT-AI/toolnetapi/blob/main/CONTRIBUTING.md)を参照。
 
 ---
 
 ## さらにヘルプが必要?
 
 - **ドキュメント:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
-- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub:** [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues:** [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 - **トラブルシューティング:** [troubleshooting.md](troubleshooting.md)

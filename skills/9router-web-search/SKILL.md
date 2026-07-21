@@ -5,7 +5,7 @@ description: Web search via ToolNet API /v1/search using Tavily / Exa / Brave / 
 
 # ToolNet API — Web Search
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
+Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
 
 ## Discover
 

@@ -5,7 +5,7 @@ description: Generate videos via ToolNet API /v1/videos/generations using xAI Gr
 
 # ToolNet API — Video Generation (xAI Grok Imagine)
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
+Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
 
 Requires a connected **xAI account** in the ToolNet API dashboard — either **Grok Build OAuth** (SuperGrok / X Premium+ subscription sign-in) or a direct **xAI API key** from console.x.ai. The two are separate auth types with separate billing; the dashboard shows which one each connection uses.
 

@@ -243,5 +243,5 @@ Daily routine:
 ## Need Help?
 
 - **Website**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)

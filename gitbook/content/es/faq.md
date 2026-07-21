@@ -172,7 +172,7 @@ Cursor Settings → Models → Advanced:
 **Alternativa:** Auto-hospéda en VPS con dominio público:
 ```bash
 # Despliega en VPS
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 npm start
@@ -206,7 +206,7 @@ toolnetapi
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install && npm run build
 
@@ -316,7 +316,7 @@ toolnetapi --version
 ```
 
 **Cambios disruptivos:**
-- Revisa [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)
+- Revisa [CHANGELOG.md](https://github.com/LBT-AI/toolnetapi/blob/main/CHANGELOG.md)
 - Respalda `~/.toolnetapi` antes de actualizaciones mayores
 - Revisa las guías de migración para versiones mayores
 
@@ -329,11 +329,11 @@ toolnetapi --version
 ### Formas de contribuir:
 
 1. **Reportar bugs:**
-   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
+   - [GitHub Issues](https://github.com/LBT-AI/toolnetapi/issues)
    - Incluye logs de error, pasos para reproducir
 
 2. **Solicitar características:**
-   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
+   - [GitHub Discussions](https://github.com/LBT-AI/toolnetapi/discussions)
    - Describe el caso de uso y los beneficios
 
 3. **Enviar código:**
@@ -375,13 +375,13 @@ toolnetapi --version
 - Actualiza la documentación
 - Mantén los commits atómicos y descriptivos
 
-Consulta [CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md) para detalles.
+Consulta [CONTRIBUTING.md](https://github.com/LBT-AI/toolnetapi/blob/main/CONTRIBUTING.md) para detalles.
 
 ---
 
 ## ¿Necesitas más ayuda?
 
 - **Documentación:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
-- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub:** [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues:** [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

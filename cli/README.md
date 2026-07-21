@@ -7,12 +7,12 @@
 [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
 [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
 [![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/toolnet/toolnetapi)
-[![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://hub.docker.com/r/toolnet/toolnetapi)
-[![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+[![GHCR](https://img.shields.io/badge/GHCR-lbt--ai%2Ftoolnetapi-blue?logo=github)](https://github.com/LBT-AI/toolnetapi/pkgs/container/toolnetapi)
+[![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
 
-<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="toolnet%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-[🌐 Website](https://toolnetapi.com) • [📖 Full Docs](https://github.com/decolua/toolnetapi)
+[🌐 Website](https://toolnetapi.com) • [📖 Full Docs](https://github.com/LBT-AI/toolnetapi)
 
 ---
 
@@ -110,8 +110,8 @@ Any tool supporting OpenAI/Claude-compatible API works.
 
 Full docs, advanced setup, video tutorials & development guide:
 
-- **GitHub**: https://github.com/decolua/toolnetapi
-- **Full README**: https://github.com/decolua/toolnetapi/blob/main/app/README.md
+- **GitHub**: https://github.com/LBT-AI/toolnetapi
+- **Full README**: https://github.com/LBT-AI/toolnetapi/blob/main/app/README.md
 - **Website**: https://toolnetapi.com
 
 ---

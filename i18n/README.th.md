@@ -15,7 +15,7 @@
   
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
   
   [🚀 เริ่มต้นใช้งาน](#-quick-start) • [💡 ฟีเจอร์](#-key-features) • [📖 การตั้งค่า](#-setup-guide) • [🌐 เว็บไซต์](https://toolnetapi.com)
 </div>
@@ -699,8 +699,8 @@ Authorization: Bearer your-api-key
 ## 📧 สนับสนุน
 
 - **เว็บไซต์**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)
 
 ---
 
@@ -708,7 +708,7 @@ Authorization: Bearer your-api-key
 
 ขอขอบคุณผู้มีส่วนร่วมทุกคนที่ช่วยทำให้ ToolNet API ดียิ่งขึ้น!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=150&columns=15&anon=1)](https://github.com/decolua/toolnetapi/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=toolnet/toolnetapi&max=150&columns=15&anon=1)](https://github.com/LBT-AI/toolnetapi/graphs/contributors)
 
 ---
 

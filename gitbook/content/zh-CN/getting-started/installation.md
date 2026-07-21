@@ -74,7 +74,7 @@ npx toolnetapi
 从 GitHub 克隆并构建:
 
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 npm install
 npm run build
@@ -474,5 +474,5 @@ nano ~/.bashrc  # 或 ~/.zshrc
 ## 需要帮助?
 
 - **网站**: [toolnetapi.com](https://toolnetapi.com)
-- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
-- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **GitHub**: [github.com/LBT-AI/toolnetapi](https://github.com/LBT-AI/toolnetapi)
+- **Issues**: [github.com/LBT-AI/toolnetapi/issues](https://github.com/LBT-AI/toolnetapi/issues)

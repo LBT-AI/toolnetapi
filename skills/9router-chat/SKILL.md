@@ -5,7 +5,7 @@ description: Chat / code generation via ToolNet API using OpenAI /v1/chat/comple
 
 # ToolNet API — Chat
 
-Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
+Requires `NINEROUTER_URL` (and `NINEROUTER_KEY` if auth enabled). See https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi/SKILL.md for setup.
 
 ## Endpoints
 

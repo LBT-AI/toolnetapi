@@ -16,7 +16,7 @@ Triển khai ToolNet API trên VPS hoặc Docker để truy cập từ xa và d�
 ### Bước 1: Clone Repository
 
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 ```
 

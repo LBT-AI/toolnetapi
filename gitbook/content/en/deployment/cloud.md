@@ -16,7 +16,7 @@ Deploy ToolNet API on VPS or Docker for remote access and production use.
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/decolua/toolnetapi.git
+git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 ```
 

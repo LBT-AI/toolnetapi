@@ -46,13 +46,13 @@ When the user needs a specific capability, fetch that skill's `SKILL.md` from it
 
 | Capability | Raw URL |
 |---|---|
-| Chat / code-gen | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-chat/SKILL.md |
-| Image generation | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-image/SKILL.md |
-| Text-to-speech | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-tts/SKILL.md |
-| Speech-to-text | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-stt/SKILL.md |
-| Embeddings | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-embeddings/SKILL.md |
-| Web search | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-web-search/SKILL.md |
-| Web fetch (URL → markdown) | https://raw.githubusercontent.com/decolua/toolnetapi/refs/heads/master/skills/toolnetapi-web-fetch/SKILL.md |
+| Chat / code-gen | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-chat/SKILL.md |
+| Image generation | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-image/SKILL.md |
+| Text-to-speech | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-tts/SKILL.md |
+| Speech-to-text | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-stt/SKILL.md |
+| Embeddings | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-embeddings/SKILL.md |
+| Web search | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-web-search/SKILL.md |
+| Web fetch (URL → markdown) | https://raw.githubusercontent.com/toolnet/toolnetapi/refs/heads/master/skills/toolnetapi-web-fetch/SKILL.md |
 
 ## Errors
 

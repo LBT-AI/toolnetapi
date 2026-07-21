@@ -105,10 +105,10 @@ Comienza en 2 minutos:
 
 ```bash
 # Instala globalmente
-npm install -g 9router
+npm install -g toolnetapi
 
 # Inicia (el dashboard se abre automáticamente)
-9router
+toolnetapi
 ```
 
 🎉 **Se abre el dashboard** → Conecta proveedores → ¡Empieza a codificar!
@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### Para codificación móvil/remota
 
-- Usa el despliegue en la nube (https://9router.com)
+- Usa el despliegue en la nube (https://toolnetapi.com)
 - Accede desde iPad, teléfono, donde sea
 - Sin limitaciones de localhost
 - Red edge de Cloudflare (300+ ubicaciones)

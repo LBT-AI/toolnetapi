@@ -31,7 +31,7 @@ Provider free tier là **fallback** khi hết quota subscription và cheap:
 **Bước 1: Kết nối qua Dashboard**
 
 ```bash
-9router
+toolnetapi
 # Dashboard → Providers → Connect iFlow
 ```
 
@@ -91,7 +91,7 @@ Model: if/kimi-k2-thinking
 **Bước 1: Kết nối qua Dashboard**
 
 ```bash
-9router
+toolnetapi
 # Dashboard → Providers → Connect Qwen
 ```
 
@@ -144,7 +144,7 @@ Model: qw/qwen3-coder-plus
 **Bước 1: Kết nối qua Dashboard**
 
 ```bash
-9router
+toolnetapi
 # Dashboard → Providers → Connect Kiro
 ```
 
@@ -200,7 +200,7 @@ Model: kr/claude-sonnet-4.5
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [from 9router dashboard]
+  OpenAI API Key: [from toolnetapi dashboard]
   Model: if/kimi-k2-thinking
 ```
 

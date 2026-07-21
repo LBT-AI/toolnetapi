@@ -6,7 +6,7 @@ ToolNet APIをContinue拡張機能と統合し、Visual Studio Codeに直接AI�
 
 - Visual Studio Codeがインストール済み
 - VSCodeマーケットプレイスからContinue拡張機能がインストール済み
-- [ダッシュボード](https://9router.com/dashboard)からのToolNet API APIキー
+- [ダッシュボード](https://toolnetapi.com/dashboard)からのToolNet API APIキー
 - ToolNet APIが動作中 (ローカルまたはクラウド)
 
 ## 設定手順
@@ -76,7 +76,7 @@ ToolNet APIをContinue拡張機能と統合し、Visual Studio Codeに直接AI�
 **クラウドToolNet API用:**
 `apiBase` を以下に置き換え:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://toolnetapi.com/v1"
 ```
 
 ### 3. 保存してリロード

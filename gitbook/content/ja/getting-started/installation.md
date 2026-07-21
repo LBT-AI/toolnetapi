@@ -34,34 +34,34 @@ npm --version
 どこからでも使用できるようにToolNet APIをグローバルインストール:
 
 ```bash
-npm install -g 9router
+npm install -g toolnetapi
 ```
 
 **ToolNet APIを起動:**
 
 ```bash
-9router
+toolnetapi
 ```
 
 **利点:**
 - ✅ どのディレクトリからでも実行
-- ✅ シンプルなコマンド: `9router`
-- ✅ `npm update -g 9router` で自動更新
+- ✅ シンプルなコマンド: `toolnetapi`
+- ✅ `npm update -g toolnetapi` で自動更新
 
 ### 方法2: ローカルインストール
 
 特定のプロジェクトにインストール:
 
 ```bash
-mkdir my-9router
-cd my-9router
-npm install 9router
+mkdir my-toolnetapi
+cd my-toolnetapi
+npm install toolnetapi
 ```
 
 **ToolNet APIを起動:**
 
 ```bash
-npx 9router
+npx toolnetapi
 ```
 
 **利点:**
@@ -74,8 +74,8 @@ npx 9router
 GitHubからクローンしてビルド:
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install
 npm run build
 npm start
@@ -93,13 +93,13 @@ npm start
 ### サーバーを起動
 
 ```bash
-9router
+toolnetapi
 ```
 
 **何が起こるか:**
 1. サーバーが `http://localhost:20128` で起動
 2. ダッシュボードが自動的にブラウザで開く
-3. `~/.9router` にデータディレクトリが作成される
+3. `~/.toolnetapi` にデータディレクトリが作成される
 4. APIキーが自動生成される
 
 ### ダッシュボードログイン
@@ -193,7 +193,7 @@ export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 
 # ストレージ
-export DATA_DIR="~/.9router"
+export DATA_DIR="~/.toolnetapi"
 
 # サーバー
 export PORT="20128"
@@ -205,11 +205,11 @@ export ENABLE_REQUEST_LOGS="false"
 
 ### データディレクトリ
 
-**デフォルトの場所:** `~/.9router`
+**デフォルトの場所:** `~/.toolnetapi`
 
 **内容:**
 ```
-~/.9router/
+~/.toolnetapi/
   ├── db.json           # データベース (プロバイダー、コンボ、使用量)
   ├── api-keys.json     # APIキー
   └── logs/             # リクエストログ (有効化されている場合)
@@ -219,7 +219,7 @@ export ENABLE_REQUEST_LOGS="false"
 
 ```bash
 export DATA_DIR="/custom/path"
-9router
+toolnetapi
 ```
 
 ### ポート設定
@@ -230,13 +230,13 @@ export DATA_DIR="/custom/path"
 
 ```bash
 export PORT="3000"
-9router
+toolnetapi
 ```
 
 **またはコマンドラインで:**
 
 ```bash
-9router --port 3000
+toolnetapi --port 3000
 ```
 
 ---
@@ -263,14 +263,14 @@ kill -9 <PID>
 **解決策2: 別のポートを使用**
 
 ```bash
-9router --port 3000
+toolnetapi --port 3000
 ```
 
 ### Permission Denied
 
 **エラー:**
 ```
-Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/9router'
+Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/toolnetapi'
 ```
 
 **解決策: sudoを使用 (非推奨) またはnpm権限を修正**
@@ -283,7 +283,7 @@ echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
 # 再度インストール
-npm install -g 9router
+npm install -g toolnetapi
 ```
 
 ### Node.jsバージョンが古すぎる
@@ -351,17 +351,17 @@ Dashboard → Provider → Disconnect → Reconnect
 
 ```bash
 # 停止
-pkill -f 9router
+pkill -f toolnetapi
 
 # 起動
-9router
+toolnetapi
 ```
 
 **または自動再起動にPM2を使用:**
 
 ```bash
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start toolnetapi --name toolnetapi
 pm2 save
 ```
 
@@ -372,8 +372,8 @@ pm2 save
 ### ローカル開発
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 ```
 
 **ユースケース:** 個人コーディング、テスト
@@ -382,7 +382,7 @@ npm install -g 9router
 
 ```bash
 # インストール
-npm install -g 9router
+npm install -g toolnetapi
 
 # 設定
 export JWT_SECRET="your-secure-secret"
@@ -391,7 +391,7 @@ export NODE_ENV="production"
 
 # PM2で起動
 npm install -g pm2
-pm2 start 9router --name 9router
+pm2 start toolnetapi --name toolnetapi
 pm2 save
 pm2 startup
 ```
@@ -401,15 +401,15 @@ pm2 startup
 ### Docker
 
 ```bash
-docker pull 9router/9router:latest
+docker pull toolnetapi/toolnetapi:latest
 
 docker run -d \
   -p 20128:20128 \
   -e JWT_SECRET="your-secure-secret" \
   -e INITIAL_PASSWORD="your-password" \
-  -v 9router-data:/root/.9router \
-  --name 9router \
-  9router/9router:latest
+  -v toolnetapi-data:/root/.toolnetapi \
+  --name toolnetapi \
+  toolnetapi/toolnetapi:latest
 ```
 
 **ユースケース:** コンテナデプロイ、Kubernetes
@@ -444,13 +444,13 @@ server {
 ### グローバルインストールを削除
 
 ```bash
-npm uninstall -g 9router
+npm uninstall -g toolnetapi
 ```
 
 ### データディレクトリを削除
 
 ```bash
-rm -rf ~/.9router
+rm -rf ~/.toolnetapi
 ```
 
 ### 設定を削除
@@ -458,7 +458,7 @@ rm -rf ~/.9router
 ```bash
 # シェル設定から環境変数を削除
 nano ~/.bashrc  # または ~/.zshrc
-# 9router関連のエクスポートを削除
+# toolnetapi関連のエクスポートを削除
 ```
 
 ---
@@ -473,6 +473,6 @@ nano ~/.bashrc  # または ~/.zshrc
 
 ## ヘルプが必要?
 
-- **ウェブサイト**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **ウェブサイト**: [toolnetapi.com](https://toolnetapi.com)
+- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)

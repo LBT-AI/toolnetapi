@@ -1,6 +1,6 @@
 
 <div align="center">
-  <img src="./images/9router.png?1" alt="ToolNet API Dashboard" width="800"/>
+  <img src="./images/toolnetapi.png?1" alt="ToolNet API Dashboard" width="800"/>
   
   # ToolNet API - 免费 AI 路由器与 Token 节省器
   
@@ -8,13 +8,13 @@
   
   **将所有 AI 编程工具（Claude Code、Cursor、Antigravity、Copilot、Codex、Gemini、OpenCode、Cline、OpenClaw...）连接到 40+ AI 提供商和 100+ 模型。**
   
-  [![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-  [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+  [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
 
-  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2F9router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
   
-  [🚀 快速开始](#-快速开始) • [💡 功能特点](#-主要功能) • [📖 设置指南](#-设置指南) • [🌐 网站](https://9router.com)
+  [🚀 快速开始](#-快速开始) • [💡 功能特点](#-主要功能) • [📖 设置指南](#-设置指南) • [🌐 网站](https://toolnetapi.com)
 
   [🇻🇳 Tiếng Việt](./i18n/README.vi.md) • [🇨🇳 中文](./i18n/README.zh-CN.md) • [🇯🇵 日本語](./i18n/README.ja-JP.md)
 </div>
@@ -74,8 +74,8 @@
 **1. 全局安装：**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 ```
 
 🎉 控制面板在 `http://localhost:20128` 打开
@@ -97,7 +97,7 @@ Claude Code/Codex/OpenClaw/Cursor/Cline 设置：
 
 **替代方案：从源码运行（本仓库）：**
 
-本仓库的包是私有的（`9router-app`），所以源码/Docker 执行是预期的本地开发方式。
+本仓库的包是私有的（`toolnetapi-app`），所以源码/Docker 执行是预期的本地开发方式。
 
 ```bash
 cp .env.example .env
@@ -173,7 +173,7 @@ PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run 
 
 </div>
 
-> 🎬 **制作了关于 ToolNet API 的视频？** 提交 [Pull Request](https://github.com/decolua/9router/pulls)，将你的视频添加到此部分 — 我们会合并它！
+> 🎬 **制作了关于 ToolNet API 的视频？** 提交 [Pull Request](https://github.com/decolua/toolnetapi/pulls)，将你的视频添加到此部分 — 我们会合并它！
 
 ---
 
@@ -939,7 +939,7 @@ Vertex 合作伙伴（通过 Vertex 提供 Anthropic / DeepSeek / GLM / Qwen）�
 ```
 设置 → 模型 → 高级：
   OpenAI API Base URL：http://localhost:20128/v1
-  OpenAI API Key：[来自 9router 控制面板]
+  OpenAI API Key：[来自 toolnetapi 控制面板]
   Model：cc/claude-opus-4-7
 ```
 
@@ -952,7 +952,7 @@ Vertex 合作伙伴（通过 Vertex 提供 Anthropic / DeepSeek / GLM / Qwen）�
 ```json
 {
   "anthropic_api_base": "http://localhost:20128/v1",
-  "anthropic_api_key": "your-9router-api-key"
+  "anthropic_api_key": "your-toolnetapi-api-key"
 }
 ```
 
@@ -960,7 +960,7 @@ Vertex 合作伙伴（通过 Vertex 提供 Anthropic / DeepSeek / GLM / Qwen）�
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:20128"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 
 codex "your prompt"
 ```
@@ -980,15 +980,15 @@ codex "your prompt"
   "agents": {
     "defaults": {
       "model": {
-        "primary": "9router/kr/claude-sonnet-4.5"
+        "primary": "toolnetapi/kr/claude-sonnet-4.5"
       }
     }
   },
   "models": {
     "providers": {
-      "9router": {
+      "toolnetapi": {
         "baseUrl": "http://127.0.0.1:20128/v1",
-        "apiKey": "sk_9router",
+        "apiKey": "sk_toolnetapi",
         "api": "openai-completions",
         "models": [
           {
@@ -1022,20 +1022,20 @@ Model：cc/claude-opus-4-7
 
 ```bash
 # 克隆并安装
-git clone https://github.com/decolua/9router.git
-cd 9router
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi
 npm install
 npm run build
 
 # 配置
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export PORT="20128"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
 export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
-export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
+export NEXT_PUBLIC_CLOUD_URL="https://toolnetapi.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
 
@@ -1044,7 +1044,7 @@ npm run start
 
 # 或使用 PM2
 npm install -g pm2
-pm2 start npm --name 9router -- start
+pm2 start npm --name toolnetapi -- start
 pm2 save
 pm2 startup
 ```
@@ -1053,28 +1053,28 @@ pm2 startup
 
 ```bash
 # 构建镜像（从仓库根目录）
-docker build -t 9router .
+docker build -t toolnetapi .
 
 # 运行容器（当前设置使用的命令）
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
-  --env-file /root/dev/9router/.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
-  9router
+  --env-file /root/dev/toolnetapi/.env \
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
+  toolnetapi
 ```
 
 便携命令（如果你已经在仓库根目录）：
 
 ```bash
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
   --env-file ./.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
-  9router
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
+  toolnetapi
 ```
 
 容器默认值：
@@ -1084,25 +1084,25 @@ docker run -d \
 常用命令：
 
 ```bash
-docker logs -f 9router
-docker restart 9router
-docker stop 9router && docker rm 9router
+docker logs -f toolnetapi
+docker restart toolnetapi
+docker stop toolnetapi && docker rm toolnetapi
 ```
 
 ### 环境变量
 
 | 变量 | 默认值 | 描述 |
 |----------|---------|-------------|
-| `JWT_SECRET` | 自动生成（`~/.9router/jwt-secret`） | 用于控制面板 auth cookie 的 JWT 签名密钥（设置可在多实例间共享） |
+| `JWT_SECRET` | 自动生成（`~/.toolnetapi/jwt-secret`） | 用于控制面板 auth cookie 的 JWT 签名密钥（设置可在多实例间共享） |
 | `INITIAL_PASSWORD` | `123456` | 当没有保存的哈希时首次登录的密码 |
-| `DATA_DIR` | `~/.9router` | 主应用数据库位置（`db.json`） |
+| `DATA_DIR` | `~/.toolnetapi` | 主应用数据库位置（`db.json`） |
 | `PORT` | 框架默认值 | 服务端口（示例中为 `20128`） |
 | `HOSTNAME` | 框架默认值 | 绑定主机（Docker 默认为 `0.0.0.0`） |
 | `NODE_ENV` | 运行时默认值 | 设置 `production` 用于部署 |
 | `BASE_URL` | `http://localhost:20128` | 云同步任务使用的服务端内部基础 URL |
-| `CLOUD_URL` | `https://9router.com` | 服务端云同步端点基础 URL |
+| `CLOUD_URL` | `https://toolnetapi.com` | 服务端云同步端点基础 URL |
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | 向后兼容/公开基础 URL（服务端运行时优先使用 `BASE_URL`） |
-| `NEXT_PUBLIC_CLOUD_URL` | `https://9router.com` | 向后兼容/公开云 URL（服务端运行时优先使用 `CLOUD_URL`） |
+| `NEXT_PUBLIC_CLOUD_URL` | `https://toolnetapi.com` | 向后兼容/公开云 URL（服务端运行时优先使用 `CLOUD_URL`） |
 | `API_KEY_SECRET` | `endpoint-proxy-api-key-secret` | 生成 API key 的 HMAC 密钥 |
 | `MACHINE_ID_SALT` | `endpoint-proxy-salt` | 稳定机器 ID 哈希的盐值 |
 | `ENABLE_REQUEST_LOGS` | `false` | 在 `logs/` 下启用请求/响应日志 |
@@ -1121,7 +1121,7 @@ docker stop 9router && docker rm 9router
 - 主应用状态：`${DATA_DIR}/db.json`（提供商、组合、别名、密钥、设置），由 `src/lib/localDb.js` 管理。
 - 使用历史和日志：`${DATA_DIR}/usage.json` 和 `${DATA_DIR}/log.txt`，由 `src/lib/usageDb.js` 管理。
 - 可选的请求/翻译器日志：`ENABLE_REQUEST_LOGS=true` 时位于 `<repo>/logs/...`。
-- `${DATA_DIR}` 和 `~/.9router` 在 Docker 容器中解析到同一位置 — 符号链接 `/root/.9router -> /app/data` 在构建时创建。
+- `${DATA_DIR}` 和 `~/.toolnetapi` 在 Docker 容器中解析到同一位置 — 符号链接 `/root/.toolnetapi -> /app/data` 在构建时创建。
 
 </details>
 
@@ -1266,9 +1266,9 @@ Authorization: Bearer your-api-key
 
 ## 📧 支持
 
-- **网站**：[9router.com](https://9router.com)
-- **GitHub**：[github.com/decolua/9router](https://github.com/decolua/9router)
-- **问题**：[github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **网站**：[toolnetapi.com](https://toolnetapi.com)
+- **GitHub**：[github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **问题**：[github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 
 ---
 
@@ -1276,13 +1276,13 @@ Authorization: Bearer your-api-key
 
 感谢所有帮助改进 ToolNet API 的贡献者！
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/9router/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star 图表
 
-[![Star Chart](https://starchart.cc/decolua/9router.svg?variant=adaptive)](https://starchart.cc/decolua/9router)
+[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
 
 
 

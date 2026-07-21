@@ -105,10 +105,10 @@ ToolNet API 是一款智能代理,位于你的编码工具(Cursor、Cline、Clau
 
 ```bash
 # 全局安装
-npm install -g 9router
+npm install -g toolnetapi
 
 # 启动(仪表盘自动打开)
-9router
+toolnetapi
 ```
 
 🎉 **仪表盘自动打开** → 连接提供商 → 开始编码!
@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### 移动/远程编码
 
-- 使用云端部署(https://9router.com)
+- 使用云端部署(https://toolnetapi.com)
 - 从 iPad、手机、任何地方访问
 - 没有 localhost 限制
 - Cloudflare 边缘网络(300+ 节点)

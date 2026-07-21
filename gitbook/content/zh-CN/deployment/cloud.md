@@ -16,8 +16,8 @@
 ### 步骤 1:克隆仓库
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 ```
 
 ### 步骤 2:安装依赖
@@ -39,7 +39,7 @@ npm run build
 ```bash
 export JWT_SECRET="your-secure-secret-change-this-to-random-string"
 export INITIAL_PASSWORD="your-secure-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export NODE_ENV="production"
 ```
 
@@ -49,15 +49,15 @@ export NODE_ENV="production"
 |----------|---------|-------------|
 | `JWT_SECRET` | 自动生成 | **生产环境必须修改!** 用于 JWT token 签名 |
 | `INITIAL_PASSWORD` | `123456` | 仪表盘登录密码 |
-| `DATA_DIR` | `~/.9router` | 数据库与数据存储路径 |
+| `DATA_DIR` | `~/.toolnetapi` | 数据库与数据存储路径 |
 | `NODE_ENV` | `development` | 部署时设为 `production` |
 | `ENABLE_REQUEST_LOGS` | `false` | 启用 debug 请求/响应日志 |
 
 ### 步骤 5:创建数据目录
 
 ```bash
-sudo mkdir -p /var/lib/9router
-sudo chown $USER:$USER /var/lib/9router
+sudo mkdir -p /var/lib/toolnetapi
+sudo chown $USER:$USER /var/lib/toolnetapi
 ```
 
 ### 步骤 6:启动应用
@@ -75,7 +75,7 @@ PM2 让应用持续运行,崩溃时自动重启:
 npm install -g pm2
 
 # 用 PM2 启动 ToolNet API
-pm2 start npm --name 9router -- start
+pm2 start npm --name toolnetapi -- start
 
 # 保存 PM2 配置
 pm2 save
@@ -89,13 +89,13 @@ pm2 startup
 
 ```bash
 # 查看日志
-pm2 logs 9router
+pm2 logs toolnetapi
 
 # 重启应用
-pm2 restart 9router
+pm2 restart toolnetapi
 
 # 停止应用
-pm2 stop 9router
+pm2 stop toolnetapi
 
 # 查看状态
 pm2 status
@@ -147,17 +147,17 @@ CMD ["npm", "run", "start"]
 
 ```bash
 # 构建镜像
-docker build -t 9router .
+docker build -t toolnetapi .
 
 # 运行容器
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 3000:3000 \
   -p 20128:20128 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
-  -v 9router-data:/app/data \
-  9router
+  -v toolnetapi-data:/app/data \
+  toolnetapi
 ```
 
 ### 方式 2:Docker Compose
@@ -168,9 +168,9 @@ docker run -d \
 version: '3.8'
 
 services:
-  9router:
+  toolnetapi:
     build: .
-    container_name: 9router
+    container_name: toolnetapi
     ports:
       - "3000:3000"
       - "20128:20128"
@@ -180,11 +180,11 @@ services:
       - INITIAL_PASSWORD=your-secure-password
       - DATA_DIR=/app/data
     volumes:
-      - 9router-data:/app/data
+      - toolnetapi-data:/app/data
     restart: unless-stopped
 
 volumes:
-  9router-data:
+  toolnetapi-data:
 ```
 
 **使用 Docker Compose 运行:**
@@ -223,7 +223,7 @@ sudo apt install nginx
 
 ### 步骤 2:配置 Nginx
 
-创建 `/etc/nginx/sites-available/9router`:
+创建 `/etc/nginx/sites-available/toolnetapi`:
 
 ```nginx
 server {
@@ -284,7 +284,7 @@ server {
 
 ```bash
 # 创建软链接
-sudo ln -s /etc/nginx/sites-available/9router /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/toolnetapi /etc/nginx/sites-enabled/
 
 # 测试配置
 sudo nginx -t
@@ -364,21 +364,21 @@ ssh -L 3000:localhost:3000 user@your-server.com
 sudo apt update && sudo apt upgrade -y
 
 # 更新 ToolNet API
-cd /path/to/9router/app
+cd /path/to/toolnetapi/app
 git pull
 npm install
 npm run build
-pm2 restart 9router
+pm2 restart toolnetapi
 ```
 
 ### 5. 备份策略
 
 ```bash
 # 备份数据目录
-tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
+tar -czf toolnetapi-backup-$(date +%Y%m%d).tar.gz /var/lib/toolnetapi
 
 # 每日自动备份(加入 crontab)
-0 2 * * * tar -czf /backups/9router-$(date +\%Y\%m\%d).tar.gz /var/lib/9router
+0 2 * * * tar -czf /backups/toolnetapi-$(date +\%Y\%m\%d).tar.gz /var/lib/toolnetapi
 ```
 
 ---
@@ -392,7 +392,7 @@ tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
 pm2 status
 
 # 查看日志
-pm2 logs 9router --lines 100
+pm2 logs toolnetapi --lines 100
 
 # 监控资源
 pm2 monit
@@ -429,14 +429,14 @@ netstat -tulpn | grep -E '3000|20128'
 
 ```bash
 # 查看日志
-pm2 logs 9router
+pm2 logs toolnetapi
 
 # 检查端口是否被占用
 sudo lsof -i :3000
 sudo lsof -i :20128
 
 # 检查环境变量
-pm2 env 9router
+pm2 env toolnetapi
 ```
 
 ### Nginx 502 Bad Gateway
@@ -460,8 +460,8 @@ sudo nginx -t
 
 ```bash
 # 修复数据目录权限
-sudo chown -R $USER:$USER /var/lib/9router
-chmod 755 /var/lib/9router
+sudo chown -R $USER:$USER /var/lib/toolnetapi
+chmod 755 /var/lib/toolnetapi
 ```
 
 ---

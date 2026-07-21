@@ -103,7 +103,7 @@ Claude Codeは設定を `~/.claude/settings.json` に保存します。必要に
 localhostの代わりにToolNet APIクラウドエンドポイントを使用するには:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://9router.com"
+export ANTHROPIC_BASE_URL="https://toolnetapi.com"
 ```
 
 ToolNet APIクラウドダッシュボードでAPIキーが設定されていることを確認してください。

@@ -143,7 +143,7 @@
 
 1. **启动 ToolNet API:**
    ```bash
-   9router
+   toolnetapi
    ```
    仪表盘应该在 http://localhost:3000 打开。
 
@@ -164,7 +164,7 @@
 4. **使用云端 endpoint:**
    如果 localhost 不行(例如 Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://toolnetapi.com/v1
    ```
 
 ---
@@ -183,7 +183,7 @@
 1. **确认 ToolNet API 是否运行:**
    ```bash
    # 检查进程
-   ps aux | grep 9router
+   ps aux | grep toolnetapi
    
    # 检查端口 3000
    lsof -i :3000
@@ -202,10 +202,10 @@
 3. **重启 ToolNet API:**
    ```bash
    # 停止
-   pkill -f 9router
+   pkill -f toolnetapi
    
    # 启动
-   9router
+   toolnetapi
    ```
 
 4. **清除浏览器缓存:**
@@ -346,6 +346,6 @@
 
 ## 需要更多帮助?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **文档:** [9router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **文档:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
 - **常见问题:** [faq.md](faq.md)

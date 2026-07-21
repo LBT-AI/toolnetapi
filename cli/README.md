@@ -4,15 +4,15 @@
 
 **Connect All AI Code Tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini, OpenCode, Cline, OpenClaw...) to 40+ AI Providers & 100+ Models.**
 
-[![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-[![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-[![Docker Pulls](https://img.shields.io/docker/pulls/decolua/9router.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/9router)
-[![GHCR](https://img.shields.io/badge/GHCR-decolua%2F9router-blue?logo=github)](https://github.com/decolua/9router/pkgs/container/9router)
-[![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+[![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+[![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+[![Docker Pulls](https://img.shields.io/docker/pulls/decolua/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/toolnetapi)
+[![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
+[![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
 
-<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2F9router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-[🌐 Website](https://9router.com) • [📖 Full Docs](https://github.com/decolua/9router)
+[🌐 Website](https://toolnetapi.com) • [📖 Full Docs](https://github.com/decolua/toolnetapi)
 
 ---
 
@@ -40,22 +40,22 @@
 **Option 1 — npm (recommended for desktop):**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 
 # Or run directly with npx
-npx 9router
+npx toolnetapi
 ```
 
 **Option 2 — Docker (server/VPS):**
 
 ```bash
-docker run -d --name 9router -p 20128:20128 \
-  -v "$HOME/.9router:/app/data" -e DATA_DIR=/app/data \
-  decolua/9router:latest
+docker run -d --name toolnetapi -p 20128:20128 \
+  -v "$HOME/.toolnetapi:/app/data" -e DATA_DIR=/app/data \
+  decolua/toolnetapi:latest
 ```
 
-Published images: [Docker Hub](https://hub.docker.com/r/decolua/9router) • [GHCR](https://github.com/decolua/9router/pkgs/container/9router) (multi-platform amd64/arm64).
+Published images: [Docker Hub](https://hub.docker.com/r/decolua/toolnetapi) • [GHCR](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi) (multi-platform amd64/arm64).
 
 🎉 Dashboard opens at `http://localhost:20128`
 
@@ -79,11 +79,11 @@ That's it! Start coding with FREE AI models.
 ## 🚀 CLI Options
 
 ```bash
-9router                    # Start with default settings
-9router --port 8080        # Custom port
-9router --no-browser       # Don't open browser
-9router --skip-update      # Skip auto-update check
-9router --help             # Show all options
+toolnetapi                    # Start with default settings
+toolnetapi --port 8080        # Custom port
+toolnetapi --no-browser       # Don't open browser
+toolnetapi --skip-update      # Skip auto-update check
+toolnetapi --help             # Show all options
 ```
 
 **Dashboard**: `http://localhost:20128/dashboard`
@@ -100,9 +100,9 @@ Any tool supporting OpenAI/Claude-compatible API works.
 
 ## 💾 Data Location
 
-- **macOS/Linux**: `~/.9router/db/data.sqlite`
-- **Windows**: `%APPDATA%/9router/db/data.sqlite`
-- **Docker**: `/app/data/db/data.sqlite` (mount `$HOME/.9router` to persist)
+- **macOS/Linux**: `~/.toolnetapi/db/data.sqlite`
+- **Windows**: `%APPDATA%/toolnetapi/db/data.sqlite`
+- **Docker**: `/app/data/db/data.sqlite` (mount `$HOME/.toolnetapi` to persist)
 
 ---
 
@@ -110,9 +110,9 @@ Any tool supporting OpenAI/Claude-compatible API works.
 
 Full docs, advanced setup, video tutorials & development guide:
 
-- **GitHub**: https://github.com/decolua/9router
-- **Full README**: https://github.com/decolua/9router/blob/main/app/README.md
-- **Website**: https://9router.com
+- **GitHub**: https://github.com/decolua/toolnetapi
+- **Full README**: https://github.com/decolua/toolnetapi/blob/main/app/README.md
+- **Website**: https://toolnetapi.com
 
 ---
 

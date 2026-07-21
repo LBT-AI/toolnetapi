@@ -6,7 +6,7 @@ Integra ToolNet API con la extensión Continue para llevar la asistencia de IA d
 
 - Visual Studio Code instalado
 - Extensión Continue instalada desde el marketplace de VSCode
-- API key de ToolNet API desde el [dashboard](https://9router.com/dashboard)
+- API key de ToolNet API desde el [dashboard](https://toolnetapi.com/dashboard)
 - ToolNet API ejecutándose (local o en la nube)
 
 ## Pasos de configuración
@@ -76,7 +76,7 @@ Agrega la siguiente configuración a tu `config.json`:
 **Para ToolNet API en la nube:**
 Reemplaza `apiBase` con:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://toolnetapi.com/v1"
 ```
 
 ### 3. Guardar y recargar

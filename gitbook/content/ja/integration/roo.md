@@ -5,7 +5,7 @@ ToolNet APIをRoo AIアシスタントと統合し、統一インターフェイ
 ## 前提条件
 
 - Roo AIアシスタントがインストール済み
-- [ダッシュボード](https://9router.com/dashboard)からのToolNet API APIキー
+- [ダッシュボード](https://toolnetapi.com/dashboard)からのToolNet API APIキー
 - ToolNet APIが動作中 (ローカルまたはクラウド)
 
 ## 設定手順
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **クラウドToolNet API用:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://toolnetapi.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

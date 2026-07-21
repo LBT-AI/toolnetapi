@@ -16,8 +16,8 @@ Deploy ToolNet API on VPS or Docker for remote access and production use.
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 ```
 
 ### Step 2: Install Dependencies
@@ -39,7 +39,7 @@ Create a `.env` file or export variables:
 ```bash
 export JWT_SECRET="your-secure-secret-change-this-to-random-string"
 export INITIAL_PASSWORD="your-secure-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export NODE_ENV="production"
 ```
 
@@ -49,15 +49,15 @@ export NODE_ENV="production"
 |----------|---------|-------------|
 | `JWT_SECRET` | Auto-generated | **MUST change in production!** Used for JWT token signing |
 | `INITIAL_PASSWORD` | `123456` | Dashboard login password |
-| `DATA_DIR` | `~/.9router` | Database and data storage path |
+| `DATA_DIR` | `~/.toolnetapi` | Database and data storage path |
 | `NODE_ENV` | `development` | Set to `production` for deployment |
 | `ENABLE_REQUEST_LOGS` | `false` | Enable debug request/response logs |
 
 ### Step 5: Create Data Directory
 
 ```bash
-sudo mkdir -p /var/lib/9router
-sudo chown $USER:$USER /var/lib/9router
+sudo mkdir -p /var/lib/toolnetapi
+sudo chown $USER:$USER /var/lib/toolnetapi
 ```
 
 ### Step 6: Start Application
@@ -75,7 +75,7 @@ PM2 keeps your application running and restarts it on crashes:
 npm install -g pm2
 
 # Start ToolNet API with PM2
-pm2 start npm --name 9router -- start
+pm2 start npm --name toolnetapi -- start
 
 # Save PM2 configuration
 pm2 save
@@ -89,13 +89,13 @@ pm2 startup
 
 ```bash
 # View logs
-pm2 logs 9router
+pm2 logs toolnetapi
 
 # Restart application
-pm2 restart 9router
+pm2 restart toolnetapi
 
 # Stop application
-pm2 stop 9router
+pm2 stop toolnetapi
 
 # View status
 pm2 status
@@ -147,17 +147,17 @@ CMD ["npm", "run", "start"]
 
 ```bash
 # Build image
-docker build -t 9router .
+docker build -t toolnetapi .
 
 # Run container
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 3000:3000 \
   -p 20128:20128 \
   -e JWT_SECRET="your-secure-secret-change-this" \
   -e INITIAL_PASSWORD="your-secure-password" \
-  -v 9router-data:/app/data \
-  9router
+  -v toolnetapi-data:/app/data \
+  toolnetapi
 ```
 
 ### Option 2: Docker Compose
@@ -168,9 +168,9 @@ Create `docker-compose.yml`:
 version: '3.8'
 
 services:
-  9router:
+  toolnetapi:
     build: .
-    container_name: 9router
+    container_name: toolnetapi
     ports:
       - "3000:3000"
       - "20128:20128"
@@ -180,11 +180,11 @@ services:
       - INITIAL_PASSWORD=your-secure-password
       - DATA_DIR=/app/data
     volumes:
-      - 9router-data:/app/data
+      - toolnetapi-data:/app/data
     restart: unless-stopped
 
 volumes:
-  9router-data:
+  toolnetapi-data:
 ```
 
 **Run with Docker Compose:**
@@ -223,7 +223,7 @@ sudo apt install nginx
 
 ### Step 2: Configure Nginx
 
-Create `/etc/nginx/sites-available/9router`:
+Create `/etc/nginx/sites-available/toolnetapi`:
 
 ```nginx
 server {
@@ -284,7 +284,7 @@ server {
 
 ```bash
 # Create symbolic link
-sudo ln -s /etc/nginx/sites-available/9router /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/toolnetapi /etc/nginx/sites-enabled/
 
 # Test configuration
 sudo nginx -t
@@ -364,21 +364,21 @@ ssh -L 3000:localhost:3000 user@your-server.com
 sudo apt update && sudo apt upgrade -y
 
 # Update ToolNet API
-cd /path/to/9router/app
+cd /path/to/toolnetapi/app
 git pull
 npm install
 npm run build
-pm2 restart 9router
+pm2 restart toolnetapi
 ```
 
 ### 5. Backup Strategy
 
 ```bash
 # Backup data directory
-tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
+tar -czf toolnetapi-backup-$(date +%Y%m%d).tar.gz /var/lib/toolnetapi
 
 # Automated daily backup (add to crontab)
-0 2 * * * tar -czf /backups/9router-$(date +\%Y\%m\%d).tar.gz /var/lib/9router
+0 2 * * * tar -czf /backups/toolnetapi-$(date +\%Y\%m\%d).tar.gz /var/lib/toolnetapi
 ```
 
 ---
@@ -392,7 +392,7 @@ tar -czf 9router-backup-$(date +%Y%m%d).tar.gz /var/lib/9router
 pm2 status
 
 # View logs
-pm2 logs 9router --lines 100
+pm2 logs toolnetapi --lines 100
 
 # Monitor resources
 pm2 monit
@@ -429,14 +429,14 @@ netstat -tulpn | grep -E '3000|20128'
 
 ```bash
 # Check logs
-pm2 logs 9router
+pm2 logs toolnetapi
 
 # Check if ports are in use
 sudo lsof -i :3000
 sudo lsof -i :20128
 
 # Check environment variables
-pm2 env 9router
+pm2 env toolnetapi
 ```
 
 ### Nginx 502 Bad Gateway
@@ -460,8 +460,8 @@ Ensure `proxy_buffering off` is set in Nginx configuration for SSE support.
 
 ```bash
 # Fix data directory permissions
-sudo chown -R $USER:$USER /var/lib/9router
-chmod 755 /var/lib/9router
+sudo chown -R $USER:$USER /var/lib/toolnetapi
+chmod 755 /var/lib/toolnetapi
 ```
 
 ---

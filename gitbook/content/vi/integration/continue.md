@@ -6,7 +6,7 @@ Tích hợp ToolNet API với extension Continue để mang trợ lý AI trực 
 
 - Visual Studio Code đã cài đặt
 - Extension Continue đã cài đặt từ VSCode marketplace
-- ToolNet API API key từ [dashboard](https://9router.com/dashboard)
+- ToolNet API API key từ [dashboard](https://toolnetapi.com/dashboard)
 - ToolNet API đang chạy (cục bộ hoặc cloud)
 
 ## Các bước Cấu hình
@@ -76,7 +76,7 @@ Thêm cấu hình sau vào `config.json`:
 **Cho Cloud ToolNet API:**
 Thay `apiBase` bằng:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://toolnetapi.com/v1"
 ```
 
 ### 3. Lưu và Reload

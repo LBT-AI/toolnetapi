@@ -19,7 +19,7 @@ Set the following environment variables in your shell configuration file (`~/.ba
 export OPENAI_BASE_URL="http://localhost:20128/v1"
 
 # API Key from ToolNet API dashboard
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 ```
 
 ### 2. Reload Shell Configuration
@@ -77,7 +77,7 @@ You can also configure Codex CLI using a configuration file. Create or edit `~/.
 ```json
 {
   "baseUrl": "http://localhost:20128/v1",
-  "apiKey": "your-9router-api-key",
+  "apiKey": "your-toolnetapi-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
 ```
@@ -113,7 +113,7 @@ If you get "model not available" errors:
 To use ToolNet API cloud endpoint instead of localhost:
 
 ```bash
-export OPENAI_BASE_URL="https://9router.com"
+export OPENAI_BASE_URL="https://toolnetapi.com"
 ```
 
 Make sure you have configured your API key in the ToolNet API cloud dashboard.

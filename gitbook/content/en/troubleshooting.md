@@ -143,7 +143,7 @@ Common issues and solutions when using ToolNet API.
 
 1. **Start ToolNet API:**
    ```bash
-   9router
+   toolnetapi
    ```
    Dashboard should open at http://localhost:3000
 
@@ -164,7 +164,7 @@ Common issues and solutions when using ToolNet API.
 4. **Use cloud endpoint:**
    If localhost doesn't work (e.g., Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://toolnetapi.com/v1
    ```
 
 ---
@@ -183,7 +183,7 @@ Common issues and solutions when using ToolNet API.
 1. **Check if ToolNet API is running:**
    ```bash
    # Check process
-   ps aux | grep 9router
+   ps aux | grep toolnetapi
    
    # Check port 3000
    lsof -i :3000
@@ -202,10 +202,10 @@ Common issues and solutions when using ToolNet API.
 3. **Restart ToolNet API:**
    ```bash
    # Stop
-   pkill -f 9router
+   pkill -f toolnetapi
    
    # Start
-   9router
+   toolnetapi
    ```
 
 4. **Clear browser cache:**
@@ -346,6 +346,6 @@ Common issues and solutions when using ToolNet API.
 
 ## Need More Help?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentation:** [9router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **Documentation:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
 - **FAQ:** [faq.md](faq.md)

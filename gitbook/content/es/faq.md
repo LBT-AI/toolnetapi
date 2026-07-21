@@ -164,7 +164,7 @@ Consulta la [documentación de seguimiento de cuota](features/quota-tracking.md)
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://toolnetapi.com/v1
   OpenAI API Key: [desde el dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **Alternativa:** Auto-hospéda en VPS con dominio público:
 ```bash
 # Despliega en VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 npm start
 
@@ -198,16 +198,16 @@ Consulta la [guía de integración de Cursor](integration/cursor.md) para detall
 
 ### Localhost (Por defecto)
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 → Dashboard: http://localhost:3000
 → API: http://localhost:20128/v1
 ```
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -219,23 +219,23 @@ npm start
 
 ### Docker
 ```bash
-docker build -t 9router .
+docker build -t toolnetapi .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
-  9router
+  -v toolnetapi-data:/app/data \
+  toolnetapi
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd toolnetapi/app
 npm run deploy:cloudflare
 ```
 
 **Variables de entorno:**
 - `JWT_SECRET` - **¡DEBE cambiarse en producción!**
-- `DATA_DIR` - Ruta de almacenamiento de la base de datos (por defecto: `~/.9router`)
+- `DATA_DIR` - Ruta de almacenamiento de la base de datos (por defecto: `~/.toolnetapi`)
 - `INITIAL_PASSWORD` - Login del dashboard (por defecto: `123456`)
 - `NODE_ENV` - Establece en `production` para desplegar
 
@@ -248,7 +248,7 @@ Consulta la [guía de despliegue](getting-started/installation.md#deployment) pa
 **Sí, ToolNet API prioriza la seguridad y privacidad:**
 
 **Almacenamiento local:**
-- Todos los datos se almacenan localmente en `~/.9router` (o `DATA_DIR` personalizado)
+- Todos los datos se almacenan localmente en `~/.toolnetapi` (o `DATA_DIR` personalizado)
 - No se envían datos a los servidores de ToolNet API
 - Tokens OAuth cifrados con JWT
 
@@ -287,12 +287,12 @@ Consulta la [guía de despliegue](getting-started/installation.md#deployment) pa
 
 ### Instalación global NPM
 ```bash
-npm update -g 9router
+npm update -g toolnetapi
 ```
 
 ### Instalación local
 ```bash
-cd 9router/app
+cd toolnetapi/app
 git pull origin main
 npm install
 npm run build
@@ -301,23 +301,23 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
-docker stop 9router
-docker rm 9router
+docker pull toolnetapi:latest
+docker stop toolnetapi
+docker rm toolnetapi
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
-  9router:latest
+  -v toolnetapi-data:/app/data \
+  toolnetapi:latest
 ```
 
 **Verificar versión:**
 ```bash
-9router --version
+toolnetapi --version
 ```
 
 **Cambios disruptivos:**
-- Revisa [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
-- Respalda `~/.9router` antes de actualizaciones mayores
+- Revisa [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)
+- Respalda `~/.toolnetapi` antes de actualizaciones mayores
 - Revisa las guías de migración para versiones mayores
 
 ---
@@ -329,18 +329,18 @@ docker run -d \
 ### Formas de contribuir:
 
 1. **Reportar bugs:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
    - Incluye logs de error, pasos para reproducir
 
 2. **Solicitar características:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
    - Describe el caso de uso y los beneficios
 
 3. **Enviar código:**
    ```bash
    # Fork del repo
-   git clone https://github.com/YOUR_USERNAME/9router.git
-   cd 9router
+   git clone https://github.com/YOUR_USERNAME/toolnetapi.git
+   cd toolnetapi
    
    # Crea una rama
    git checkout -b feature/your-feature
@@ -375,13 +375,13 @@ docker run -d \
 - Actualiza la documentación
 - Mantén los commits atómicos y descriptivos
 
-Consulta [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md) para detalles.
+Consulta [CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md) para detalles.
 
 ---
 
 ## ¿Necesitas más ayuda?
 
-- **Documentación:** [9router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Documentación:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
+- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

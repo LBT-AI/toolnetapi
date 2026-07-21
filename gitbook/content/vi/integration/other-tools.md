@@ -24,7 +24,7 @@ Model: any ToolNet API model (cc/*, cx/*, glm/*, etc.)
 
 **ToolNet API cloud:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://toolnetapi.com/v1
 API Key: your-api-key-from-dashboard
 Model: any ToolNet API model (cc/*, cx/*, glm/*, etc.)
 ```

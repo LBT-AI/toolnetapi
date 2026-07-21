@@ -19,7 +19,7 @@ ToolNet APIをOpenAI Codex CLIと統合し、OpenAI APIリクエストをToolNet
 export OPENAI_BASE_URL="http://localhost:20128/v1"
 
 # ToolNet APIダッシュボードからのAPIキー
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 ```
 
 ### 2. シェル設定をリロード
@@ -77,7 +77,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 ```json
 {
   "baseUrl": "http://localhost:20128/v1",
-  "apiKey": "your-9router-api-key",
+  "apiKey": "your-toolnetapi-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
 ```
@@ -113,7 +113,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 localhostの代わりにToolNet APIクラウドエンドポイントを使用するには:
 
 ```bash
-export OPENAI_BASE_URL="https://9router.com"
+export OPENAI_BASE_URL="https://toolnetapi.com"
 ```
 
 ToolNet APIクラウドダッシュボードでAPIキーが設定されていることを確認してください。

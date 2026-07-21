@@ -105,10 +105,10 @@ MiniMax経由で200万: $0.40
 
 ```bash
 # グローバルインストール
-npm install -g 9router
+npm install -g toolnetapi
 
 # 起動(ダッシュボードが自動で開きます)
-9router
+toolnetapi
 ```
 
 🎉 **ダッシュボードが開く** → プロバイダーを接続 → コーディング開始!
@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### モバイル/リモートコーディング向け
 
-- クラウドデプロイ(https://9router.com)を使用
+- クラウドデプロイ(https://toolnetapi.com)を使用
 - iPad、スマホ、どこからでもアクセス
 - localhost制限なし
 - Cloudflareエッジネットワーク(300以上のロケーション)

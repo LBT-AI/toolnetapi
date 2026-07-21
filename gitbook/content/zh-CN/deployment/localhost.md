@@ -9,7 +9,7 @@
 通过 npm 全局安装 ToolNet API:
 
 ```bash
-npm install -g 9router
+npm install -g toolnetapi
 ```
 
 **要求:**
@@ -23,7 +23,7 @@ npm install -g 9router
 一条命令启动 ToolNet API:
 
 ```bash
-9router
+toolnetapi
 ```
 
 仪表盘会自动在浏览器中打开,地址为 `http://localhost:3000`
@@ -31,7 +31,7 @@ npm install -g 9router
 **默认配置:**
 - **仪表盘**: `http://localhost:3000`
 - **API Endpoint**: `http://localhost:20128/v1`
-- **数据目录**: `~/.9router`
+- **数据目录**: `~/.toolnetapi`
 
 ---
 
@@ -42,7 +42,7 @@ npm install -g 9router
 通过环境变量设置自定义数据目录:
 
 ```bash
-DATA_DIR=/path/to/data 9router
+DATA_DIR=/path/to/data toolnetapi
 ```
 
 ### 自定义端口
@@ -56,7 +56,7 @@ API 端口(20128)和仪表盘端口(3000)在应用中配置。如需修改,你�
 在运行 ToolNet API 的终端中按 `Ctrl+C`。
 
 ```bash
-# 在运行 9router 的终端中
+# 在运行 toolnetapi 的终端中
 ^C  # 按 Ctrl+C
 ```
 
@@ -69,7 +69,7 @@ API 端口(20128)和仪表盘端口(3000)在应用中配置。如需修改,你�
 再次运行启动命令即可:
 
 ```bash
-9router
+toolnetapi
 ```
 
 所有配置、API keys 和组合都保存在数据目录中。
@@ -81,13 +81,13 @@ API 端口(20128)和仪表盘端口(3000)在应用中配置。如需修改,你�
 更新到最新版本:
 
 ```bash
-npm update -g 9router
+npm update -g toolnetapi
 ```
 
 查看当前版本:
 
 ```bash
-npm list -g 9router
+npm list -g toolnetapi
 ```
 
 ---
@@ -113,7 +113,7 @@ kill -9 <PID>
 
 ```bash
 # 使用 sudo(不推荐)
-sudo npm install -g 9router
+sudo npm install -g toolnetapi
 
 # 或修复 npm 权限(推荐)
 mkdir ~/.npm-global
@@ -128,10 +128,10 @@ source ~/.bashrc
 
 ```bash
 # 检查权限
-ls -la ~/.9router
+ls -la ~/.toolnetapi
 
 # 修复权限
-chmod 755 ~/.9router
+chmod 755 ~/.toolnetapi
 ```
 
 ---
@@ -139,7 +139,7 @@ chmod 755 ~/.9router
 ## 📁 数据目录结构
 
 ```
-~/.9router/
+~/.toolnetapi/
 ├── db.json           # 主数据库(提供商、组合、设置)
 ├── logs/             # 应用日志
 └── cache/            # 临时缓存文件
@@ -149,10 +149,10 @@ chmod 755 ~/.9router
 
 ```bash
 # 备份
-cp -r ~/.9router ~/.9router.backup
+cp -r ~/.toolnetapi ~/.toolnetapi.backup
 
 # 恢复
-cp -r ~/.9router.backup ~/.9router
+cp -r ~/.toolnetapi.backup ~/.toolnetapi
 ```
 
 ---

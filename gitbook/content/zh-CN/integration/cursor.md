@@ -11,7 +11,7 @@
 
 ## ⚠️ 重要说明
 
-> **必须使用云端 Endpoint**:Cursor 会通过自己的服务器转发请求,不支持 localhost endpoint。你必须使用 ToolNet API 云端 endpoint:`https://9router.com`
+> **必须使用云端 Endpoint**:Cursor 会通过自己的服务器转发请求,不支持 localhost endpoint。你必须使用 ToolNet API 云端 endpoint:`https://toolnetapi.com`
 
 > **必须有 Cursor Pro**:此功能需要 Cursor Pro 账户才能使用自定义 API endpoint。
 
@@ -33,12 +33,12 @@
 将 base URL 设为 ToolNet API 云端 endpoint:
 
 ```
-https://9router.com
+https://toolnetapi.com
 ```
 
 **步骤:**
 1. 在 Models 设置中找到 **Base URL** 字段
-2. 输入:`https://9router.com`
+2. 输入:`https://toolnetapi.com`
 3. 点击 **Save**
 
 ### 4. 添加 API Key
@@ -66,8 +66,8 @@ https://9router.com
 
 ```
 OpenAI API: ✓ 已启用
-Base URL: https://9router.com
-API Key: sk-9router-xxxxxxxxxxxxx
+Base URL: https://toolnetapi.com
+API Key: sk-toolnetapi-xxxxxxxxxxxxx
 Custom Models: gpt-4, claude-opus-4-5, gemini-2.0-flash
 ```
 
@@ -110,7 +110,7 @@ Custom Models: gpt-4, claude-opus-4-5, gemini-2.0-flash
 ### "Invalid API Key" 错误
 
 1. 在 ToolNet API 仪表盘中确认 API key
-2. 确保复制了包含 `sk-9router-` 前缀在内的完整 key
+2. 确保复制了包含 `sk-toolnetapi-` 前缀在内的完整 key
 3. 检查 API key 是否过期
 4. 尝试重新生成 API key
 
@@ -123,14 +123,14 @@ Custom Models: gpt-4, claude-opus-4-5, gemini-2.0-flash
 
 ### 连接问题
 
-1. 确认使用的是云端 endpoint:`https://9router.com`
+1. 确认使用的是云端 endpoint:`https://toolnetapi.com`
 2. 检查网络连接
 3. 确认 ToolNet API 云端服务运行正常
 4. 若启用了 VPN 或代理,尝试关闭
 
 ### Localhost 无法使用
 
-> **请记住**:Cursor 不支持 localhost endpoint。你必须使用云端 endpoint `https://9router.com`。如果需要使用本地 ToolNet API 实例,可以考虑使用 ngrok 之类的隧道服务把本地 endpoint 暴露到公网。
+> **请记住**:Cursor 不支持 localhost endpoint。你必须使用云端 endpoint `https://toolnetapi.com`。如果需要使用本地 ToolNet API 实例,可以考虑使用 ngrok 之类的隧道服务把本地 endpoint 暴露到公网。
 
 ## 云端 Endpoint 设置
 

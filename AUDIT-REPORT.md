@@ -17,9 +17,9 @@ Quá trình audit đã diễn ra thành công và an toàn tuyệt đối. Môi 
 - **PM2:** 7.0.3 | **Git:** 2.43.7
 - **Docker:** 26.1.3 | **Docker Compose:** v2.27.0
 
-## 3. Trạng thái `/root/9router`
+## 3. Trạng thái `/root/toolnetapi`
 - **Phương thức chạy:** Quản lý bởi PM2 (`fork_mode`).
-- **Trạng thái:** `online` (Tên: `9router`, PM ID: 3, PID: 1552782).
+- **Trạng thái:** `online` (Tên: `toolnetapi`, PM ID: 3, PID: 1552782).
 - **Cổng kết nối:** 20128 (Đang được bind bởi `next-server (v1)`).
 - ToolNet API hoạt động ổn định và hoàn toàn không bị gián đoạn trong lúc audit.
 
@@ -31,7 +31,7 @@ Quá trình audit đã diễn ra thành công và an toàn tuyệt đối. Môi 
 ## 5. Kiến trúc ToolNet API
 - **Kiến trúc cốt lõi:** Monorepo. Sử dụng **Next.js** làm cả Frontend Dashboard và Backend (MITM Proxy Server kết hợp API Router).
 - **CLI Wrapper:** Source Next.js sau khi build (standalone) sẽ được đóng gói bởi `esbuild` vào một ứng dụng CLI (`cli/cli.js`). 
-- **Dependencies xử lý thông minh:** Các native module như `sql.js`, `better-sqlite3`, và `systray2` không bị bundle cứng vào source mà được cơ chế `postinstall` tải thẳng vào `~/.9router/runtime/node_modules`. Tính năng này giúp CLI chạy mượt, không lỗi EBUSY (đặc biệt trên Windows).
+- **Dependencies xử lý thông minh:** Các native module như `sql.js`, `better-sqlite3`, và `systray2` không bị bundle cứng vào source mà được cơ chế `postinstall` tải thẳng vào `~/.toolnetapi/runtime/node_modules`. Tính năng này giúp CLI chạy mượt, không lỗi EBUSY (đặc biệt trên Windows).
 
 ## 6. Source code và dữ liệu runtime
 - **Phiên bản Node.js yêu cầu:** `>=18.0.0`
@@ -41,10 +41,10 @@ Quá trình audit đã diễn ra thành công và an toàn tuyệt đối. Môi 
 - **Entry point Backend:** Nằm trong thư mục `cli/cli.js`, sẽ gọi đến `custom-server.js` để khởi chạy file standalone Next.js.
 - **Frontend & API:** Thư mục `app/src/app` hoặc `pages` (API `/v1` cho chat/completions/models).
 - **Routing & Proxy:** Sử dụng cơ chế load balancing nội bộ, đánh dấu node `priority` và lưu cache request.
-- **Dữ liệu Runtime:** Mặc định lưu bên ngoài source, nằm ở **`~/.9router/`** (bao gồm `data.sqlite` và cấu hình server).
+- **Dữ liệu Runtime:** Mặc định lưu bên ngoài source, nằm ở **`~/.toolnetapi/`** (bao gồm `data.sqlite` và cấu hình server).
 
 ## 7. Cơ chế secret/credential
-- Toàn bộ Provider Connections (API Keys của OpenAI, Anthropic,...), API Keys do máy chủ cấp ra cho người dùng con, OAuth Tokens, dữ liệu log (usage/cost analytics) đều được lưu trữ hoàn toàn trong **`~/.9router/data.sqlite`**.
+- Toàn bộ Provider Connections (API Keys của OpenAI, Anthropic,...), API Keys do máy chủ cấp ra cho người dùng con, OAuth Tokens, dữ liệu log (usage/cost analytics) đều được lưu trữ hoàn toàn trong **`~/.toolnetapi/data.sqlite`**.
 - Không có cấu hình cứng (hardcode) mang tính nhạy cảm trong source code. Quản lý an toàn.
 
 ## 8. Rủi ro bảo mật
@@ -53,7 +53,7 @@ Quá trình audit đã diễn ra thành công và an toàn tuyệt đối. Môi 
 
 ## 9. Danh sách file dự kiến cần sửa (Rebranding)
 - `package.json` và `cli/package.json`: Đổi `name` thành `toolnetapi`, đổi CLI command, mô tả.
-- `cli/cli.js`: Đổi thư mục runtime từ `.9router` thành `.toolnetapi`, đổi cổng mặc định (ví dụ sang 20130 để tránh trùng 20128).
+- `cli/cli.js`: Đổi thư mục runtime từ `.toolnetapi` thành `.toolnetapi`, đổi cổng mặc định (ví dụ sang 20130 để tránh trùng 20128).
 - Cập nhật logo/favicon trong `public/`.
 - `README.md`: Viết lại tài liệu cho dự án ToolNet API.
 - Đổi tên các metadata, Title, UI brand color trong config của Next.js và Tailwind.
@@ -72,7 +72,7 @@ File `.gitignore` phải loại trừ ít nhất các thành phần sau:
 .env.test.local
 .env.production.local
 .toolnetapi/
-.9router/
+.toolnetapi/
 data.sqlite
 *.sqlite3
 *.log
@@ -108,7 +108,7 @@ Repository CHỈ chứa source tĩnh, logic, scripts, và `.env.example`. Không
 
 ## 15. Kế hoạch rollback (Hoàn tác)
 Do ToolNet API sẽ lưu dữ liệu vào thư mục riêng (`~/.toolnetapi`) và chạy trên cổng riêng (VD: 20130), nó **độc lập hoàn toàn** với ToolNet API gốc.
-Nếu có sự cố, chỉ cần: `pm2 delete toolnetapi`, xóa thư mục `~/.toolnetapi` và checkout code Git lại commit cũ là hệ thống sạch như mới, không ảnh hưởng `9router`.
+Nếu có sự cố, chỉ cần: `pm2 delete toolnetapi`, xóa thư mục `~/.toolnetapi` và checkout code Git lại commit cũ là hệ thống sạch như mới, không ảnh hưởng `toolnetapi`.
 
 ---
 

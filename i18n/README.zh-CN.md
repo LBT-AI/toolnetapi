@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="../images/9router.png?1" alt="ToolNet API Dashboard" width="800"/>
+  <img src="../images/toolnetapi.png?1" alt="ToolNet API Dashboard" width="800"/>
   
   # ToolNet API - 免费 AI 路由器
   
@@ -11,11 +11,11 @@
     <img src="../public/providers/openclaw.png" alt="OpenClaw" width="80"/>
   </p>
   
-  [![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-  [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+  [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
   
-  [🚀 快速开始](#-quick-start) • [💡 特性](#-key-features) • [📖 设置](#-setup) • [🌐 网站](https://9router.com)
+  [🚀 快速开始](#-quick-start) • [💡 特性](#-key-features) • [📖 设置](#-setup) • [🌐 网站](https://toolnetapi.com)
 </div>
 
 ---
@@ -70,8 +70,8 @@ Result: Never stop coding, minimal cost
 **1. 全局安装：**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 ```
 
 🎉 仪表板将在 `http://localhost:20128` 打开
@@ -93,7 +93,7 @@ Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Cline 设置:
 
 **替代方案：从源码运行（此仓库）：**
 
-此仓库包是私有的（`9router-app`），因此源码/Docker 执行是预期的本地开发路径。
+此仓库包是私有的（`toolnetapi-app`），因此源码/Docker 执行是预期的本地开发路径。
 
 ```bash
 cp .env.example .env
@@ -862,7 +862,7 @@ Cost: $0 forever!
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [from 9router dashboard]
+  OpenAI API Key: [from toolnetapi dashboard]
   Model: cc/claude-opus-4-6
 ```
 
@@ -875,7 +875,7 @@ Settings → Models → Advanced:
 ```json
 {
   "anthropic_api_base": "http://localhost:20128/v1",
-  "anthropic_api_key": "your-9router-api-key"
+  "anthropic_api_key": "your-toolnetapi-api-key"
 }
 ```
 
@@ -883,7 +883,7 @@ Settings → Models → Advanced:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:20128"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 
 codex "your prompt"
 ```
@@ -903,15 +903,15 @@ Dashboard → CLI Tools →Claw → Select Model → Apply
   "agents": {
     "defaults": {
       "model": {
-        "primary": "9router/if/glm-4.7"
+        "primary": "toolnetapi/if/glm-4.7"
       }
     }
   },
   "models": {
     "providers": {
-      "9router": {
+      "toolnetapi": {
         "baseUrl": "http://127.0.0.1:20128/v1",
-        "apiKey": "sk_9router",
+        "apiKey": "sk_toolnetapi",
         "api": "openai-completions",
         "models": [
           {
@@ -945,20 +945,20 @@ Model: cc/claudeus-4-6
 
 ```bash
 # Clone and install
-git clone https://github.com/decolua/9router.git
-cd 9router
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi
 npm install
 npm run build
 
 # Configure
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export PORT="20128"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
 export NEXT_PUBLIC_BASE_URLhttp://localhost:20128"
-export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
+export NEXT_PUBLIC_CLOUD_URL="https://toolnetapi.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
 
@@ -967,7 +967,7 @@ npm run start
 
 # Or use PM2
 npm install -g pm2
-pm2 start npm --name 9router -- start
+pm2 start npm --name toolnetapi -- start
 pm2 save
 pm2 startup
 ```
@@ -976,26 +976,26 @@ pm2 startup
 
 ```bash
 # Build image (from repository root)
-docker build -t 9router .
+docker build -t toolnetapi .
 
 # Run container (command used in current setup)
 docker run -d \
-  --name 9router  -p 20128:20128 \
-  --env-file /root/dev/9router/.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
-  9router
+  --name toolnetapi  -p 20128:20128 \
+  --env-file /root/dev/toolnetapi/.env \
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
+  toolnetapi
 ```
 
 便携式命令（如果您已在仓库根目录）：
 
 ```bash
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
   --env-file ./.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
   9
 ```
 
@@ -1006,25 +1006,25 @@ docker run -d \
 有用命令：
 
 ```bash
-docker logs -f 9router
-docker restart 9router
-docker stop 9router && docker rm 9router
+docker logs -f toolnetapi
+docker restart toolnetapi
+docker stop toolnetapi && docker rm toolnetapi
 ```
 
 ### 环境变量
 
 | 变量 | 默认值 | 描述 |
 |----------|---------|-------------|
-| `JWT_SECRET` | 自动生成（`~/.9router/jwt-secret`） | 仪表板认证 cookie 的 JWT 签名密钥（设置可在多实例间共享） |
+| `JWT_SECRET` | 自动生成（`~/.toolnetapi/jwt-secret`） | 仪表板认证 cookie 的 JWT 签名密钥（设置可在多实例间共享） |
 | `INITIAL_PASSWORD | `123456` | 当没有保存的哈希时的首次登录密码 |
-| `DATA_DIR` | `~/.9router` | 主应用数据库位置（`db.json`） |
+| `DATA_DIR` | `~/.toolnetapi` | 主应用数据库位置（`db.json`） |
 | `PORT` | 框架默认值 | 服务端口（示例中为 `20128`） |
 | `HOSTNAME` | 框架默认值 | 绑定主机（Docker 默认为 `0.0.0.0`） |
 | `NODE_ENV` | 运行时默认值 | 部署时设置 `production` |
 | `BASE_URL` |http://localhost:20128` | 云同步作业使用的服务器端内部基础 URL |
-| `CLOUD_URL` | `https://9router.com` | 服务器端云同步端点基础 URL |
+| `CLOUD_URL` | `https://toolnetapi.com` | 服务器端云同步端点基础 URL |
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | 向后兼容/公共基础 URL（服务器运行时优先使用 `BASE_URL`） |
-| `NEXT_PUBLIC_CLOUD_URL` | `https://9router.com` | 向后兼容/公共云 URL（服务器运行时优先使用 `CLOUD_URL`） |
+| `NEXT_PUBLIC_CLOUD_URL` | `https://toolnetapi.com` | 向后兼容/公共云 URL（服务器运行时优先使用 `CLOUD_URL`） |
 | `API_KEY_SECRET` | `endpoint-proxy-api-secret` | 生成的 API Key 的 HMAC 密钥 |
 | `MACHINE_ID_SALT` | `endpoint-proxy-salt` | 稳定机器 ID 哈希的盐值 |
 | `ENABLE_REQUEST_LOGS` | `false` | 在 `logs/` 下启用请求/响应日志 |
@@ -1041,7 +1041,7 @@ docker stop 9router && docker rm 9router
 ### 运行时文件和存储
 
 - 主应用状态：`${DATA_DIR}/db.json`（提供商、组合、别名、密钥、设置），由 `src/lib/localDb.js` 管理。
-- 使用历史和日志：`~/.9router/usage.json` 和 `~/.9router/log.txt`，由 `src/lib/usageDb.js` 管理。
+- 使用历史和日志：`~/.toolnetapi/usage.json` 和 `~/.toolnetapi/log.txt`，由 `src/lib/usageDb.js` 管理。
 - 可选请求/转换器日志：当 `ENABLE_REQUEST_LOGS=true` 时为 `<repo>/logs/...`。
 - 使用存储当前遵循 `~/.9` 路径逻辑，独立于 `DATA_DIR`。
 
@@ -1117,11 +1117,11 @@ docker stop 9router && docker rm 9router
 
 **云端同步错误**
 - 验证 `BASE_URL` 指向您正在运行的实例（例如：`http://localhost:20128`）
-- 验证 `CLOUD_URL` 指向您预期的云端端点（例如：`https://9router.com`）
+- 验证 `CLOUD_URL` 指向您预期的云端端点（例如：`https://toolnetapi.com`）
 - 尽可能保持 `NEXT_PUBLIC_*` 值与服务器端值一致。
 
 **云端端点 `stream=false` 返回 500（`Unexpected token 'd'...`）**
-- 症状通常出现在公共云端端点（`https://9router.com/v1`）的非流式调用上。
+- 症状通常出现在公共云端端点（`https://toolnetapi.com/v1`）的非流式调用上。
 - 根本原因：上游返回 SSE 负载（`data: ...`）而客户端期望 JSON。
 - 变通方法：对云端直接调用使用 `stream=true`。
 - 当上游返回 `text/event-stream` 时，本地 ToolNet API 运行时包含 SSE→JSON 回退用于非流式调用。
@@ -1195,7 +1195,7 @@ Authorization: Bearer your-api-key
 - `tester/security/test-docker-hardening.sh`
   - 构建 Docker 镜像并验证加固检查（`/api/cloud/auth` 认证保护、`REQUIRE_API_KEY`、安全认证 cookie 行为）。
 - `tester/security/test-cloud-openai-compatible.sh`
-  - 使用提供的模型/密钥向云端端点（`https://9router.com/v1/chat/completions`）发送直接的 OpenAI 兼容请求。
+  - 使用提供的模型/密钥向云端端点（`https://toolnetapi.com/v1/chat/completions`）发送直接的 OpenAI 兼容请求。
 - `tester/security/test-cloud-sync-and-call.sh`
   - 端到端流程：创建本地密钥 -> 启用/同步云端 -> 带重试调用云端端点。
   - 包含使用 `stream` 的回退检查，以区分认证错误和非流式解析问题。
@@ -1215,7 +1215,7 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 
 - 本地运行时（`http://127.0.0.1:20128/v1/chat/completions`）：使用 `stream=false` 和 `stream=true` 都可以工作。
 - Docker 运行时（容器暴露的相同 API 路径）：加固检查通过，云端认证保护工作，启用时严格 API 密钥模式工作。
-- 公共云端端点（`https://9router.com/v1/chat/completions`）：
+- 公共云端端点（`https://toolnetapi.com/v1/chat/completions`）：
   - `stream=true`：预期成功（返回 SSE 块）。
   - `stream=false`：当上游向非流式客户端路径返回 SSE 内容时，可能失败并显示 `500` + 解析错误（`Unexpected token 'd'`）。
 
@@ -1253,9 +1253,9 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 
 ## 📧 支持
 
-- **网站**：[9router.com](https://9router.com)
-- **GitHub**：[github.com/decolua/9router](https://github.com/decolua/9router)
-- **问题**：[github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **网站**：[toolnetapi.com](https://toolnetapi.com)
+- **GitHub**：[github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **问题**：[github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 
 ---
 
@@ -1263,13 +1263,13 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 
 感谢所有帮助让 ToolNet API 变得更好的贡献者！
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=100&columns=20&anon=1)](https://github.com/decolua/9router/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=100&columns=20&anon=1)](https://github.com/decolua/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star 图表
 
-[![Star Chart](https://starchart.cc/decolua/9router.svg?variant=adaptive)](https://starchart.cc/decolua/9router)
+[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
 
 ### 如何贡献
 
@@ -1279,7 +1279,7 @@ OPENAI_API_KEY="your-cloud-key" bash tester/security/test-cloud-openai-compatibl
 4 推送到分支（`git push origin feature/amazing-feature`）
 5. 打开 Pull Request
 
-详细指南请参阅 [Pull Requests](https://github.com/decolua/9router/pulls)。
+详细指南请参阅 [Pull Requests](https://github.com/decolua/toolnetapi/pulls)。
 
 ---
 

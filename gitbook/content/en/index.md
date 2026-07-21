@@ -105,10 +105,10 @@ Get started in 2 minutes:
 
 ```bash
 # Install globally
-npm install -g 9router
+npm install -g toolnetapi
 
 # Start (dashboard opens automatically)
-9router
+toolnetapi
 ```
 
 🎉 **Dashboard opens** → Connect providers → Start coding!
@@ -143,7 +143,7 @@ Model: cc/claude-opus-4-5-20251101
 
 ### For Mobile/Remote Coding
 
-- Use cloud deployment (https://9router.com)
+- Use cloud deployment (https://toolnetapi.com)
 - Access from iPad, phone, anywhere
 - No localhost limitations
 - Cloudflare edge network (300+ locations)

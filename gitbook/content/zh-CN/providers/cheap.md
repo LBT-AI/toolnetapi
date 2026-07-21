@@ -48,7 +48,7 @@
 **步骤 3:添加到 ToolNet API**
 
 ```bash
-9router
+toolnetapi
 # 仪表盘 → 提供商 → 添加 API Key
 
 Provider: glm
@@ -120,7 +120,7 @@ Model: glm/glm-4.7
 **步骤 3:添加到 ToolNet API**
 
 ```bash
-9router
+toolnetapi
 # 仪表盘 → 提供商 → 添加 API Key
 
 Provider: minimax
@@ -193,7 +193,7 @@ Model: minimax/MiniMax-M2.1
 **步骤 3:添加到 ToolNet API**
 
 ```bash
-9router
+toolnetapi
 # 仪表盘 → 提供商 → 添加 API Key
 
 Provider: kimi
@@ -255,7 +255,7 @@ Model: kimi/kimi-latest
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [从 9router 仪表盘获取]
+  OpenAI API Key: [从 toolnetapi 仪表盘获取]
   Model: glm/glm-4.7
 ```
 

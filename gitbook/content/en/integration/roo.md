@@ -5,7 +5,7 @@ Integrate ToolNet API with Roo AI Assistant to access multiple AI models through
 ## Prerequisites
 
 - Roo AI Assistant installed
-- ToolNet API API key from [dashboard](https://9router.com/dashboard)
+- ToolNet API API key from [dashboard](https://toolnetapi.com/dashboard)
 - ToolNet API running (local or cloud)
 
 ## Configuration Steps
@@ -28,7 +28,7 @@ API Key: your-api-key-from-dashboard
 
 **For Cloud ToolNet API:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://toolnetapi.com/v1
 API Key: your-api-key-from-dashboard
 ```
 

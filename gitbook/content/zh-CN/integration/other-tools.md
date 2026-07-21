@@ -24,7 +24,7 @@ Model: 任意 ToolNet API 模型(cc/*, cx/*, glm/*, 等)
 
 **云端 ToolNet API:**
 ```
-Base URL: https://9router.com/v1
+Base URL: https://toolnetapi.com/v1
 API Key: your-api-key-from-dashboard
 Model: 任意 ToolNet API 模型(cc/*, cx/*, glm/*, 等)
 ```

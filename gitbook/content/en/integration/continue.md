@@ -6,7 +6,7 @@ Integrate ToolNet API with Continue extension to bring AI assistance directly in
 
 - Visual Studio Code installed
 - Continue extension installed from VSCode marketplace
-- ToolNet API API key from [dashboard](https://9router.com/dashboard)
+- ToolNet API API key from [dashboard](https://toolnetapi.com/dashboard)
 - ToolNet API running (local or cloud)
 
 ## Configuration Steps
@@ -76,7 +76,7 @@ Add the following configuration to your `config.json`:
 **For Cloud ToolNet API:**
 Replace `apiBase` with:
 ```json
-"apiBase": "https://9router.com/v1"
+"apiBase": "https://toolnetapi.com/v1"
 ```
 
 ### 3. Save and Reload

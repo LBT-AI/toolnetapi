@@ -143,7 +143,7 @@ ToolNet API利用時の一般的な問題と解決策。
 
 1. **ToolNet APIを起動:**
    ```bash
-   9router
+   toolnetapi
    ```
    ダッシュボードがhttp://localhost:3000で開くはず
 
@@ -164,7 +164,7 @@ ToolNet API利用時の一般的な問題と解決策。
 4. **クラウドエンドポイントを使用:**
    localhostが動作しない場合(例: Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://toolnetapi.com/v1
    ```
 
 ---
@@ -183,7 +183,7 @@ ToolNet API利用時の一般的な問題と解決策。
 1. **ToolNet APIが実行中か確認:**
    ```bash
    # プロセスを確認
-   ps aux | grep 9router
+   ps aux | grep toolnetapi
    
    # ポート3000を確認
    lsof -i :3000
@@ -202,10 +202,10 @@ ToolNet API利用時の一般的な問題と解決策。
 3. **ToolNet APIを再起動:**
    ```bash
    # 停止
-   pkill -f 9router
+   pkill -f toolnetapi
    
    # 起動
-   9router
+   toolnetapi
    ```
 
 4. **ブラウザキャッシュをクリア:**
@@ -346,6 +346,6 @@ ToolNet API利用時の一般的な問題と解決策。
 
 ## さらにヘルプが必要?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **ドキュメント:** [9router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **ドキュメント:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
 - **FAQ:** [faq.md](faq.md)

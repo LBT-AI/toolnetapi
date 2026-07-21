@@ -164,7 +164,7 @@
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://toolnetapi.com/v1
   OpenAI API Key: [从仪表盘获取]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **替代方案:** 在 VPS 上自托管,使用公开域名:
 ```bash
 # 部署到 VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 npm start
 
@@ -198,16 +198,16 @@ npm start
 
 ### Localhost(默认)
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 → 仪表盘: http://localhost:3000
 → API: http://localhost:20128/v1
 ```
 
 ### VPS/云
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -219,23 +219,23 @@ npm start
 
 ### Docker
 ```bash
-docker build -t 9router .
+docker build -t toolnetapi .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
-  9router
+  -v toolnetapi-data:/app/data \
+  toolnetapi
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd toolnetapi/app
 npm run deploy:cloudflare
 ```
 
 **环境变量:**
 - `JWT_SECRET` - **生产环境必须修改!**
-- `DATA_DIR` - 数据库存储路径(默认:`~/.9router`)
+- `DATA_DIR` - 数据库存储路径(默认:`~/.toolnetapi`)
 - `INITIAL_PASSWORD` - 仪表盘登录(默认:`123456`)
 - `NODE_ENV` - 部署时设为 `production`
 
@@ -248,7 +248,7 @@ npm run deploy:cloudflare
 **是的,ToolNet API 优先考虑安全和隐私:**
 
 **本地存储:**
-- 所有数据存储在本地 `~/.9router`(或自定义 `DATA_DIR`)
+- 所有数据存储在本地 `~/.toolnetapi`(或自定义 `DATA_DIR`)
 - 不会发送数据到 ToolNet API 服务器
 - OAuth tokens 使用 JWT 加密
 
@@ -287,12 +287,12 @@ npm run deploy:cloudflare
 
 ### 全局 NPM 安装
 ```bash
-npm update -g 9router
+npm update -g toolnetapi
 ```
 
 ### 本地安装
 ```bash
-cd 9router/app
+cd toolnetapi/app
 git pull origin main
 npm install
 npm run build
@@ -301,23 +301,23 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
-docker stop 9router
-docker rm 9router
+docker pull toolnetapi:latest
+docker stop toolnetapi
+docker rm toolnetapi
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
-  9router:latest
+  -v toolnetapi-data:/app/data \
+  toolnetapi:latest
 ```
 
 **查看版本:**
 ```bash
-9router --version
+toolnetapi --version
 ```
 
 **破坏性变更:**
-- 查看 [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
-- 大版本更新前备份 `~/.9router`
+- 查看 [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)
+- 大版本更新前备份 `~/.toolnetapi`
 - 阅读大版本的迁移指南
 
 ---
@@ -329,18 +329,18 @@ docker run -d \
 ### 贡献方式:
 
 1. **报告 bug:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
    - 附上错误日志、复现步骤
 
 2. **功能请求:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
    - 描述使用场景和价值
 
 3. **提交代码:**
    ```bash
    # Fork 仓库
-   git clone https://github.com/YOUR_USERNAME/9router.git
-   cd 9router
+   git clone https://github.com/YOUR_USERNAME/toolnetapi.git
+   cd toolnetapi
    
    # 创建分支
    git checkout -b feature/your-feature
@@ -375,13 +375,13 @@ docker run -d \
 - 更新文档
 - 提交保持原子化、描述清晰
 
-详情见 [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md)。
+详情见 [CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md)。
 
 ---
 
 ## 需要更多帮助?
 
-- **文档:** [9router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **文档:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
+- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 - **故障排除:** [troubleshooting.md](troubleshooting.md)

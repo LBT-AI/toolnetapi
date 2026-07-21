@@ -34,7 +34,7 @@ http://localhost:20128/v1
 
 **クラウドToolNet API用:**
 ```
-https://9router.com
+https://toolnetapi.com
 ```
 
 **手順:**
@@ -45,7 +45,7 @@ https://9router.com
 
 1. **API Key** フィールドにToolNet API APIキーを入力
 2. APIキーはToolNet APIダッシュボードの **Settings → API Keys** で確認できます
-3. キーは `sk-9router-` で始まります
+3. キーは `sk-toolnetapi-` で始まります
 
 ### 5. モデルを選択
 
@@ -71,7 +71,7 @@ Cline設定は次のようになります:
 ```
 API Provider: Ollama
 Base URL: http://localhost:20128/v1
-API Key: sk-9router-xxxxxxxxxxxxx
+API Key: sk-toolnetapi-xxxxxxxxxxxxx
 Model: gpt-4
 ```
 
@@ -126,7 +126,7 @@ ToolNet APIダッシュボードで設定されたモデルを使用できます
 ### 「Invalid API Key」エラー
 
 1. ToolNet APIダッシュボードでAPIキーを確認
-2. `sk-9router-` プレフィックスを含むキー全体をコピーしたか確認
+2. `sk-toolnetapi-` プレフィックスを含むキー全体をコピーしたか確認
 3. APIキーが期限切れでないか確認
 4. 新しいAPIキーを再生成してみる
 
@@ -150,7 +150,7 @@ ToolNet APIダッシュボードで設定されたモデルを使用できます
 
 localhostの代わりにToolNet APIクラウドエンドポイントを使用:
 
-1. Cline設定で、Base URLを設定: `https://9router.com`
+1. Cline設定で、Base URLを設定: `https://toolnetapi.com`
 2. ToolNet APIクラウドダッシュボードでAPIキーが設定されていることを確認
 3. クラウドエンドポイントがアクティブでアクセス可能か確認
 

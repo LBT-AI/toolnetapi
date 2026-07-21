@@ -143,7 +143,7 @@ Các vấn đề và giải pháp phổ biến khi dùng ToolNet API.
 
 1. **Khởi động ToolNet API:**
    ```bash
-   9router
+   toolnetapi
    ```
    Dashboard sẽ mở tại http://localhost:3000
 
@@ -164,7 +164,7 @@ Các vấn đề và giải pháp phổ biến khi dùng ToolNet API.
 4. **Dùng cloud endpoint:**
    Nếu localhost không hoạt động (ví dụ: Cursor IDE):
    ```
-   Endpoint: https://9router.com/v1
+   Endpoint: https://toolnetapi.com/v1
    ```
 
 ---
@@ -183,7 +183,7 @@ Các vấn đề và giải pháp phổ biến khi dùng ToolNet API.
 1. **Kiểm tra ToolNet API có chạy không:**
    ```bash
    # Check process
-   ps aux | grep 9router
+   ps aux | grep toolnetapi
    
    # Check port 3000
    lsof -i :3000
@@ -202,10 +202,10 @@ Các vấn đề và giải pháp phổ biến khi dùng ToolNet API.
 3. **Khởi động lại ToolNet API:**
    ```bash
    # Stop
-   pkill -f 9router
+   pkill -f toolnetapi
    
    # Start
-   9router
+   toolnetapi
    ```
 
 4. **Xóa cache browser:**
@@ -346,6 +346,6 @@ Các vấn đề và giải pháp phổ biến khi dùng ToolNet API.
 
 ## Cần trợ giúp thêm?
 
-- **GitHub Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
-- **Documentation:** [9router.com/docs](https://9router.com/docs)
+- **GitHub Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
+- **Documentation:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
 - **FAQ:** [faq.md](faq.md)

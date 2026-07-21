@@ -34,7 +34,7 @@ http://localhost:20128/v1
 
 **云端 ToolNet API:**
 ```
-https://9router.com
+https://toolnetapi.com
 ```
 
 **步骤:**
@@ -45,7 +45,7 @@ https://9router.com
 
 1. 在 **API Key** 字段中输入你的 ToolNet API API key
 2. 可在 ToolNet API 仪表盘 **Settings → API Keys** 中找到 API key
-3. key 应以 `sk-9router-` 开头
+3. key 应以 `sk-toolnetapi-` 开头
 
 ### 5. 选择模型
 
@@ -71,7 +71,7 @@ https://9router.com
 ```
 API Provider: Ollama
 Base URL: http://localhost:20128/v1
-API Key: sk-9router-xxxxxxxxxxxxx
+API Key: sk-toolnetapi-xxxxxxxxxxxxx
 Model: gpt-4
 ```
 
@@ -126,7 +126,7 @@ Model: gpt-4
 ### "Invalid API Key" 错误
 
 1. 在 ToolNet API 仪表盘中确认 API key
-2. 确保复制了包含 `sk-9router-` 前缀在内的完整 key
+2. 确保复制了包含 `sk-toolnetapi-` 前缀在内的完整 key
 3. 检查 API key 是否过期
 4. 尝试重新生成 API key
 
@@ -150,7 +150,7 @@ Model: gpt-4
 
 使用 ToolNet API 云端 endpoint 而非 localhost:
 
-1. 在 Cline 设置中将 Base URL 设为:`https://9router.com`
+1. 在 Cline 设置中将 Base URL 设为:`https://toolnetapi.com`
 2. 确保已在 ToolNet API 云端仪表盘中配置 API key
 3. 确保云端 endpoint 已激活且可访问
 

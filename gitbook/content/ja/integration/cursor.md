@@ -11,7 +11,7 @@ ToolNet APIをCursor IDEと統合し、AIリクエストをToolNet APIのイン�
 
 ## ⚠️ 重要な注意点
 
-> **クラウドエンドポイントが必要**: Cursorは独自のサーバー経由でリクエストをルーティングし、localhostエンドポイントをサポートしません。ToolNet APIクラウドエンドポイント `https://9router.com` を使用する必要があります。
+> **クラウドエンドポイントが必要**: Cursorは独自のサーバー経由でリクエストをルーティングし、localhostエンドポイントをサポートしません。ToolNet APIクラウドエンドポイント `https://toolnetapi.com` を使用する必要があります。
 
 > **Cursor Proが必要**: この機能はカスタムAPIエンドポイントを使用するためにCursor Proアカウントが必要です。
 
@@ -33,12 +33,12 @@ ToolNet APIをCursor IDEと統合し、AIリクエストをToolNet APIのイン�
 Base URLをToolNet APIクラウドエンドポイントに設定:
 
 ```
-https://9router.com
+https://toolnetapi.com
 ```
 
 **手順:**
 1. Models設定で **Base URL** フィールドを見つける
-2. 入力: `https://9router.com`
+2. 入力: `https://toolnetapi.com`
 3. **Save** をクリック
 
 ### 4. APIキーを追加
@@ -66,8 +66,8 @@ Cursor設定は次のようになります:
 
 ```
 OpenAI API: ✓ Enabled
-Base URL: https://9router.com
-API Key: sk-9router-xxxxxxxxxxxxx
+Base URL: https://toolnetapi.com
+API Key: sk-toolnetapi-xxxxxxxxxxxxx
 Custom Models: gpt-4, claude-opus-4-5, gemini-2.0-flash
 ```
 
@@ -110,7 +110,7 @@ ToolNet APIダッシュボードで設定されたモデルを使用できます
 ### 「Invalid API Key」エラー
 
 1. ToolNet APIダッシュボードでAPIキーを確認
-2. `sk-9router-` プレフィックスを含むキー全体をコピーしたか確認
+2. `sk-toolnetapi-` プレフィックスを含むキー全体をコピーしたか確認
 3. APIキーが期限切れでないか確認
 4. 新しいAPIキーを再生成してみる
 
@@ -123,14 +123,14 @@ ToolNet APIダッシュボードで設定されたモデルを使用できます
 
 ### 接続の問題
 
-1. クラウドエンドポイントを使用しているか確認: `https://9router.com`
+1. クラウドエンドポイントを使用しているか確認: `https://toolnetapi.com`
 2. インターネット接続を確認
 3. ToolNet APIクラウドサービスが運用中か確認
 4. VPNまたはプロキシが有効な場合は無効化してみる
 
 ### Localhostが動作しない
 
-> **覚えておいてください**: Cursorはlocalhostエンドポイントをサポートしません。クラウドエンドポイント `https://9router.com` を使用する必要があります。ローカルToolNet APIインスタンスを使用したい場合は、ngrokなどのトンネリングサービスを検討してローカルエンドポイントを公開してください。
+> **覚えておいてください**: Cursorはlocalhostエンドポイントをサポートしません。クラウドエンドポイント `https://toolnetapi.com` を使用する必要があります。ローカルToolNet APIインスタンスを使用したい場合は、ngrokなどのトンネリングサービスを検討してローカルエンドポイントを公開してください。
 
 ## クラウドエンドポイントのセットアップ
 

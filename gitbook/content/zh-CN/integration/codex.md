@@ -19,7 +19,7 @@
 export OPENAI_BASE_URL="http://localhost:20128/v1"
 
 # 来自 ToolNet API 仪表盘的 API Key
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 ```
 
 ### 2. 重新加载 Shell 配置
@@ -77,7 +77,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 ```json
 {
   "baseUrl": "http://localhost:20128/v1",
-  "apiKey": "your-9router-api-key",
+  "apiKey": "your-toolnetapi-api-key",
   "defaultModel": "cx/gpt-5.2-codex"
 }
 ```
@@ -113,7 +113,7 @@ codex --model cx/gpt-5.1-codex-max "Explain what this code does: $(cat myfile.js
 使用 ToolNet API 云端 endpoint 而非 localhost:
 
 ```bash
-export OPENAI_BASE_URL="https://9router.com"
+export OPENAI_BASE_URL="https://toolnetapi.com"
 ```
 
 确保已在 ToolNet API 云端仪表盘中配置 API key。

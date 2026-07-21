@@ -6,8 +6,8 @@
 
 [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
 [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-[![Docker Pulls](https://img.shields.io/docker/pulls/decolua/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/toolnetapi)
-[![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
+[![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/toolnet/toolnetapi)
+[![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://hub.docker.com/r/toolnet/toolnetapi)
 [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
 
 <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -52,10 +52,10 @@ npx toolnetapi
 ```bash
 docker run -d --name toolnetapi -p 20128:20128 \
   -v "$HOME/.toolnetapi:/app/data" -e DATA_DIR=/app/data \
-  decolua/toolnetapi:latest
+  toolnet/toolnetapi:latest
 ```
 
-Published images: [Docker Hub](https://hub.docker.com/r/decolua/toolnetapi) • [GHCR](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi) (multi-platform amd64/arm64).
+Published images: [Docker Hub](https://hub.docker.com/r/toolnet/toolnetapi).
 
 🎉 Dashboard opens at `http://localhost:20128`
 

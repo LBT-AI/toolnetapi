@@ -122,7 +122,8 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
             {connection.lastError && connection.isActive !== false && (
               <span className="text-xs text-red-500 truncate max-w-[300px]" title={connection.lastError}>{connection.lastError}</span>
             )}
-            <span className="text-xs text-text-muted">#{connection.priority}</span>
+            <span className="text-xs text-text-muted">Pri:{connection.priority}</span>
+            <span className="text-xs text-text-muted">Wt:{connection.weight || 1}</span>
           </div>
           {hasAnyProxy && (
             <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -196,7 +197,7 @@ ConnectionRow.propTypes = {
 // ── AddApiKeyModal ─────────────────────────────────────────────
 function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, onClose }) {
   const NONE = "__none__";
-  const [formData, setFormData] = useState({ name: "", apiKey: "", priority: 1, proxyPoolId: NONE });
+  const [formData, setFormData] = useState({ name: "", apiKey: "", priority: 1, weight: 1, proxyPoolId: NONE });
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -236,6 +237,7 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
         name: formData.name,
         apiKey: formData.apiKey,
         priority: formData.priority,
+        weight: formData.weight,
         proxyPoolId: formData.proxyPoolId === NONE ? null : formData.proxyPoolId,
         testStatus: isValid ? "active" : "unknown",
       });
@@ -267,9 +269,15 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
             {validationResult === "success" ? "Valid" : "Invalid"}
           </Badge>
         )}
-        <div>
-          <label className="text-xs text-text-muted mb-1 block">Priority</label>
-          <input type="number" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })} />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="text-xs text-text-muted mb-1 block">Priority</label>
+            <input type="number" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })} />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs text-text-muted mb-1 block">Weight</label>
+            <input type="number" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.weight} onChange={(e) => setFormData({ ...formData, weight: Number.parseInt(e.target.value) || 1 })} />
+          </div>
         </div>
         <Select label="Proxy Pool" value={formData.proxyPoolId} onChange={(e) => setFormData({ ...formData, proxyPoolId: e.target.value })}
           options={[{ value: NONE, label: "None" }, ...(proxyPools || []).map((p) => ({ value: p.id, label: p.name }))]} />
@@ -404,22 +412,26 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-lg font-semibold">Connections</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-text-muted font-medium">Round Robin</span>
-            <Toggle
-              checked={providerStrategy === "round-robin"}
-              onChange={(enabled) => {
-                const strategy = enabled ? "round-robin" : null;
+            <Select
+              value={providerStrategy || "fill-first"}
+              onChange={(e) => {
+                const strategy = e.target.value === "fill-first" ? null : e.target.value;
                 setProviderStrategy(strategy);
-                if (enabled && !providerStickyLimit) setProviderStickyLimit("1");
-                saveStrategy(strategy, enabled ? (providerStickyLimit || "1") : providerStickyLimit);
+                if ((strategy === "round-robin" || strategy === "weighted") && !providerStickyLimit) setProviderStickyLimit("1");
+                saveStrategy(strategy, (strategy === "round-robin" || strategy === "weighted") ? (providerStickyLimit || "1") : providerStickyLimit);
               }}
+              options={[
+                { value: "fill-first", label: "Fill-First" },
+                { value: "round-robin", label: "Round Robin" },
+                { value: "weighted", label: "Weighted" },
+              ]}
             />
-            {providerStrategy === "round-robin" && (
+            {(providerStrategy === "round-robin" || providerStrategy === "weighted") && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs text-text-muted">Sticky:</span>
                 <input
                   type="number" min={1} value={providerStickyLimit}
-                  onChange={(e) => { setProviderStickyLimit(e.target.value); saveStrategy("round-robin", e.target.value); }}
+                  onChange={(e) => { setProviderStickyLimit(e.target.value); saveStrategy(providerStrategy || "round-robin", e.target.value); }}
                   className="w-16 px-2 py-1 text-xs border border-border rounded-md bg-background focus:outline-none focus:border-primary"
                 />
               </div>

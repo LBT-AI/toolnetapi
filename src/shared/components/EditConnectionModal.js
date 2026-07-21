@@ -13,6 +13,7 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
   const [formData, setFormData] = useState({
     name: "",
     priority: 1,
+    weight: 1,
     apiKey: "",
   });
   const [azureData, setAzureData] = useState({
@@ -34,6 +35,7 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
       setFormData({
         name: connection.name || "",
         priority: connection.priority || 1,
+        weight: connection.weight || 1,
         apiKey: "",
       });
       // Load Azure-specific data if present
@@ -120,6 +122,7 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
       const updates = {
         name: formData.name,
         priority: formData.priority,
+        weight: formData.weight,
       };
       if (!isOAuth && formData.apiKey) {
         updates.apiKey = formData.apiKey;
@@ -195,12 +198,24 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
             <p className="font-medium">{connection.email}</p>
           </div>
         )}
-        <Input
-          label="Priority"
-          type="number"
-          value={formData.priority}
-          onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value, 10) || 1 })}
-        />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              label="Priority"
+              type="number"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value, 10) || 1 })}
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              label="Weight"
+              type="number"
+              value={formData.weight}
+              onChange={(e) => setFormData({ ...formData, weight: Number.parseInt(e.target.value, 10) || 1 })}
+            />
+          </div>
+        </div>
 
         {!isOAuth && (
           <>

@@ -9,8 +9,8 @@
   
   [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
   [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-  [![Docker Pulls](https://img.shields.io/docker/pulls/decolua/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/toolnetapi)
-  [![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/toolnet/toolnetapi)
+  [![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://hub.docker.com/r/toolnet/toolnetapi)
   [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
 
 <a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -1068,8 +1068,8 @@ pm2 startup
 
 Published images (multi-platform `linux/amd64` + `linux/arm64`):
 
-- Docker Hub: [`decolua/toolnetapi`](https://hub.docker.com/r/decolua/toolnetapi)
-- GHCR: [`ghcr.io/decolua/toolnetapi`](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
+- Docker Hub: [`decolua/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi)
+- GHCR: [`toolnet/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi)
 
 **Quick start (use published image):**
 
@@ -1079,7 +1079,7 @@ docker run -d \
   -p 20128:20128 \
   -v "$HOME/.toolnetapi:/app/data" \
   -e DATA_DIR=/app/data \
-  decolua/toolnetapi:latest
+  toolnet/toolnetapi:latest
 ```
 
 → Open http://localhost:20128
@@ -1105,7 +1105,7 @@ docker run -d --name toolnetapi -p 20128:20128 \
 docker logs -f toolnetapi
 docker restart toolnetapi
 docker stop toolnetapi && docker rm toolnetapi
-docker pull decolua/toolnetapi:latest   # update to latest
+docker pull toolnet/toolnetapi:latest   # update to latest
 ```
 
 **Data persistence:** `$HOME/.toolnetapi/db/data.sqlite` on host ↔ `/app/data/db/data.sqlite` in container.

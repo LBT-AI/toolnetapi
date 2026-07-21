@@ -1,6 +1,6 @@
 # Docker
 
-Run ToolNet API in a container. Published image: [`decolua/toolnetapi`](https://hub.docker.com/r/decolua/toolnetapi) — multi-platform `linux/amd64` + `linux/arm64`.
+Run ToolNet API in a container. Published image: [`decolua/toolnetapi`](https://hub.docker.com/r/toolnet/toolnetapi) — multi-platform `linux/amd64` + `linux/arm64`.
 
 ---
 
@@ -14,7 +14,7 @@ docker run -d \
   -v "$HOME/.toolnetapi:/app/data" \
   -e DATA_DIR=/app/data \
   --name toolnetapi \
-  decolua/toolnetapi:latest
+  toolnet/toolnetapi:latest
 ```
 
 App listens on port `20128`. Open: http://localhost:20128
@@ -61,7 +61,7 @@ docker run -d \
   -e HOSTNAME=0.0.0.0 \
   -e DEBUG=true \
   --name toolnetapi \
-  decolua/toolnetapi:latest
+  toolnet/toolnetapi:latest
 ```
 
 ## Optional Headroom sidecar
@@ -71,7 +71,7 @@ The ToolNet API image does not bundle Python or Headroom. To use Headroom in Doc
 ```yaml
 services:
   toolnetapi:
-    image: decolua/toolnetapi:latest
+    image: toolnet/toolnetapi:latest
     ports:
       - "20128:20128"
     volumes:
@@ -95,7 +95,7 @@ If Headroom runs on the Docker host instead of as a sidecar, use `http://host.do
 ## Update to latest
 
 ```bash
-docker pull decolua/toolnetapi:latest
+docker pull toolnet/toolnetapi:latest
 docker rm -f toolnetapi
 # re-run the quick start command
 ```
@@ -118,7 +118,7 @@ docker run --rm -p 20128:20128 \
 ## Publish (automatic via CI)
 
 Push a git tag `v*` → GitHub Actions builds multi-platform (amd64+arm64) and pushes to:
-- `ghcr.io/decolua/toolnetapi:v{version}` + `:latest`
+- `toolnet/toolnetapi:v{version}` + `:latest`
 - `decolua/toolnetapi:v{version}` + `:latest`
 
 ```bash

@@ -119,6 +119,37 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     }
     if (connection) {
       // skip strategy
+    } else if (strategy === "weighted") {
+      const byRecency = [...availableConnections].sort((a, b) => {
+        if (!a.lastUsedAt && !b.lastUsedAt) return (a.priority || 999) - (b.priority || 999);
+        if (!a.lastUsedAt) return 1;
+        if (!b.lastUsedAt) return -1;
+        return new Date(b.lastUsedAt) - new Date(a.lastUsedAt);
+      });
+
+      const current = byRecency[0];
+      const currentCount = current?.consecutiveUseCount || 0;
+      const currentWeight = current?.weight || 1;
+
+      if (current && current.lastUsedAt && currentCount < currentWeight) {
+        connection = current;
+        await updateProviderConnection(connection.id, {
+          lastUsedAt: new Date().toISOString(),
+          consecutiveUseCount: currentCount + 1
+        });
+      } else {
+        const sortedByOldest = [...availableConnections].sort((a, b) => {
+          if (!a.lastUsedAt && !b.lastUsedAt) return (a.priority || 999) - (b.priority || 999);
+          if (!a.lastUsedAt) return -1;
+          if (!b.lastUsedAt) return 1;
+          return new Date(a.lastUsedAt) - new Date(b.lastUsedAt);
+        });
+        connection = sortedByOldest[0];
+        await updateProviderConnection(connection.id, {
+          lastUsedAt: new Date().toISOString(),
+          consecutiveUseCount: 1
+        });
+      }
     } else if (strategy === "round-robin") {
       const stickyLimit = providerOverride.stickyRoundRobinLimit || settings.stickyRoundRobinLimit || 3;
 

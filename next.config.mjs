@@ -35,12 +35,15 @@ const nextConfig = {
   },
   webpack: (config, { isServer }) => {
     // Ignore fs/path modules in browser bundle
-    if (!isServer) {
+      // Ignore fs/path modules in browser bundle
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         path: false,
+        "better-sqlite3": false,
       };
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'better-sqlite3'];
     }
     // Exclude non-source dirs from watcher to reduce inotify load
     config.watchOptions = {

@@ -1,6 +1,6 @@
 services:
   toolnetapi:
-    image: decolua/toolnetapi:latest
+    image: toolnet/toolnetapi:latest
     container_name: toolnetapi
     restart: always
     ports:

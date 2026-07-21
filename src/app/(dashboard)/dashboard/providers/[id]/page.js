@@ -370,7 +370,7 @@ export default function ProviderDetailPage() {
       // Build override: null strategy means remove override, use global
       const override = {};
       if (strategy) override.fallbackStrategy = strategy;
-      if (strategy === "round-robin" && stickyLimit !== "") {
+      if ((strategy === "round-robin" || strategy === "weighted") && stickyLimit !== "") {
         override.stickyRoundRobinLimit = Number(stickyLimit) || 3;
       }
 
@@ -391,17 +391,17 @@ export default function ProviderDetailPage() {
     }
   };
 
-  const handleRoundRobinToggle = (enabled) => {
-    const strategy = enabled ? "round-robin" : null;
-    const sticky = enabled ? (providerStickyLimit || "1") : providerStickyLimit;
-    if (enabled && !providerStickyLimit) setProviderStickyLimit("1");
+  const handleStrategyChange = (e) => {
+    const strategy = e.target.value === "fill-first" ? null : e.target.value;
+    const sticky = (strategy === "round-robin" || strategy === "weighted") ? (providerStickyLimit || "1") : providerStickyLimit;
+    if ((strategy === "round-robin" || strategy === "weighted") && !providerStickyLimit) setProviderStickyLimit("1");
     setProviderStrategy(strategy);
     saveProviderStrategy(strategy, sticky);
   };
 
   const handleStickyLimitChange = (value) => {
     setProviderStickyLimit(value);
-    saveProviderStrategy("round-robin", value);
+    saveProviderStrategy(providerStrategy || "round-robin", value);
   };
 
   const saveThinkingConfig = async (mode) => {
@@ -1467,14 +1467,18 @@ export default function ProviderDetailPage() {
                   )}
                 </>
               )}
-              {/* Round Robin toggle */}
+              {/* Strategy Select */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-text-muted font-medium">Round Robin</span>
-                <Toggle
-                  checked={providerStrategy === "round-robin"}
-                  onChange={handleRoundRobinToggle}
+                <Select
+                  value={providerStrategy || "fill-first"}
+                  onChange={handleStrategyChange}
+                  options={[
+                    { value: "fill-first", label: "Fill-First" },
+                    { value: "round-robin", label: "Round Robin" },
+                    { value: "weighted", label: "Weighted" },
+                  ]}
                 />
-                {providerStrategy === "round-robin" && (
+                {(providerStrategy === "round-robin" || providerStrategy === "weighted") && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-text-muted">Sticky:</span>
                     <input

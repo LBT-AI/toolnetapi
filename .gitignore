@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+runtime/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environments
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+
+# Data & Runtime
+.toolnetapi/
+.toolnetapi/
+data.sqlite
+data.sqlite3
+*.sqlite
+*.sqlite3
+*.log
+
+# Temp
+.temp/
+.tmp/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db

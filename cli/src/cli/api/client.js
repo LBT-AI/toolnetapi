@@ -364,7 +364,7 @@ async function deleteCombo(id) {
 /**
  * Get CLI tool settings
  * @param {string} tool - Tool name: claude | codex | droid | openclaw
- * @returns {Promise<Object>} { success, data: { installed, hasToolNet API, ... } }
+ * @returns {Promise<Object>} { success, data: { installed, hasToolNetAPI, ... } }
  */
 async function getCliToolSettings(tool) {
   return makeRequest("GET", `/api/cli-tools/${tool}-settings`);

@@ -44,7 +44,7 @@ const readConfig = async () => {
   }
 };
 
-const hasToolNet APIConfig = (config) => {
+const hasToolNetAPIConfig = (config) => {
   if (!config || !config.providers) return false;
 
   const providers = config.providers;
@@ -118,12 +118,12 @@ export async function GET() {
   }
 
   const config = await readConfig();
-  const hasToolNet API = hasToolNet APIConfig(config);
+  const hasToolNetAPI = hasToolNetAPIConfig(config);
 
   return NextResponse.json({
     installed: true,
     config,
-    hasToolNet API,
+    hasToolNetAPI,
     configPath: getConfigPath(),
   });
 }

@@ -1,7 +1,7 @@
 Dưới đây là bản dịch tiếng Việt của tài liệu Markdown, giữ nguyên toàn bộ cú pháp và cấu trúc kỹ thuật.
 
 <div align="center">
-  <img src="../images/9router.png?1" alt="Bảng điều khiển ToolNet API" width="800"/>
+  <img src="../images/toolnetapi.png?1" alt="Bảng điều khiển ToolNet API" width="800"/>
   
   # ToolNet API - Free AI Router
   
@@ -13,11 +13,11 @@ Dưới đây là bản dịch tiếng Việt của tài liệu Markdown, giữ 
     <img src="../public/providers/openclaw.png" alt="OpenClaw" width="80"/>
   </p>
   
-  [![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-  [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+  [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
   
-  [🚀 Bắt đầu nhanh](#-quick-start) • [💡 Tính năng](#-key-features) • [📖 Cài đặt](#-setup-guide) • [🌐 Website](https://9router.com)
+  [🚀 Bắt đầu nhanh](#-quick-start) • [💡 Tính năng](#-key-features) • [📖 Cài đặt](#-setup-guide) • [🌐 Website](https://toolnetapi.com)
 </div>
 
 ---
@@ -72,8 +72,8 @@ Result: Never stop coding, minimal cost
 **1. Cài đặt toàn cục:**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 ```
 
 🎉 Bảng điều khiển mở tại `http://localhost:20128`
@@ -95,7 +95,7 @@ Cài đặt Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Cline:
 
 **Phương án khác: chạy từ nguồn (k lưu trữ này):**
 
-Gói kho lưu trữ này là riêng tư (`9router-app`), vì vậy việc thực thi nguồn/Docker là đường dẫn phát triển cục bộ dự kiến.
+Gói kho lưu trữ này là riêng tư (`toolnetapi-app`), vì vậy việc thực thi nguồn/Docker là đường dẫn phát triển cục bộ dự kiến.
 
 ```bash
 cp .env.example .env
@@ -866,7 +866,7 @@ Chi phí: $0 mãi mãi!
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [từ bảng điều khiển 9router]
+  OpenAI API Key: [từ bảng điều khiển toolnetapi]
   Model: cc/claude-opus-4-6
 ``Hoặc sử dụng combo: `premium-coding`
 
@@ -877,7 +877,7 @@ Chỉnh sửa `~/.claude/config.json`:
 ```json
 {
   "anthropic_api_base": "http://localhost:20128/v1",
-  "anthropic_api_key": "your-9router-api-key"
+  "anthropic_api_key": "your-toolnetapi-api-key"
 }
 ```
 
@@ -885,7 +885,7 @@ Chỉnh sửa `~/.claude/config.json`:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:20128"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 
 codex "prompt của bạn"
 ```
@@ -905,15 +905,15 @@ Bảng điều khiển → CLI Tools → OpenClaw → Chọn Mô hình → Áp d
   "agents": {
     "defaults": {
       "model": {
-        "primary": "9router/if/glm-4.7"
+        "primary": "toolnetapi/if/glm-4.7"
       }
     }
   },
   "models": {
     "providers": {
-      "9router": {
+      "toolnetapi": {
         "baseUrl": "://127.0.0.1:20128/v1",
-        "apiKey": "sk_9router",
+        "apiKey": "sk_toolnetapi",
         "api": "openai-completions",
         "models": [
           {
@@ -947,20 +947,20 @@ Model: cc/claude-opus-4-6
 
 ```bash
 # Clone và cài đặt
-git clone https://github.com/decolua/9router.git
-cd 9router
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi
 npm install
 npm run build
 
 # Cấu hình
 export JWT="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export PORT="20128"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
 export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
-export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
+export NEXT_PUBLIC_CLOUD_URL="https://toolnetapi.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
 
@@ -969,7 +969,7 @@ npm run start
 
 # Hoặc sử dụng PM2
 npm install -g pm2
-pm2 start --name 9router -- start
+pm2 start --name toolnetapi -- start
 pm2 save
 pm2 startup
 ```
@@ -978,28 +978,28 @@ pm2 startup
 
 ```bash
 # Build image (từ gốc kho lưu trữ)
-docker build -t 9router .
+docker build -t toolnetapi .
 
 # Chạy container (lệnh được sử dụng trong thiết lập hiện tại)
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
-  --env-file /root/dev/9router/.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
-  9router
+  --env-file /root/dev/toolnetapi/.env \
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
+  toolnetapi
 ```
 
 Lệnh di động (nếu bạn đã ở gốc kho lưu trữ):
 
 ```bash
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
   --env-file ./.env \
-  -v 9router-data:/app/data \
-  -v 9router-usage:/root/.9router \
-  9router
+  -v toolnetapi-data:/app/data \
+  -v toolnetapi-usage:/root/.toolnetapi \
+  toolnetapi
 ```
 
 Mặc định container:
@@ -1009,25 +1009,25 @@ Mặc định container:
 Các lệnh hữu ích:
 
 ```bash
-docker logs -f 9router
- restart 9router
-docker stop 9router && docker rm 9router
+docker logs -f toolnetapi
+ restart toolnetapi
+docker stop toolnetapi && docker rm toolnetapi
 ```
 
 ### Biến môi trường
 
 | Biến | Mặc định | Mô tả |
 |----------|---------|-------------|
-| `JWT_SECRET` | Tự động sinh (`~/.9router/jwt-secret`) | Bí mật ký JWT cho cookie xác thực bảng điều khiển (đặt để chia sẻ giữa nhiều instance) |
+| `JWT_SECRET` | Tự động sinh (`~/.toolnetapi/jwt-secret`) | Bí mật ký JWT cho cookie xác thực bảng điều khiển (đặt để chia sẻ giữa nhiều instance) |
 | `INITIAL_PASSWORD` | `123456` | Mật khẩu đăng nhập đầu tiên khi không có hash đã lưu tồn tại |
-| `DATA_DIR` | `~/.9router` |ị trí cơ sở dữ liệu ứng dụng chính (`db.json`) |
+| `DATA_DIR` | `~/.toolnetapi` |ị trí cơ sở dữ liệu ứng dụng chính (`db.json`) |
 | `PORT` | framework default | Cổng dịch vụ (`20128` trong các ví dụ) |
 | `HOSTNAME` | framework default | Bind host (Docker mặc định là `0.0.0.0`) |
 | `NODE_ENV` | runtime default | Đặt `production` để triển khai |
 | `BASE_URL` | `http://localhost:20128` | URL cơ sở nội bộ phía máy chủ được sử dụng bởi các tác vụ đồng bộ đám mây |
-| `CLOUD_URL` | `https://9router.com` | URL cơ sở endpoint đồng bộ đám mây phía máy chủ |
+| `CLOUD_URL` | `https://toolnetapi.com` | URL cơ sở endpoint đồng bộ đám mây phía máy chủ |
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | URL cơ sở tương thích ngược/công khai (ưu tiên `BASE_URL` cho runtime máy chủ) |
-| `NEXT_PUBLIC_CLOUD_URL` | `https://9router.com` | URL đám mây tương thích ngược/công khai (ưu tiên `CLOUD_URL` cho runtime máy chủ) |
+| `NEXT_PUBLIC_CLOUD_URL` | `https://toolnetapi.com` | URL đám mây tương thích ngược/công khai (ưu tiên `CLOUD_URL` cho runtime máy chủ) |
 | `API_KEY_SECRET` | `endpoint-proxy-api-key-secret` | B mật HMAC cho các API key được tạo |
 | `MACHINE_ID_SALT` | `endpoint-proxy-salt` | Salt cho việc băm ID máy ổn định |
 | `ENABLE_REQUEST_LOGS` | `false` | Bật log request/response dưới `logs/` |
@@ -1044,9 +1044,9 @@ Ghi chú:
 ### Tệp Runtime và Lưu trữ
 
 - Trạng thái ứng dụng chính: `${DATA_DIR}/db.json` (nhà cung cấp, combo, alias, key, cài đặt), được quản lý bởi `src/lib/localDb.js`.
-- Lịch sử sử dụng và log: `~/.9router/usage.json` và `~/.9router/log.txt`, được quản lý bởi `src/lib/usageDb.js`.
+- Lịch sử sử dụng và log: `~/.toolnetapi/usage.json` và `~/.toolnetapi/log.txt`, được quản lý bởi `src/lib/usageDb.js`.
 - request/translator tùy chọn: `<repo>/logs/...` khi `ENABLE_REQUEST_LOGS=true`.
-- Lưu trữ sử dụng hiện tại tuân theo logic đường dẫn `~/.9router` và độc lập với `DATA_DIR`.
+- Lưu trữ sử dụng hiện tại tuân theo logic đường dẫn `~/.toolnetapi` và độc lập với `DATA_DIR`.
 
 </details>
 
@@ -1121,11 +1121,11 @@ Ghi chú:
 
 **Lỗi đồng bộ đám mây**
 - Xác minh `BASE_URL` trỏ đến phiên bản đang chạy của bạn (ví dụ: `http://localhost:20128`)
-- Xác minh `CLOUD_URL` trỏ đến endpoint đám mây dự kiến của bạn (ví dụ: `https://9router.com`)
+- Xác minh `CLOUD_URL` trỏ đến endpoint đám mây dự kiến của bạn (ví dụ: `https://toolnetapi.com`)
 - Giữ các giá trị `NEXT_PUBLIC_*` phù hợp với giá trị phía máy chủ khi có thể.
 
 **Endpoint đám mây `stream=false` trả về 500 (`Unexpected token 'd'...`)**
-- Triệu chứng thường xuất hiện trên endpoint đám mây công khai (`https://9router.com/v1`) cho các lệnh gọi không phát trực tiếp (non-streaming).
+- Triệu chứng thường xuất hiện trên endpoint đám mây công khai (`https://toolnetapi.com/v1`) cho các lệnh gọi không phát trực tiếp (non-streaming).
 - Nguyên nhân gốc rễ: upstream trả về payload SSE (`data: ...`) trong khi client mong đợi JSON.
 -ải pháp thay thế: sử dụng `stream=true` cho các lệnh gọi trực tiếp đến đám mây.
 - Runtime ToolNet API cục bộ bao gồm dự phòng SSE→JSON cho các lệnh gọi không phát trực tiếp khi upstream trả về `text/event-stream`.
@@ -1199,7 +1199,7 @@ Authorization: Bearer your-api-key
 - `tester/security/test-docker-hardening.sh`
   - Build image Docker và xác thực các kiểm tra hardening (`/api/cloud/auth` auth guard, `REQUIRE_API_KEY`, hành vi cookie xác thực bảo).
 - `tester/security/test-cloud-openai-compatible.sh`
-  - Gửi một yêu cầu tương thích OpenAI trực tiếp đến endpoint đám mây (`https://9router.com/v1/chat/completions`) với mô hình/key được cung cấp.
+  - Gửi một yêu cầu tương thích OpenAI trực tiếp đến endpoint đám mây (`https://toolnetapi.com/v1/chat/completions`) với mô hình/key được cung cấp.
 - `tester/security/test-cloud-sync-and-call.sh`
   - Quy trình end-to-end: tạo key cục bộ -> bật/đồng bộ đám mây -> gọi endpoint đám mây với thử lại.
   - Bao gồm kiểm tra dự phòng với `stream=true` để phân biệt lỗi xác thực với các vấn đề phân tích phát trực tiếp.
@@ -1219,7 +1219,7 @@ Hành vi dự kiến từ việc xác thực gần đây:
 
 - cục bộ (`http://127.0.0.1:20128/v1/chat/completions`): hoạt động với `stream=false` và `stream=true`.
 - Runtime Docker (cùng đường dẫn API được expose bởi container): các kiểm tra hardening đạt, cloud auth guard hoạt động, chế độ API key nghiêm ngặt hoạt động khi được bật.
-- Endpoint đám mây công khai (`https://9router.com/v1/chat/completions`):
+- Endpoint đám mây công khai (`https://toolnetapi.com/v1/chat/completions`):
   - `stream=true`: dự kiến thành công (trả về các khối SSE).
   - `stream=false`: có thể thất bại với `500` + lỗi phân tích (`Unexpected token 'd'`) khi upstream trả về nội dung SSE cho đường dẫn client không phát trực tiếp.
 
@@ -1257,9 +1257,9 @@ Tài liệu tham khảo kiến trúc đầy đủ: [`docs/ARCHITECTURE.md`](../d
 
 ## 📧 Hỗ trợ
 
-- **Website**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Website**: [toolnetapi.com](https://toolnetapi.com)
+- **GitHub**: [github.com/decolua/9](https://github.com/decolua/toolnetapi)
+- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 
 ---
 
@@ -1267,13 +1267,13 @@ Tài liệu tham khảo kiến trúc đầy đủ: [`docs/ARCHITECTURE.md`](../d
 
 Cảm ơn tất cả những người đã đóng góp giúp ToolNet API tốt hơn!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=100&columns=20&anon=1)](https://github.com/decolua/9router/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=100&columns=20&anon=1)](https://github.com/decolua/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star Chart
 
-[![ Chart](https://starchart.cc/decolua/9router.svg?variant=adaptive)](https://starchart.cc/decolua/9router)
+[![ Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
 
 ### Cách Đóng góp
 
@@ -1283,7 +1283,7 @@ Cảm ơn tất cả những người đã đóng góp giúp ToolNet API tốt h
 4. Push lên nhánh (`git push origin feature/amazing-feature`)
 5. Mở một Pull Request
 
-Xem [Pull Requests](https://github.com/decolua/9router/pulls) để biết hướng dẫn chi tiết.
+Xem [Pull Requests](https://github.com/decolua/toolnetapi/pulls) để biết hướng dẫn chi tiết.
 
 ---
 

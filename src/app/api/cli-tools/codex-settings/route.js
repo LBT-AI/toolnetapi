@@ -74,7 +74,7 @@ const readConfig = async () => {
 };
 
 // Check if config has ToolNet API settings
-const hasToolNet APIConfig = (config) => {
+const hasToolNetAPIConfig = (config) => {
   if (!config) return false;
   return config.includes("model_provider = \"9router\"") || config.includes("[model_providers.9router]");
 };
@@ -97,7 +97,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      hasToolNet API: hasToolNet APIConfig(config),
+      hasToolNetAPI: hasToolNetAPIConfig(config),
       configPath: getCodexConfigPath(),
     });
   } catch (error) {

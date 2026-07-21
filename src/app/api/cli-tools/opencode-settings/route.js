@@ -48,7 +48,7 @@ const readConfig = async () => {
   }
 };
 
-const hasToolNet APIConfig = (config) => {
+const hasToolNetAPIConfig = (config) => {
   if (!config?.provider) return false;
   return !!config.provider["9router"];
 };
@@ -73,7 +73,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       config,
-      hasToolNet API: hasToolNet APIConfig(config),
+      hasToolNetAPI: hasToolNetAPIConfig(config),
       configPath: getConfigPath(),
         opencode: {
           models: Object.keys(modelMap),

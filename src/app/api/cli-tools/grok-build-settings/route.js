@@ -70,7 +70,7 @@ const normalizeSubagentModels = (value) => {
   return result;
 };
 
-const hasToolNet APIConfig = (settings) => Boolean(settings?.model?.base_url);
+const hasToolNetAPIConfig = (settings) => Boolean(settings?.model?.base_url);
 
 export async function GET() {
   try {
@@ -87,7 +87,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       settings,
-      hasToolNet API: hasToolNet APIConfig(settings),
+      hasToolNetAPI: hasToolNetAPIConfig(settings),
       configPath: getGrokConfigPath(),
     });
   } catch (error) {

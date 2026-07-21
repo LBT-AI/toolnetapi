@@ -30,12 +30,12 @@ const readConfig = async () => {
   }
 };
 
-const hasToolNet APIConfig = (config) => {
+const hasToolNetAPIConfig = (config) => {
   if (!Array.isArray(config)) return false;
   return config.some((entry) => entry.name === "ToolNet API");
 };
 
-const getToolNet APIEntry = (config) => {
+const getToolNetAPIEntry = (config) => {
   if (!Array.isArray(config)) return null;
   return config.find((entry) => entry.name === "ToolNet API") || null;
 };
@@ -44,12 +44,12 @@ const getToolNet APIEntry = (config) => {
 export async function GET() {
   try {
     const config = await readConfig();
-    const entry = getToolNet APIEntry(config);
+    const entry = getToolNetAPIEntry(config);
 
     return NextResponse.json({
       installed: true,
       config,
-      hasToolNet API: hasToolNet APIConfig(config),
+      hasToolNetAPI: hasToolNetAPIConfig(config),
       configPath: getConfigPath(),
       currentModel: entry?.models?.[0]?.id || null,
       currentUrl: entry?.models?.[0]?.url || null,

@@ -101,13 +101,13 @@ export async function GET() {
     }
 
     const settings = await readSettings();
-    const hasToolNet API = !!(settings?.env?.ANTHROPIC_BASE_URL);
+    const hasToolNetAPI = !!(settings?.env?.ANTHROPIC_BASE_URL);
     const claudeJson = await readClaudeJson();
 
     return NextResponse.json({
       installed: true,
       settings: settings,
-      hasToolNet API: hasToolNet API,
+      hasToolNetAPI: hasToolNetAPI,
       exaMcpEnabled: !!claudeJson?.mcpServers?.exa,
       settingsPath: getClaudeSettingsPath(),
     });

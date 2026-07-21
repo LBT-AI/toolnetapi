@@ -57,7 +57,7 @@ const readSettings = async () => {
 };
 
 // Check if settings has ToolNet API config
-const hasToolNet APIConfig = (settings) => {
+const hasToolNetAPIConfig = (settings) => {
   if (!settings || !settings.models || !settings.models.providers) return false;
   return !!settings.models.providers["9router"];
 };
@@ -105,7 +105,7 @@ export async function GET() {
       installed: true,
       settings,
       agents: enrichedAgents,
-      hasToolNet API: hasToolNet APIConfig(settings),
+      hasToolNetAPI: hasToolNetAPIConfig(settings),
       settingsPath: getOpenClawSettingsPath(),
     });
   } catch (error) {

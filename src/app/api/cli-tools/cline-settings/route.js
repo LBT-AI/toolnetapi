@@ -44,7 +44,7 @@ const readJson = async (filePath) => {
   }
 };
 
-const hasToolNet APIConfig = (globalState) => {
+const hasToolNetAPIConfig = (globalState) => {
   if (!globalState) return false;
   const isOpenAi =
     globalState.actModeApiProvider === "openai" || globalState.planModeApiProvider === "openai";
@@ -67,7 +67,7 @@ export async function GET() {
         openAiBaseUrl: globalState?.openAiBaseUrl,
         openAiModelId: globalState?.openAiModelId,
       },
-      hasToolNet API: hasToolNet APIConfig(globalState),
+      hasToolNetAPI: hasToolNetAPIConfig(globalState),
       globalStatePath: getGlobalStatePath(),
     });
   } catch (error) {

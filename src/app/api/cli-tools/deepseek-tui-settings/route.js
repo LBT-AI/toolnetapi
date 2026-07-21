@@ -52,7 +52,7 @@ const parseToml = (content) => {
 };
 
 // Build TOML config for ToolNet API (openai provider mode)
-const buildToolNet APIConfig = (baseUrl, apiKey, model) => {
+const buildToolNetAPIConfig = (baseUrl, apiKey, model) => {
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
     return `provider = "openai"
 
@@ -93,7 +93,7 @@ const readConfigToml = async () => {
 };
 
 // Detect ToolNet API by checking if provider is "openai" and base_url points to localhost/127.0.0.1
-const hasToolNet APIConfig = (config) => {
+const hasToolNetAPIConfig = (config) => {
     if (!config) return false;
     const provider = config.provider;
     if (provider !== "openai") return false;
@@ -113,7 +113,7 @@ export async function GET() {
         return NextResponse.json({
             installed: true,
             settings: config,
-            hasToolNet API: hasToolNet APIConfig(config),
+            hasToolNetAPI: hasToolNetAPIConfig(config),
             configPath: getDeepSeekConfigPath(),
         });
     } catch (error) {
@@ -132,7 +132,7 @@ export async function POST(request) {
         const dir = getDeepSeekDir();
         await fs.mkdir(dir, { recursive: true });
 
-        const newConfig = buildToolNet APIConfig(baseUrl, apiKey || "sk_9router", model);
+        const newConfig = buildToolNetAPIConfig(baseUrl, apiKey || "sk_9router", model);
         await fs.writeFile(getDeepSeekConfigPath(), newConfig);
 
         return NextResponse.json({

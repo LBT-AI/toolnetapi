@@ -47,7 +47,7 @@ const readSettings = async () => {
 };
 
 // Check if settings has ToolNet API customModels
-const hasToolNet APIConfig = (settings) => {
+const hasToolNetAPIConfig = (settings) => {
   if (!settings || !settings.customModels) return false;
   return settings.customModels.some(m => m.id?.startsWith("custom:ToolNet API"));
 };
@@ -70,7 +70,7 @@ export async function GET() {
     return NextResponse.json({
       installed: true,
       settings,
-      hasToolNet API: hasToolNet APIConfig(settings),
+      hasToolNetAPI: hasToolNetAPIConfig(settings),
       settingsPath: getDroidSettingsPath(),
     });
   } catch (error) {

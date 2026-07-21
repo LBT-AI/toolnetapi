@@ -164,7 +164,7 @@ Xem [tài liệu quota tracking](features/quota-tracking.md) để biết chi ti
 
 ```
 Cursor Settings → Models → Advanced:
-  OpenAI API Base URL: https://9router.com/v1
+  OpenAI API Base URL: https://toolnetapi.com/v1
   OpenAI API Key: [from dashboard]
   Model: cc/claude-opus-4-5-20251101
 ```
@@ -172,8 +172,8 @@ Cursor Settings → Models → Advanced:
 **Thay thế:** Self-host trên VPS với domain công khai:
 ```bash
 # Deploy to VPS
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 npm start
 
@@ -198,16 +198,16 @@ Xem [hướng dẫn tích hợp Cursor](integration/cursor.md) để biết chi 
 
 ### Localhost (Mặc định)
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 → Dashboard: http://localhost:3000
 → API: http://localhost:20128/v1
 ```
 
 ### VPS/Cloud
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
 npm install && npm run build
 
 export JWT_SECRET="your-secure-secret"
@@ -219,23 +219,23 @@ npm start
 
 ### Docker
 ```bash
-docker build -t 9router .
+docker build -t toolnetapi .
 docker run -d \
   -p 3000:3000 \
   -e JWT_SECRET="your-secret" \
-  -v 9router-data:/app/data \
-  9router
+  -v toolnetapi-data:/app/data \
+  toolnetapi
 ```
 
 ### Cloudflare Workers
 ```bash
-cd 9router/app
+cd toolnetapi/app
 npm run deploy:cloudflare
 ```
 
 **Biến môi trường:**
 - `JWT_SECRET` - **PHẢI đổi trong production!**
-- `DATA_DIR` - Đường dẫn lưu database (mặc định: `~/.9router`)
+- `DATA_DIR` - Đường dẫn lưu database (mặc định: `~/.toolnetapi`)
 - `INITIAL_PASSWORD` - Đăng nhập Dashboard (mặc định: `123456`)
 - `NODE_ENV` - Đặt `production` để deploy
 
@@ -248,7 +248,7 @@ Xem [hướng dẫn deployment](getting-started/installation.md#deployment) đ�
 **Có, ToolNet API ưu tiên bảo mật và quyền riêng tư:**
 
 **Local storage:**
-- Mọi dữ liệu lưu cục bộ tại `~/.9router` (hoặc `DATA_DIR` tùy chỉnh)
+- Mọi dữ liệu lưu cục bộ tại `~/.toolnetapi` (hoặc `DATA_DIR` tùy chỉnh)
 - Không gửi data đến server ToolNet API
 - OAuth tokens mã hóa bằng JWT
 
@@ -287,12 +287,12 @@ Xem [hướng dẫn deployment](getting-started/installation.md#deployment) đ�
 
 ### Global NPM Install
 ```bash
-npm update -g 9router
+npm update -g toolnetapi
 ```
 
 ### Local Install
 ```bash
-cd 9router/app
+cd toolnetapi/app
 git pull origin main
 npm install
 npm run build
@@ -301,23 +301,23 @@ npm start
 
 ### Docker
 ```bash
-docker pull 9router:latest
-docker stop 9router
-docker rm 9router
+docker pull toolnetapi:latest
+docker stop toolnetapi
+docker rm toolnetapi
 docker run -d \
   -p 3000:3000 \
-  -v 9router-data:/app/data \
-  9router:latest
+  -v toolnetapi-data:/app/data \
+  toolnetapi:latest
 ```
 
 **Kiểm tra version:**
 ```bash
-9router --version
+toolnetapi --version
 ```
 
 **Breaking changes:**
-- Xem [CHANGELOG.md](https://github.com/decolua/9router/blob/main/CHANGELOG.md)
-- Backup `~/.9router` trước khi update lớn
+- Xem [CHANGELOG.md](https://github.com/decolua/toolnetapi/blob/main/CHANGELOG.md)
+- Backup `~/.toolnetapi` trước khi update lớn
 - Xem hướng dẫn migration cho major version
 
 ---
@@ -329,18 +329,18 @@ docker run -d \
 ### Các cách đóng góp:
 
 1. **Report bugs:**
-   - [GitHub Issues](https://github.com/decolua/9router/issues)
+   - [GitHub Issues](https://github.com/decolua/toolnetapi/issues)
    - Bao gồm error logs, các bước reproduce
 
 2. **Request features:**
-   - [GitHub Discussions](https://github.com/decolua/9router/discussions)
+   - [GitHub Discussions](https://github.com/decolua/toolnetapi/discussions)
    - Mô tả use case và lợi ích
 
 3. **Submit code:**
    ```bash
    # Fork repo
-   git clone https://github.com/YOUR_USERNAME/9router.git
-   cd 9router
+   git clone https://github.com/YOUR_USERNAME/toolnetapi.git
+   cd toolnetapi
    
    # Create branch
    git checkout -b feature/your-feature
@@ -375,13 +375,13 @@ docker run -d \
 - Cập nhật tài liệu
 - Giữ commit nhỏ gọn và mô tả rõ ràng
 
-Xem [CONTRIBUTING.md](https://github.com/decolua/9router/blob/main/CONTRIBUTING.md) để biết chi tiết.
+Xem [CONTRIBUTING.md](https://github.com/decolua/toolnetapi/blob/main/CONTRIBUTING.md) để biết chi tiết.
 
 ---
 
 ## Cần trợ giúp thêm?
 
-- **Documentation:** [9router.com/docs](https://9router.com/docs)
-- **GitHub:** [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues:** [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Documentation:** [toolnetapi.com/docs](https://toolnetapi.com/docs)
+- **GitHub:** [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **Issues:** [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 - **Troubleshooting:** [troubleshooting.md](troubleshooting.md)

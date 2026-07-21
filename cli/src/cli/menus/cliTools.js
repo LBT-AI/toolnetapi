@@ -179,10 +179,10 @@ async function buildCodexHeader() {
   const result = await api.getCliToolSettings("codex");
   if (!result.success) return `  ${COLORS.red}Failed to load settings${COLORS.reset}`;
 
-  const { installed, hasToolNet API, config } = result.data;
+  const { installed, hasToolNetAPI, config } = result.data;
   if (!installed) return `Status:   ${COLORS.red}✗ Codex CLI not installed${COLORS.reset}`;
 
-  if (!hasToolNet API) {
+  if (!hasToolNetAPI) {
     return [
       `Status:   ${COLORS.red}✗ Not configured${COLORS.reset}`,
       `${COLORS.dim}Run "Quick Setup" to configure${COLORS.reset}`
@@ -267,10 +267,10 @@ async function buildDroidHeader() {
   const result = await api.getCliToolSettings("droid");
   if (!result.success) return `  ${COLORS.red}Failed to load settings${COLORS.reset}`;
 
-  const { installed, hasToolNet API, settings } = result.data;
+  const { installed, hasToolNetAPI, settings } = result.data;
   if (!installed) return `Status:   ${COLORS.red}✗ Factory Droid not installed${COLORS.reset}`;
 
-  if (!hasToolNet API) {
+  if (!hasToolNetAPI) {
     return [
       `Status:   ${COLORS.red}✗ Not configured${COLORS.reset}`,
       `${COLORS.dim}Run "Quick Setup" to configure${COLORS.reset}`
@@ -350,10 +350,10 @@ async function buildOpenClawHeader() {
   const result = await api.getCliToolSettings("openclaw");
   if (!result.success) return `  ${COLORS.red}Failed to load settings${COLORS.reset}`;
 
-  const { installed, hasToolNet API, settings } = result.data;
+  const { installed, hasToolNetAPI, settings } = result.data;
   if (!installed) return `Status:   ${COLORS.red}✗ Open Claw not installed${COLORS.reset}`;
 
-  if (!hasToolNet API) {
+  if (!hasToolNetAPI) {
     return [
       `Status:   ${COLORS.red}✗ Not configured${COLORS.reset}`,
       `${COLORS.dim}Run "Quick Setup" to configure${COLORS.reset}`
@@ -431,10 +431,10 @@ async function buildOpenCodeHeader() {
   const result = await api.getCliToolSettings("opencode");
   if (!result.success) return `  ${COLORS.red}Failed to load settings${COLORS.reset}`;
 
-  const { installed, hasToolNet API, opencode } = result.data;
+  const { installed, hasToolNetAPI, opencode } = result.data;
   if (!installed) return `Status:   ${COLORS.red}✗ OpenCode CLI not installed${COLORS.reset}`;
 
-  if (!hasToolNet API) {
+  if (!hasToolNetAPI) {
     return [
       `Status:   ${COLORS.red}✗ Not configured${COLORS.reset}`,
       `${COLORS.dim}Run "Quick Setup" to configure${COLORS.reset}`
@@ -519,10 +519,10 @@ async function buildHermesHeader() {
   const result = await api.getCliToolSettings("hermes");
   if (!result.success) return `  ${COLORS.red}Failed to load settings${COLORS.reset}`;
 
-  const { installed, hasToolNet API, settings } = result.data;
+  const { installed, hasToolNetAPI, settings } = result.data;
   if (!installed) return `Status:   ${COLORS.red}✗ Hermes Agent not installed${COLORS.reset}`;
 
-  if (!hasToolNet API) {
+  if (!hasToolNetAPI) {
     return [
       `Status:   ${COLORS.red}✗ Not configured${COLORS.reset}`,
       `${COLORS.dim}Run "Quick Setup" to configure${COLORS.reset}`

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./images/9router.png?1" alt="ToolNet API Dashboard" width="800"/>
+  <img src="./images/toolnetapi.png?1" alt="ToolNet API Dashboard" width="800"/>
   
   # ToolNet API - FREE AI Router & Token Saver
   
@@ -7,15 +7,15 @@
   
   **Connect All AI Code Tools (Claude Code, Cursor, Antigravity, Copilot, Codex, Gemini, OpenCode, Cline, OpenClaw...) to 40+ AI Providers & 100+ Models.**
   
-  [![npm](https://img.shields.io/npm/v/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Downloads](https://img.shields.io/npm/dm/9router.svg)](https://www.npmjs.com/package/9router)
-  [![Docker Pulls](https://img.shields.io/docker/pulls/decolua/9router.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/9router)
-  [![GHCR](https://img.shields.io/badge/GHCR-decolua%2F9router-blue?logo=github)](https://github.com/decolua/9router/pkgs/container/9router)
-  [![License](https://img.shields.io/npm/l/9router.svg)](https://github.com/decolua/9router/blob/main/LICENSE)
+  [![npm](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![Downloads](https://img.shields.io/npm/dm/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/decolua/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/decolua/toolnetapi)
+  [![GHCR](https://img.shields.io/badge/GHCR-decolua%2Ftoolnetapi-blue?logo=github)](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
+  [![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/decolua/toolnetapi/blob/main/LICENSE)
 
-<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2F9router | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://trendshift.io/repositories/22628" target="_blank"><img src="https://trendshift.io/api/badge/repositories/22628" alt="decolua%2Ftoolnetapi | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-[🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Setup](#-setup-guide) • [🌐 Website](https://9router.com)
+[🚀 Quick Start](#-quick-start) • [💡 Features](#-key-features) • [📖 Setup](#-setup-guide) • [🌐 Website](https://toolnetapi.com)
 
 [🇻🇳 Tiếng Việt](./i18n/README.vi.md) • [🇨🇳 中文](./i18n/README.zh-CN.md) • [🇯🇵 日本語](./i18n/README.ja-JP.md) • [🇷🇺 Русский](./i18n/README.ru.md) • [🇹🇭 ไทย](./i18n/README.th.md) • [🇮🇷 فارسی](./i18n/README.fa_IR.md)
 
@@ -76,8 +76,8 @@ Result: Never stop coding, minimal cost + 20-40% token savings via RTK
 **1. Install globally:**
 
 ```bash
-npm install -g 9router
-9router
+npm install -g toolnetapi
+toolnetapi
 ```
 
 🎉 Dashboard opens at `http://localhost:20128`
@@ -99,7 +99,7 @@ Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
 
 **Alternative: run from source (this repository):**
 
-This repository package is private (`9router-app`), so source/Docker execution is the expected local development path.
+This repository package is private (`toolnetapi-app`), so source/Docker execution is the expected local development path.
 
 ```bash
 cp .env.example .env
@@ -954,7 +954,7 @@ Cost: $0 forever (+ 20-40% token savings via RTK)!
 ```
 Settings → Models → Advanced:
   OpenAI API Base URL: http://localhost:20128/v1
-  OpenAI API Key: [from 9router dashboard]
+  OpenAI API Key: [from toolnetapi dashboard]
   Model: cc/claude-opus-4-7
 ```
 
@@ -967,7 +967,7 @@ Edit `~/.claude/config.json`:
 ```json
 {
   "anthropic_api_base": "http://localhost:20128/v1",
-  "anthropic_api_key": "your-9router-api-key"
+  "anthropic_api_key": "your-toolnetapi-api-key"
 }
 ```
 
@@ -975,7 +975,7 @@ Edit `~/.claude/config.json`:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:20128"
-export OPENAI_API_KEY="your-9router-api-key"
+export OPENAI_API_KEY="your-toolnetapi-api-key"
 
 codex "your prompt"
 ```
@@ -995,15 +995,15 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
   "agents": {
     "defaults": {
       "model": {
-        "primary": "9router/kr/claude-sonnet-4.5"
+        "primary": "toolnetapi/kr/claude-sonnet-4.5"
       }
     }
   },
   "models": {
     "providers": {
-      "9router": {
+      "toolnetapi": {
         "baseUrl": "http://127.0.0.1:20128/v1",
-        "apiKey": "sk_9router",
+        "apiKey": "sk_toolnetapi",
         "api": "openai-completions",
         "models": [
           {
@@ -1037,20 +1037,20 @@ Model: cc/claude-opus-4-7
 
 ```bash
 # Clone and install
-git clone https://github.com/decolua/9router.git
-cd 9router
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi
 npm install
 npm run build
 
 # Configure
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
-export DATA_DIR="/var/lib/9router"
+export DATA_DIR="/var/lib/toolnetapi"
 export PORT="20128"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
 export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
-export NEXT_PUBLIC_CLOUD_URL="https://9router.com"
+export NEXT_PUBLIC_CLOUD_URL="https://toolnetapi.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
 
@@ -1059,7 +1059,7 @@ npm run start
 
 # Or use PM2
 npm install -g pm2
-pm2 start npm --name 9router -- start
+pm2 start npm --name toolnetapi -- start
 pm2 save
 pm2 startup
 ```
@@ -1068,18 +1068,18 @@ pm2 startup
 
 Published images (multi-platform `linux/amd64` + `linux/arm64`):
 
-- Docker Hub: [`decolua/9router`](https://hub.docker.com/r/decolua/9router)
-- GHCR: [`ghcr.io/decolua/9router`](https://github.com/decolua/9router/pkgs/container/9router)
+- Docker Hub: [`decolua/toolnetapi`](https://hub.docker.com/r/decolua/toolnetapi)
+- GHCR: [`ghcr.io/decolua/toolnetapi`](https://github.com/decolua/toolnetapi/pkgs/container/toolnetapi)
 
 **Quick start (use published image):**
 
 ```bash
 docker run -d \
-  --name 9router \
+  --name toolnetapi \
   -p 20128:20128 \
-  -v "$HOME/.9router:/app/data" \
+  -v "$HOME/.toolnetapi:/app/data" \
   -e DATA_DIR=/app/data \
-  decolua/9router:latest
+  decolua/toolnetapi:latest
 ```
 
 → Open http://localhost:20128
@@ -1087,11 +1087,11 @@ docker run -d \
 **Build from source (dev):**
 
 ```bash
-git clone https://github.com/decolua/9router.git
-cd 9router/app
-docker build -t 9router .
-docker run -d --name 9router -p 20128:20128 \
-  -v "$HOME/.9router:/app/data" -e DATA_DIR=/app/data 9router
+git clone https://github.com/decolua/toolnetapi.git
+cd toolnetapi/app
+docker build -t toolnetapi .
+docker run -d --name toolnetapi -p 20128:20128 \
+  -v "$HOME/.toolnetapi:/app/data" -e DATA_DIR=/app/data toolnetapi
 ```
 
 **Container defaults:**
@@ -1102,28 +1102,28 @@ docker run -d --name 9router -p 20128:20128 \
 **Useful commands:**
 
 ```bash
-docker logs -f 9router
-docker restart 9router
-docker stop 9router && docker rm 9router
-docker pull decolua/9router:latest   # update to latest
+docker logs -f toolnetapi
+docker restart toolnetapi
+docker stop toolnetapi && docker rm toolnetapi
+docker pull decolua/toolnetapi:latest   # update to latest
 ```
 
-**Data persistence:** `$HOME/.9router/db/data.sqlite` on host ↔ `/app/data/db/data.sqlite` in container.
+**Data persistence:** `$HOME/.toolnetapi/db/data.sqlite` on host ↔ `/app/data/db/data.sqlite` in container.
 
 ### Environment Variables
 
 | Variable                                             | Default                                  | Description                                                                         |
 | ---------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `JWT_SECRET`                                         | Auto-generated (`~/.9router/jwt-secret`) | JWT signing secret for dashboard auth cookie (override to share across instances)   |
+| `JWT_SECRET`                                         | Auto-generated (`~/.toolnetapi/jwt-secret`) | JWT signing secret for dashboard auth cookie (override to share across instances)   |
 | `INITIAL_PASSWORD`                                   | `123456`                                 | First login password when no saved hash exists                                      |
-| `DATA_DIR`                                           | `~/.9router`                             | Main app data location (SQLite at `$DATA_DIR/db/data.sqlite`)                       |
+| `DATA_DIR`                                           | `~/.toolnetapi`                             | Main app data location (SQLite at `$DATA_DIR/db/data.sqlite`)                       |
 | `PORT`                                               | framework default                        | Service port (`20128` in examples)                                                  |
 | `HOSTNAME`                                           | framework default                        | Bind host (Docker defaults to `0.0.0.0`)                                            |
 | `NODE_ENV`                                           | runtime default                          | Set `production` for deploy                                                         |
 | `BASE_URL`                                           | `http://localhost:20128`                 | Server-side internal base URL used by cloud sync jobs                               |
-| `CLOUD_URL`                                          | `https://9router.com`                    | Server-side cloud sync endpoint base URL                                            |
+| `CLOUD_URL`                                          | `https://toolnetapi.com`                    | Server-side cloud sync endpoint base URL                                            |
 | `NEXT_PUBLIC_BASE_URL`                               | `http://localhost:3000`                  | Backward-compatible/public base URL (prefer `BASE_URL` for server runtime)          |
-| `NEXT_PUBLIC_CLOUD_URL`                              | `https://9router.com`                    | Backward-compatible/public cloud URL (prefer `CLOUD_URL` for server runtime)        |
+| `NEXT_PUBLIC_CLOUD_URL`                              | `https://toolnetapi.com`                    | Backward-compatible/public cloud URL (prefer `CLOUD_URL` for server runtime)        |
 | `API_KEY_SECRET`                                     | `endpoint-proxy-api-key-secret`          | HMAC secret for generated API keys                                                  |
 | `MACHINE_ID_SALT`                                    | `endpoint-proxy-salt`                    | Salt for stable machine ID hashing                                                  |
 | `ENABLE_REQUEST_LOGS`                                | `false`                                  | Enables request/response logs under `logs/`                                         |
@@ -1144,7 +1144,7 @@ Notes:
 - Main app state: `${DATA_DIR}/db/data.sqlite` (SQLite — providers, combos, aliases, keys, settings, usage history)
 - Auto backups: `${DATA_DIR}/db/backups/`
 - Optional request/translator logs: `<repo>/logs/...` when `ENABLE_REQUEST_LOGS=true`
-- Both `${DATA_DIR}` and `~/.9router` resolve to the same location in a Docker container — the symlink `/root/.9router -> /app/data` is created at build time.
+- Both `${DATA_DIR}` and `~/.toolnetapi` resolve to the same location in a Docker container — the symlink `/root/.toolnetapi -> /app/data` is created at build time.
 
 </details>
 
@@ -1306,9 +1306,9 @@ Authorization: Bearer your-api-key
 
 ## 📧 Support
 
-- **Website**: [9router.com](https://9router.com)
-- **GitHub**: [github.com/decolua/9router](https://github.com/decolua/9router)
-- **Issues**: [github.com/decolua/9router/issues](https://github.com/decolua/9router/issues)
+- **Website**: [toolnetapi.com](https://toolnetapi.com)
+- **GitHub**: [github.com/decolua/toolnetapi](https://github.com/decolua/toolnetapi)
+- **Issues**: [github.com/decolua/toolnetapi/issues](https://github.com/decolua/toolnetapi/issues)
 
 ---
 
@@ -1316,13 +1316,13 @@ Authorization: Bearer your-api-key
 
 Thanks to all contributors who helped make ToolNet API better!
 
-[![Contributors](https://contrib.rocks/image?repo=decolua/9router&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/9router/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=decolua/toolnetapi&max=150&columns=15&anon=1&v=20260309)](https://github.com/decolua/toolnetapi/graphs/contributors)
 
 ---
 
 ## 📊 Star Chart
 
-[![Star Chart](https://starchart.cc/decolua/9router.svg?variant=adaptive)](https://starchart.cc/decolua/9router)
+[![Star Chart](https://starchart.cc/decolua/toolnetapi.svg?variant=adaptive)](https://starchart.cc/decolua/toolnetapi)
 
 ## 🔀 Forks
 

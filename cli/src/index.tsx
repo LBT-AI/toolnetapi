@@ -47,13 +47,13 @@ function cleanupTerminal() {
   } catch {}
 }
 
-if (SIMPLE) {
+if ((SIMPLE || isMobileOrIncompatibleTerminal()) && !FORCE_TUI) {
   cleanupTerminal();
   await startRepl();
   process.exit(0);
 }
 
-// Default: Launch Full TUI interface! Fallback to REPL if unsupported
+// Launch Full TUI interface on supported desktop terminals! Fallback to REPL if unsupported
 try {
   const tui = await import("./tui-entry");
   await tui.main();

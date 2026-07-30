@@ -93,15 +93,23 @@ Cài đặt Claude Code/Codex/Gemini CLI/OpenClaw/Cursor/Cline:
 
 **Xong rồi!** Bắt đầu code với các mô hình AI MIỄN PHÍ.
 
-**Phương án khác: chạy từ nguồn (k lưu trữ này):**
-
-Gói kho lưu trữ này là riêng tư (`toolnetapi-app`), vì vậy việc thực thi nguồn/Docker là đường dẫn phát triển cục bộ dự kiến.
+**Phương án khác: Chạy trực tiếp từ nguồn GitHub:**
 
 ```bash
-cp .env.example .env
+git clone https://github.com/LBT-AI/toolnetapi.git
+cd toolnetapi
 npm install
-PORT=20128 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run dev
 ```
+
+**Khởi chạy cả Server API & ToolNet CLI chỉ với 1 lệnh duy nhất (Dùng 1 cổng):**
+
+```bash
+./start-all.sh
+# Hoặc qua npm:
+npm run start:all
+```
+
+> 📱 **Hỗ trợ mượt mà cho Termius & Điện thoại:** ToolNet CLI tích hợp tính năng tự động nhận diện Terminal. Khi kết nối qua ứng dụng Termius hoặc SSH trên điện thoại, CLI sẽ tự động chuyển sang chế độ dòng lệnh nhẹ (Simple REPL) để đảm bảo 100% không bị vỡ màn hình hay tràn ký tự rác.
 
 Chế độ Production:
 

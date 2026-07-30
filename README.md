@@ -99,13 +99,21 @@ Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
 
 **Alternative: run from source (this repository):**
 
-This repository package is private (`toolnetapi-app`), so source/Docker execution is the expected local development path.
+```bash
+git clone https://github.com/LBT-AI/toolnetapi.git
+cd toolnetapi
+npm install
+```
+
+**Run Server API & ToolNet CLI with 1 single command on 1 port:**
 
 ```bash
-cp .env.example .env
-npm install
-PORT=20128 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run dev
+./start-all.sh
+# Or via npm:
+npm run start:all
 ```
+
+> 📱 **Termius & Mobile SSH Friendly:** ToolNet CLI includes smart terminal auto-detection. When connecting via Termius or mobile terminals, it automatically falls back to lightweight Simple REPL mode to prevent screen corruption and ANSI character leaks.
 
 Production mode:
 

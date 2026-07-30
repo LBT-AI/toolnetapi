@@ -127,7 +127,9 @@ const RESERVED = HEADER_ROWS + STATUS_ROWS + INPUT_ROWS;
 // ─── Render ──────────────────────────────────────────────────────────────────
 function renderAll() {
   const { cols, rows } = getSize();
-  const chatRows = rows - RESERVED;
+  const activeSuggests = getSuggestions(inputBuffer);
+  const popupRows = activeSuggests.length > 0 ? Math.min(activeSuggests.length, 8) + 1 : 0;
+  const chatRows = rows - RESERVED - popupRows;
   const out: string[] = [];
 
   // Go home, hide cursor
@@ -178,12 +180,11 @@ function renderAll() {
   }
 
   // ── Slash command suggestions popup (above input) ──
-  const activeSuggests = getSuggestions(inputBuffer);
   if (activeSuggests.length > 0) {
-    const popupRows = Math.min(activeSuggests.length, 8);
+    const listRows = popupRows - 1;
     // Clamp cmdSuggestIdx
     if (cmdSuggestIdx >= activeSuggests.length) cmdSuggestIdx = activeSuggests.length - 1;
-    for (let si = 0; si < popupRows; si++) {
+    for (let si = 0; si < listRows; si++) {
       const cmd = activeSuggests[si];
       const selected = si === cmdSuggestIdx;
       const bg = selected ? A.bgOverlay : A.bgSuggest;
@@ -221,7 +222,7 @@ function renderAll() {
   // ── Status bar ──
   let statusContent: string;
   if (showHelp) {
-    statusContent = A.fgYellow + " /model /providers /keys /settings /agent /plan /help /exit  │  Tab:mode  Ctrl+K:models  Esc:cancel" + A.reset;
+    statusContent = A.fgYellow + " Shortcuts: Tab (mode), Ctrl+K (models), Esc (cancel), / (commands)" + A.reset;
   } else if (isStreaming) {
     const spinner = A.fgYellow + A.bold + SPINNER[spinnerIdx] + A.reset;
     statusContent = spinner + " " + A.fgYellow + statusText + A.reset + A.fgSubtext + elapsedDisplay + A.reset;
@@ -230,7 +231,7 @@ function renderAll() {
     const fg = isErr ? A.fgRed : statusText.startsWith("✔") ? A.fgGreen : A.fgCyan;
     statusContent = fg + A.bold + statusText + A.reset + A.fgSubtext + elapsedDisplay + A.reset;
   } else {
-    statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model  /help  /exit" + A.reset;
+    statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model" + A.reset;
   }
   const statusStripped = statusContent.replace(/\x1b\[[^m]*m/g, "");
   const statusPad = Math.max(0, cols - statusStripped.length);

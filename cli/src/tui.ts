@@ -255,11 +255,13 @@ function renderAll() {
     out.push(A.bgOverlay + A.fgText + A.bold + "  " + toastMsg + "  " + A.reset);
   }
 
-  // ── Input border ──
-  out.push(A.fgSubtext + A.dim + "─".repeat(cols) + A.reset + "\r\n");
+  // ── Input border (Micro-interaction: Lights up when typing) ──
+  const isTyping = inputBuffer.length > 0;
+  const borderCol = isTyping ? A.fgCyan : A.fgSubtext + A.dim;
+  out.push(borderCol + "─".repeat(cols) + A.reset + "\r\n");
 
-  // ── Input bar ──
-  const prompt = A.fgCyan + A.bold + " ❯ " + A.reset;
+  // ── Input bar (Micro-interaction: Prompt icon changes color) ──
+  const prompt = isTyping ? A.fgCyan + A.bold + " ❯ " + A.reset : A.fgSubtext + A.bold + " ❯ " + A.reset;
   const promptWidth = 3;
   const inputVisible = inputBuffer.length > cols - promptWidth - 4
     ? "…" + inputBuffer.slice(-(cols - promptWidth - 5))
@@ -352,7 +354,7 @@ async function sendMessage(text: string) {
     elapsedDisplay = "  " + elapsed + "s";
     if (!isReceivingStream) {
       // Show spinner in chat area while waiting for first byte
-      messages[assistantIdx].content = A.fgYellow + SPINNER[spinnerIdx] + " " + statusText + A.reset;
+      messages[assistantIdx].content = A.fgYellow + SPINNER[spinnerIdx] + " " + A.fgSubtext + statusText + A.reset;
     }
     renderAll();
   }, 100);
@@ -430,8 +432,16 @@ async function sendMessage(text: string) {
       }
     }
 
-    // Finalize message
-    messages[assistantIdx] = { role: "assistant", content: fullText || "(empty response)" };
+    // Finalize message with a micro-interaction (check mark briefly)
+    const finalContent = fullText || "(empty response)";
+    messages[assistantIdx] = { role: "assistant", content: A.fgGreen + "✔ " + A.reset + finalContent };
+    setTimeout(() => {
+      if (messages[assistantIdx]) {
+        messages[assistantIdx].content = finalContent;
+        renderAll();
+      }
+    }, 1500);
+
     scrollOffset = 0;
     stopSpinner();
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -537,20 +547,26 @@ async function handleCommand(cmd: string) {
 
 // ─── Model Picker ────────────────────────────────────────────────────────────
 async function openModelPicker() {
+  showModelPicker = true;
   if (availableModels.length === 0) {
-    setStatus("Loading models…");
+    availableModels = ["Loading..."];
+    modelPickerIdx = 0;
+    setStatus("Fetching models...");
     renderAll();
     try {
       const res = await fetch(gatewayUrl + "/v1/models");
       if (res.ok) {
         const data = await res.json() as any;
         availableModels = (data.data || []).map((m: any) => m.id as string);
+      } else {
+        availableModels = ["Error loading models"];
       }
-    } catch {}
+    } catch {
+      availableModels = ["Gateway offline"];
+    }
   }
   modelPickerIdx = availableModels.indexOf(currentModel);
   if (modelPickerIdx < 0) modelPickerIdx = 0;
-  showModelPicker = true;
   setStatus("↑↓ navigate  Enter select  Esc cancel");
   renderAll();
 }

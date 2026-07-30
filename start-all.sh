@@ -8,7 +8,8 @@ echo "🔍 Checking ToolNet API Server status on port $PORT..."
 # Check if server is running on port
 if ! curl -s http://127.0.0.1:$PORT/api/health >/dev/null 2>&1; then
   echo "🚀 Starting ToolNet API Server in background on port $PORT..."
-  npm run dev > /tmp/toolnetapi.log 2>&1 &
+  nohup npm run dev < /dev/null > /tmp/toolnetapi.log 2>&1 &
+  disown 2>/dev/null || true
   
   # Wait for server readiness
   for i in {1..15}; do

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./images/toolnetapi.png?1" alt="ToolNet API Dashboard" width="800"/>
+  <img src="./images/ToolnetAPI.png?1" alt="ToolNet API Dashboard" width="800"/>
   
   # ToolNet API - FREE AI Router & Token Saver
   
@@ -50,7 +50,7 @@
 │  Your CLI   │  (Claude Code, Codex, OpenClaw, Cursor, Cline...)
 │   Tool      │
 └──────┬──────┘
-       │ http://localhost:20128/v1
+       │ http://localhost:20127/v1
        ↓
 ┌─────────────────────────────────────────────┐
 │           ToolNet API (Smart Router)            │
@@ -80,7 +80,7 @@ npm install -g toolnetapi
 toolnetapi
 ```
 
-🎉 Dashboard opens at `http://localhost:20128`
+🎉 Dashboard opens at `http://localhost:20127`
 
 **2. Connect a FREE provider (no signup needed):**
 
@@ -90,7 +90,7 @@ Dashboard → Providers → Connect **Kiro AI** (~50 credits/month free: Claude 
 
 ```
 Claude Code/Codex/OpenClaw/Cursor/Cline Settings:
-  Endpoint: http://localhost:20128/v1
+  Endpoint: http://localhost:20127/v1
   API Key: [copy from dashboard]
   Model: kr/claude-sonnet-4.5
 ```
@@ -119,13 +119,13 @@ Production mode:
 
 ```bash
 npm run build
-PORT=20128 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20128 npm run start
+PORT=20127 HOSTNAME=0.0.0.0 NEXT_PUBLIC_BASE_URL=http://localhost:20127 npm run start
 ```
 
 Default URLs:
 
-- Dashboard: `http://localhost:20128/dashboard`
-- OpenAI-compatible API: `http://localhost:20128/v1`
+- Dashboard: `http://localhost:20127/dashboard`
+- OpenAI-compatible API: `http://localhost:20127/v1`
 
 ---
 
@@ -961,7 +961,7 @@ Cost: $0 forever (+ 20-40% token savings via RTK)!
 
 ```
 Settings → Models → Advanced:
-  OpenAI API Base URL: http://localhost:20128/v1
+  OpenAI API Base URL: http://localhost:20127/v1
   OpenAI API Key: [from toolnetapi dashboard]
   Model: cc/claude-opus-4-7
 ```
@@ -974,7 +974,7 @@ Edit `~/.claude/config.json`:
 
 ```json
 {
-  "anthropic_api_base": "http://localhost:20128/v1",
+  "anthropic_api_base": "http://localhost:20127/v1",
   "anthropic_api_key": "your-toolnetapi-api-key"
 }
 ```
@@ -982,7 +982,7 @@ Edit `~/.claude/config.json`:
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://localhost:20128"
+export OPENAI_BASE_URL="http://localhost:20127"
 export OPENAI_API_KEY="your-toolnetapi-api-key"
 
 codex "your prompt"
@@ -1010,7 +1010,7 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
   "models": {
     "providers": {
       "toolnetapi": {
-        "baseUrl": "http://127.0.0.1:20128/v1",
+        "baseUrl": "http://127.0.0.1:20127/v1",
         "apiKey": "sk_toolnetapi",
         "api": "openai-completions",
         "models": [
@@ -1031,7 +1031,7 @@ Dashboard → CLI Tools → OpenClaw → Select Model → Apply
 
 ```
 Provider: OpenAI Compatible
-Base URL: http://localhost:20128/v1
+Base URL: http://localhost:20127/v1
 API Key: [from dashboard]
 Model: cc/claude-opus-4-7
 ```
@@ -1054,10 +1054,10 @@ npm run build
 export JWT_SECRET="your-secure-secret-change-this"
 export INITIAL_PASSWORD="your-password"
 export DATA_DIR="/var/lib/toolnetapi"
-export PORT="20128"
+export PORT="20127"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
-export NEXT_PUBLIC_BASE_URL="http://localhost:20128"
+export NEXT_PUBLIC_BASE_URL="http://localhost:20127"
 export NEXT_PUBLIC_CLOUD_URL="https://toolnetapi.com"
 export API_KEY_SECRET="endpoint-proxy-api-key-secret"
 export MACHINE_ID_SALT="endpoint-proxy-salt"
@@ -1084,13 +1084,13 @@ Published images (multi-platform `linux/amd64` + `linux/arm64`):
 ```bash
 docker run -d \
   --name toolnetapi \
-  -p 20128:20128 \
+  -p 20127:20127 \
   -v "$HOME/.toolnetapi:/app/data" \
   -e DATA_DIR=/app/data \
   toolnet/toolnetapi:latest
 ```
 
-→ Open http://localhost:20128
+→ Open http://localhost:20127
 
 **Build from source (dev):**
 
@@ -1098,13 +1098,13 @@ docker run -d \
 git clone https://github.com/LBT-AI/toolnetapi.git
 cd toolnetapi/app
 docker build -t toolnetapi .
-docker run -d --name toolnetapi -p 20128:20128 \
+docker run -d --name toolnetapi -p 20127:20127 \
   -v "$HOME/.toolnetapi:/app/data" -e DATA_DIR=/app/data toolnetapi
 ```
 
 **Container defaults:**
 
-- `PORT=20128`
+- `PORT=20127`
 - `HOSTNAME=0.0.0.0`
 
 **Useful commands:**
@@ -1125,10 +1125,10 @@ docker pull toolnet/toolnetapi:latest   # update to latest
 | `JWT_SECRET`                                         | Auto-generated (`~/.toolnetapi/jwt-secret`) | JWT signing secret for dashboard auth cookie (override to share across instances)   |
 | `INITIAL_PASSWORD`                                   | `123456`                                 | First login password when no saved hash exists                                      |
 | `DATA_DIR`                                           | `~/.toolnetapi`                             | Main app data location (SQLite at `$DATA_DIR/db/data.sqlite`)                       |
-| `PORT`                                               | framework default                        | Service port (`20128` in examples)                                                  |
+| `PORT`                                               | framework default                        | Service port (`20127` in examples)                                                  |
 | `HOSTNAME`                                           | framework default                        | Bind host (Docker defaults to `0.0.0.0`)                                            |
 | `NODE_ENV`                                           | runtime default                          | Set `production` for deploy                                                         |
-| `BASE_URL`                                           | `http://localhost:20128`                 | Server-side internal base URL used by cloud sync jobs                               |
+| `BASE_URL`                                           | `http://localhost:20127`                 | Server-side internal base URL used by cloud sync jobs                               |
 | `CLOUD_URL`                                          | `https://toolnetapi.com`                    | Server-side cloud sync endpoint base URL                                            |
 | `NEXT_PUBLIC_BASE_URL`                               | `http://localhost:3000`                  | Backward-compatible/public base URL (prefer `BASE_URL` for server runtime)          |
 | `NEXT_PUBLIC_CLOUD_URL`                              | `https://toolnetapi.com`                    | Backward-compatible/public cloud URL (prefer `CLOUD_URL` for server runtime)        |
@@ -1261,7 +1261,7 @@ Notes:
 
 **Dashboard opens on wrong port**
 
-- Set `PORT=20128` and `NEXT_PUBLIC_BASE_URL=http://localhost:20128`
+- Set `PORT=20127` and `NEXT_PUBLIC_BASE_URL=http://localhost:20127`
 
 **First login not working**
 
@@ -1290,7 +1290,7 @@ Notes:
 ### Chat Completions
 
 ```bash
-POST http://localhost:20128/v1/chat/completions
+POST http://localhost:20127/v1/chat/completions
 Authorization: Bearer your-api-key
 Content-Type: application/json
 
@@ -1306,7 +1306,7 @@ Content-Type: application/json
 ### List Models
 
 ```bash
-GET http://localhost:20128/v1/models
+GET http://localhost:20127/v1/models
 Authorization: Bearer your-api-key
 
 → Returns all models + combos in OpenAI format

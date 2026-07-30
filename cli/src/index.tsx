@@ -45,12 +45,12 @@ function drainStdin() {
   } catch {}
 }
 
-if ((SIMPLE || isMobileOrIncompatibleTerminal()) && !FORCE_TUI) {
+if (SIMPLE) {
   await startRepl();
   process.exit(0);
 }
 
-// Try TUI; fallback to REPL if it fails (e.g. on incompatible terminals)
+// Default: Launch Full TUI interface! Fallback to REPL if unsupported
 try {
   const tui = await import("./tui-entry");
   await tui.main();

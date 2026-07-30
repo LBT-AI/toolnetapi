@@ -429,6 +429,7 @@ export async function main() {
     completer: makeCompleter(commandNames),
   });
 
+  process.stdin.resume();
   rl.prompt();
 
   rl.on("line", async (line: string) => {

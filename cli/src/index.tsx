@@ -4,11 +4,11 @@ const args = process.argv.slice(2);
 const SIMPLE = args.includes("--simple") || args.includes("-s");
 
 if (SIMPLE) {
-  const { main } = await import("./simple-repl");
-  await main();
+  const { main: mainRepl } = await import("./simple-repl");
+  await mainRepl();
   process.exit(0);
 }
 
 // Launch full-screen TUI (raw terminal mode, Termius compatible)
-const { main } = await import("./tui");
-await main();
+const { main: mainTui } = await import("./tui");
+await mainTui();

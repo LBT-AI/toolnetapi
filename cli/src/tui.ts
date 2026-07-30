@@ -749,9 +749,4 @@ async function main() {
   process.on("SIGTERM", exitApp);
 }
 
-main().catch(err => {
-  write(T.show + T.altOff + A.reset + "\r\n");
-  if (process.stdin.isTTY) try { process.stdin.setRawMode(false); } catch {}
-  console.error("Fatal:", err);
-  process.exit(1);
-});
+export { main };

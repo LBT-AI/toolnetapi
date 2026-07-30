@@ -85,6 +85,7 @@ let spinnerIdx = 0;
 let spinnerTimer: ReturnType<typeof setInterval> | null = null;
 let currentModel = "openai/gpt-4o";
 let agentMode: "Build" | "Plan" = "Build";
+let bypassMode = false;
 let gatewayUrl = "http://127.0.0.1:20127";
 let showHelp = false;
 let showModelPicker = false;
@@ -103,6 +104,7 @@ const COMMANDS = [
   { name: "/model",     desc: "Pick AI model (Ctrl+K)" },
   { name: "/clear",     desc: "Clear chat history" },
   { name: "/agent",     desc: "Toggle Build/Plan mode" },
+  { name: "/bypass",    desc: "Toggle bypass mode on/off" },
   { name: "/plan",      desc: "Switch to Plan mode" },
   { name: "/build",     desc: "Switch to Build mode" },
   { name: "/providers", desc: "Show providers (open Web UI)" },
@@ -136,7 +138,8 @@ function renderAll() {
   out.push(T.hide + T.home);
 
   // ── Header ──
-  const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + A.reset;
+  const bypassLabel = bypassMode ? A.fgRed + "[Bypass] " + A.reset : "";
+  const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + bypassLabel + A.reset;
   const modelLabel = A.fgSubtext + "Model: " + A.fgText + truncate(currentModel, 30) + A.reset;
   const gwLabel = A.fgSubtext + " │ GW: " + A.fgGreen + "●" + A.reset + " ";
   const headerRight = modelLabel + gwLabel + modeLabel;
@@ -296,9 +299,12 @@ async function sendMessage(text: string) {
   try {
     setStatus("Calling API…");
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (bypassMode) headers["x-bypass-toolnet"] = "true";
+
     const res = await fetch(gatewayUrl + "/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model: currentModel,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
@@ -426,6 +432,12 @@ async function handleCommand(cmd: string) {
     case "/agent": {
       agentMode = agentMode === "Build" ? "Plan" : "Build";
       setStatus("Mode: " + agentMode);
+      break;
+    }
+
+    case "/bypass": {
+      bypassMode = !bypassMode;
+      setStatus("Bypass Mode: " + (bypassMode ? "ON" : "OFF"));
       break;
     }
 

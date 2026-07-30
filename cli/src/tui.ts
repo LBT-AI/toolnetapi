@@ -615,11 +615,11 @@ function handleKey(data: Buffer) {
   const suggests = getSuggestions(inputBuffer);
   if (suggests.length > 0) {
     if (hex === "1b5b41" || hex === "1b4f41") { // Up
-      cmdSuggestIdx = Math.max(0, cmdSuggestIdx - 1);
+      cmdSuggestIdx = cmdSuggestIdx <= 0 ? suggests.length - 1 : cmdSuggestIdx - 1;
       renderAll(); return;
     }
     if (hex === "1b5b42" || hex === "1b4f42") { // Down
-      cmdSuggestIdx = Math.min(suggests.length - 1, cmdSuggestIdx + 1);
+      cmdSuggestIdx = cmdSuggestIdx >= suggests.length - 1 ? 0 : cmdSuggestIdx + 1;
       renderAll(); return;
     }
     if (hex === "09") { // Tab

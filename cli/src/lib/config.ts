@@ -26,7 +26,7 @@ export interface CliConfig {
 }
 
 const DEFAULT_CONFIG: CliConfig = {
-  baseUrl: "http://127.0.0.1:20128",
+  baseUrl: "http://127.0.0.1:20127",
   defaultModel: "openai/gpt-4o",
   theme: "dark",
   rtkEnabled: true,
@@ -50,6 +50,9 @@ export function loadConfig(): CliConfig {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
     const parsed = JSON.parse(raw);
     cachedConfig = { ...DEFAULT_CONFIG, ...parsed };
+    if (cachedConfig.baseUrl && cachedConfig.baseUrl.includes("20128")) {
+      cachedConfig.baseUrl = cachedConfig.baseUrl.replace("20128", "20127");
+    }
   } catch {
     cachedConfig = { ...DEFAULT_CONFIG };
   }

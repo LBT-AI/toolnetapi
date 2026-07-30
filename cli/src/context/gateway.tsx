@@ -14,7 +14,7 @@ export function GatewayProvider(props: {
   baseUrl?: string;
   children: any;
 }) {
-  const client = props.client ?? createGateway(props.baseUrl ?? "http://127.0.0.1:20128");
+  const client = props.client ?? createGateway(props.baseUrl ?? "http://127.0.0.1:20127");
   return (
     <GatewayContext.Provider value={client}>
       {props.children}

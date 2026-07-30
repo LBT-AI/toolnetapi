@@ -132,7 +132,7 @@ export interface ModelsResponse {
 export class GatewayClient {
   private baseUrl: string;
 
-  constructor(baseUrl = "http://127.0.0.1:20128") {
+  constructor(baseUrl = "http://127.0.0.1:20127") {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
 
@@ -319,7 +319,7 @@ export function detectGatewayUrl(): string {
     if (url) return url;
   } catch {}
   if (process.env.TOOLNET_API_URL) return process.env.TOOLNET_API_URL;
-  return "http://127.0.0.1:20128";
+  return "http://127.0.0.1:20127";
 }
 
 let _globalGateway: GatewayClient | null = null;

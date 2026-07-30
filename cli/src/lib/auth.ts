@@ -26,7 +26,7 @@ export function clearToken() {
 
 export async function login(
   password: string,
-  baseUrl = "http://localhost:20128"
+  baseUrl = "http://localhost:20127"
 ): Promise<{ success: boolean; error?: string; token?: string }> {
   try {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
@@ -58,7 +58,7 @@ export async function login(
 }
 
 export async function checkAuth(
-  baseUrl = "http://localhost:20128"
+  baseUrl = "http://localhost:20127"
 ): Promise<boolean> {
   const token = getStoredToken();
   if (!token) return false;

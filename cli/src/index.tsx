@@ -11,55 +11,29 @@ async function startRepl() {
   await main();
 }
 
-function isMobileOrIncompatibleTerminal(): boolean {
-  if (!process.stdout.isTTY || !process.stdin.isTTY) return true;
-  const env = process.env as Record<string, string | undefined>;
-  const term = (env.TERM || "").toLowerCase();
-  const termProgram = (env.TERM_PROGRAM || "").toLowerCase();
-  
-  if (term === "dumb" || term === "vt100" || term === "vanilla") return true;
-  
-  // Detect mobile SSH clients (Termius, JuiceSSH, etc. set SSH_CLIENT / SSH_TTY)
-  if (env.SSH_CLIENT || env.SSH_TTY || env.SSH_CONNECTION) {
-    const isAdvancedDesktopTerm = termProgram.includes("kitty") || 
-                                  termProgram.includes("wezterm") || 
-                                  termProgram.includes("iterm") || 
-                                  Boolean(env.KITTY_WINDOW_ID) || 
-                                  Boolean(env.ALACRITTY_LOG);
-    if (!isAdvancedDesktopTerm) return true;
-  }
-  
-  // If terminal dimensions are missing or too small for full TUI
-  if (!process.stdout.columns || process.stdout.columns < 60) return true;
-  return false;
-}
-
 function cleanupTerminal() {
   try {
-    // Disable mouse tracking (1000, 1002, 1003, 1006), focus tracking (1004), show cursor (25h), leave alt screen (1049l)
     process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l");
     if (process.stdin.isTTY && typeof process.stdin.setRawMode === "function") {
       process.stdin.setRawMode(false);
     }
-    if (typeof process.stdin.read === "function") {
-      process.stdin.read();
-    }
   } catch {}
 }
 
-if ((SIMPLE || isMobileOrIncompatibleTerminal()) && !FORCE_TUI) {
+if (SIMPLE) {
   cleanupTerminal();
   await startRepl();
   process.exit(0);
 }
 
-// Launch Full TUI interface on supported desktop terminals! Fallback to REPL if unsupported
+// Launch Full TUI Chat Interface by default when 'toolnet' is executed!
 try {
   const tui = await import("./tui-entry");
   await tui.main();
   cleanupTerminal();
   process.exit(0);
-} catch {
+} catch (err) {
+  console.error("TUI Error:", err);
   cleanupTerminal();
   await startRepl();
 }

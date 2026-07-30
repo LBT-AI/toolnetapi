@@ -150,6 +150,14 @@ function renderAll() {
   // Go home, hide cursor
   out.push(T.hide + T.home);
 
+  // ── Dynamic Theme Color ──
+  let primaryColor = A.fgCyan; // Build mode default
+  if (bypassMode) {
+    primaryColor = A.fgRed;
+  } else if (agentMode === "Plan") {
+    primaryColor = A.fgYellow;
+  }
+
   // ── Header ──
   const bypassLabel = bypassMode ? A.fgRed + "[Bypass] " + A.reset : "";
   const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + bypassLabel + A.reset;
@@ -167,7 +175,7 @@ function renderAll() {
   for (const msg of messages) {
     const isUser = msg.role === "user";
     const prefix = isUser
-      ? A.fgCyan + A.bold + " ❯ " + A.reset
+      ? primaryColor + A.bold + " ❯ " + A.reset
       : A.fgYellow + A.bold + " ✦ " + A.reset;
     const prefixStripped = " ❯ ";
     const wrapWidth = cols - prefixStripped.length - 2;
@@ -234,7 +242,7 @@ function renderAll() {
       const cmd = activeSuggests[si];
       const selected = si === cmdSuggestIdx;
       const bg = selected ? A.bgOverlay : A.bgSuggest;
-      const nameFg = selected ? A.fgCyan + A.bold : A.fgCyan;
+      const nameFg = selected ? primaryColor + A.bold : primaryColor;
       const descFg = A.fgSubtext;
       const nameText = cmd.name.padEnd(14);
       const descText = truncate(cmd.desc, cols - 18);
@@ -257,11 +265,11 @@ function renderAll() {
 
   // ── Input border (Micro-interaction: Lights up when typing) ──
   const isTyping = inputBuffer.length > 0;
-  const borderCol = isTyping ? A.fgCyan : A.fgSubtext + A.dim;
+  const borderCol = isTyping ? primaryColor : A.fgSubtext + A.dim;
   out.push(borderCol + "─".repeat(cols) + A.reset + "\r\n");
 
   // ── Input bar (Micro-interaction: Prompt icon changes color) ──
-  const prompt = isTyping ? A.fgCyan + A.bold + " ❯ " + A.reset : A.fgSubtext + A.bold + " ❯ " + A.reset;
+  const prompt = isTyping ? primaryColor + A.bold + " ❯ " + A.reset : A.fgSubtext + A.bold + " ❯ " + A.reset;
   const promptWidth = 3;
   const inputVisible = inputBuffer.length > cols - promptWidth - 4
     ? "…" + inputBuffer.slice(-(cols - promptWidth - 5))
@@ -285,7 +293,7 @@ function renderAll() {
     statusContent = spinner + " " + A.fgYellow + statusText + A.reset + A.fgSubtext + elapsedDisplay + A.reset;
   } else if (statusText) {
     const isErr = statusText.startsWith("Error") || statusText.startsWith("✖");
-    const fg = isErr ? A.fgRed : statusText.startsWith("✔") ? A.fgGreen : A.fgCyan;
+    const fg = isErr ? A.fgRed : statusText.startsWith("✔") ? A.fgGreen : primaryColor;
     statusContent = fg + A.bold + statusText + A.reset + A.fgSubtext + elapsedDisplay + A.reset;
   } else {
     statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model" + A.reset;

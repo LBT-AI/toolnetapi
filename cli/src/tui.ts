@@ -98,6 +98,17 @@ let startTime = 0;
 let elapsedDisplay = "";
 let lastTokens = "";
 
+// ─── Toasts & Notifications ────────────────────────────────────────────────
+let toastMsg = "";
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showToast(msg: string, ms = 2500) {
+  toastMsg = msg;
+  renderAll();
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastMsg = ""; renderAll(); }, ms);
+}
+
 // ─── Slash command suggestions ──────────────────────────────────────────────
 const COMMANDS = [
   { name: "/exit",      desc: "Exit ToolNet CLI" },
@@ -162,10 +173,39 @@ function renderAll() {
     const wrapWidth = cols - prefixStripped.length - 2;
 
     const lines = wrapText(msg.content, wrapWidth);
+    let inCodeBlock = false;
+    let codeLang = "";
+
     for (let i = 0; i < lines.length; i++) {
       const linePrefix = i === 0 ? prefix : " ".repeat(prefixStripped.length);
-      const color = isUser ? A.fgText : A.fgText + A.dim; // dim AI text slightly for contrast
-      chatLines.push(linePrefix + color + lines[i] + A.reset);
+      let content = lines[i];
+      let color = isUser ? A.fgText : A.fgText + A.dim; // default
+
+      // Syntax & Diff Highlighting
+      if (content.startsWith("```")) {
+        inCodeBlock = !inCodeBlock;
+        if (inCodeBlock) codeLang = content.slice(3).trim().toLowerCase();
+        color = A.fgSubtext; // backticks color
+      } else if (inCodeBlock) {
+        if (codeLang === "diff" || codeLang === "") {
+          if (content.startsWith("+") && !content.startsWith("+++")) {
+            color = A.fgGreen;
+          } else if (content.startsWith("-") && !content.startsWith("---")) {
+            color = A.fgRed;
+          } else {
+            color = A.fgText; // normal code
+          }
+        } else {
+          color = A.fgText; // normal code
+          // Rudimentary syntax highlight
+          content = content
+            .replace(/\b(const|let|var|function|class|return|if|else|for|while|import|from|export)\b/g, A.fgBlue + "$1" + A.fgText)
+            .replace(/\b(true|false|null|undefined)\b/g, A.fgPeach + "$1" + A.fgText)
+            .replace(/(["'`])(.*?)(["'`])/g, A.fgGreen + "$1$2$3" + A.fgText);
+        }
+      }
+
+      chatLines.push(linePrefix + color + content + A.reset);
     }
     chatLines.push(""); // blank line between messages for whitespace
   }
@@ -204,6 +244,15 @@ function renderAll() {
       out.push(line + bg + " ".repeat(pad) + A.reset + "\r\n");
     }
     out.push(A.bgSuggest + A.fgSubtext + " ↑↓ navigate  Tab/Enter select  Esc cancel ".padEnd(cols) + A.reset + "\r\n");
+  }
+
+  // ── Toast Notification ──
+  if (toastMsg) {
+    const toastW = toastMsg.length + 4;
+    const toastR = 2; // top margin
+    const toastC = Math.max(1, Math.floor((cols - toastW) / 2));
+    out.push(T.goto(toastR, toastC));
+    out.push(A.bgOverlay + A.fgText + A.bold + "  " + toastMsg + "  " + A.reset);
   }
 
   // ── Input border ──
@@ -429,47 +478,55 @@ async function handleCommand(cmd: string) {
       break;
 
     case "/model":
+      showToast("Opening Model Picker...");
       await openModelPicker();
       break;
 
     case "/providers":
-    case "/keys": {
-      messages.push({ role: "system", content: "→ Configure providers/keys at: " + gatewayUrl + "/settings" });
+    case "/keys":
+    case "/combos":
+    case "/settings": {
+      showToast(`Redirecting to Web UI...`);
+      messages.push({ role: "system", content: "→ Open Web UI at: " + gatewayUrl + "/settings" });
       break;
     }
 
     case "/clear":
       messages = [];
+      showToast("Chat history cleared");
       setStatus("Chat cleared");
       break;
 
     case "/agent": {
       agentMode = agentMode === "Build" ? "Plan" : "Build";
+      showToast("Switched to " + agentMode + " Mode");
       setStatus("Mode: " + agentMode);
       break;
     }
 
     case "/bypass": {
       bypassMode = !bypassMode;
+      showToast(bypassMode ? "Bypass Mode ENABLED" : "Bypass Mode DISABLED");
       setStatus("Bypass Mode: " + (bypassMode ? "ON" : "OFF"));
       break;
     }
 
     case "/plan": {
       agentMode = "Plan";
+      showToast("Switched to Plan Mode");
       setStatus("Mode: Plan");
       break;
     }
 
     case "/build": {
       agentMode = "Build";
+      showToast("Switched to Build Mode");
       setStatus("Mode: Build");
       break;
     }
 
-    case "/combos":
-    case "/settings":
-      messages.push({ role: "system", content: "→ Open Web UI at: " + gatewayUrl + "/settings" });
+    case "/status":
+      showToast("Checking gateway status...");
       break;
 
     default:

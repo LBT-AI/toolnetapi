@@ -285,17 +285,26 @@ async function sendMessage(text: string) {
   }
 
   messages.push({ role: "user", content: text });
+  // Add placeholder for assistant immediately so spinner shows in chat
+  messages.push({ role: "assistant", content: "" });
+  const assistantIdx = messages.length - 1;
+
   scrollOffset = 0;
   startTime = Date.now();
   elapsedDisplay = "";
   setStatus("Thinking…");
   isStreaming = true;
+  let isReceivingStream = false;
   abortController = new AbortController();
 
   spinnerTimer = setInterval(() => {
     spinnerIdx = (spinnerIdx + 1) % SPINNER.length;
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     elapsedDisplay = "  " + elapsed + "s";
+    if (!isReceivingStream) {
+      // Show spinner in chat area while waiting for first byte
+      messages[assistantIdx].content = A.fgYellow + SPINNER[spinnerIdx] + " " + statusText + A.reset;
+    }
     renderAll();
   }, 100);
 
@@ -336,14 +345,12 @@ async function sendMessage(text: string) {
     }
 
     setStatus("Streaming response…");
+    isReceivingStream = true;
 
     let fullText = "";
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    // Add placeholder message for live streaming display
-    messages.push({ role: "assistant", content: "▊" });
-    const assistantIdx = messages.length - 1;
 
     while (true) {
       const { done, value } = await reader.read();

@@ -96,6 +96,7 @@ let ctrlCCount = 0;
 let ctrlCTimer: ReturnType<typeof setTimeout> | null = null;
 let startTime = 0;
 let elapsedDisplay = "";
+let lastTokens = "";
 
 // ─── Slash command suggestions ──────────────────────────────────────────────
 const COMMANDS = [
@@ -108,6 +109,7 @@ const COMMANDS = [
   { name: "/plan",      desc: "Switch to Plan mode" },
   { name: "/build",     desc: "Switch to Build mode" },
   { name: "/providers", desc: "Show providers (open Web UI)" },
+  { name: "/combos",    desc: "Manage AI combos (open Web UI)" },
   { name: "/keys",      desc: "Manage API keys (open Web UI)" },
   { name: "/settings",  desc: "Open gateway settings" },
   { name: "/status",    desc: "Show gateway connection status" },
@@ -142,7 +144,8 @@ function renderAll() {
   const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + bypassLabel + A.reset;
   const modelLabel = A.fgSubtext + "Model: " + A.fgText + truncate(currentModel, 30) + A.reset;
   const gwLabel = A.fgSubtext + " │ GW: " + A.fgGreen + "●" + A.reset + " ";
-  const headerRight = modelLabel + gwLabel + modeLabel;
+  const tokenLabel = lastTokens ? A.fgSubtext + "│ Tokens: " + A.fgYellow + lastTokens + A.reset + " " : "";
+  const headerRight = modelLabel + gwLabel + tokenLabel + modeLabel;
   const headerRightStripped = headerRight.replace(/\x1b\[[^m]*m/g, "");
   const padding = Math.max(0, cols - headerRightStripped.length);
 
@@ -361,6 +364,10 @@ async function sendMessage(text: string) {
               fullText += delta;
               messages[assistantIdx] = { role: "assistant", content: fullText + "▊" };
               scrollOffset = 0;
+            }
+            if (json.usage) {
+              const u = json.usage;
+              lastTokens = `${u.prompt_tokens || 0} \u2192 ${u.completion_tokens || 0} (${u.total_tokens || 0})`;
             }
           } catch {}
         }

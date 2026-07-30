@@ -235,18 +235,27 @@ function renderMarkdown(text: string): string {
 const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 async function withSpinner<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  // Only use spinner when stderr is a real TTY to avoid corrupting Termius/mobile SSH sessions
+  const useSpin = process.stderr.isTTY;
   let i = 0;
-  const interval = setInterval(() => {
-    process.stderr.write(
-      "\r" + color.cyan + spinnerFrames[i % spinnerFrames.length] + C.reset + " " + label
-    );
-    i++;
-  }, 100);
+  let interval: ReturnType<typeof setInterval> | null = null;
+  if (useSpin) {
+    interval = setInterval(() => {
+      process.stderr.write(
+        "\r" + color.cyan + spinnerFrames[i % spinnerFrames.length] + C.reset + " " + label
+      );
+      i++;
+    }, 100);
+  } else {
+    process.stderr.write(label + "...\n");
+  }
   try {
     return await fn();
   } finally {
-    clearInterval(interval);
-    process.stderr.write("\r\x1b[K");
+    if (interval) {
+      clearInterval(interval);
+      process.stderr.write("\r\x1b[K");
+    }
   }
 }
 
@@ -403,10 +412,16 @@ export async function main() {
   print(C.bold + color.cyan + "  ┃┃   ┃┃┃┃┃┃┃┃╰╮╭╮┃┃╰╮" + C.reset);
   print(C.bold + color.cyan + "  ╰╯   ╰╯╰╯╰╯╰╯ ╰╯╰╯╰━╯" + C.reset + "  " + color.subtext + "v" + (version || "?") + C.reset);
   print(color.subtext + "  AI Coding Agent Gateway" + C.reset);
+  const currentModel_default = "openai/gpt-4o";
+  print("");
+  print(color.green + "  ✔ Connected to gateway at " + gw.getBaseUrl() + C.reset);
+  print(color.subtext + "  Model: " + C.bold + currentModel_default + C.reset + color.subtext + "  |  Type a message and press Enter  |  /help for commands  |  /exit to quit" + C.reset);
+  print("");
+  print(color.yellow + "  ─────────────────────────────────────────────────────" + C.reset);
   print("");
 
   const messages: ChatMessage[] = [];
-  let currentModel = "openai/gpt-4o";
+  let currentModel = currentModel_default;
 
   const addMessage = (role: "user" | "assistant" | "system", content: string, model?: string) => {
     if (content) {

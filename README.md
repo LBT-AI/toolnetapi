@@ -1,48 +1,43 @@
-# ToolNet API
+<div align="center">
+  <img src="./images/ToolnetAPI.png?1" alt="ToolNet API" width="800"/>
+  
+  # ToolNet API
+  
+  **The ultimate AI proxy router & token saver for modern developers.**
 
-**ToolNet API** is a powerful AI router and token saver designed to sit between your favorite AI coding tools (Claude Code, Cursor, OpenCode, Cline, etc.) and AI providers (OpenAI, Anthropic, Gemini, etc.).
+  [![npm version](https://img.shields.io/npm/v/toolnetapi.svg?color=blue&style=flat-square)](https://www.npmjs.com/package/toolnetapi)
+  [![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&style=flat-square)](https://hub.docker.com/r/toolnet/toolnetapi)
+  [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
+</div>
 
-By automatically compressing tool results and intelligently routing requests, ToolNet API saves tokens and ensures high availability via fallback mechanisms.
+---
 
-[![npm version](https://img.shields.io/npm/v/toolnetapi.svg)](https://www.npmjs.com/package/toolnetapi)
-[![Docker Pulls](https://img.shields.io/docker/pulls/toolnet/toolnetapi.svg?logo=docker&label=Docker%20pulls)](https://hub.docker.com/r/toolnet/toolnetapi)
-[![License](https://img.shields.io/npm/l/toolnetapi.svg)](https://github.com/LBT-AI/toolnetapi/blob/main/LICENSE)
+## ⚡ Introduction
 
-## ⚡ Quick Start
+**ToolNet API** is a high-performance middleware designed to sit between your AI coding assistants (such as Claude Code, Cursor, OpenCode, Cline) and various AI providers. It helps you save money, bypass rate limits, and streamline your workflow with advanced token compression.
 
-### 1. Install & Run
+### Why use ToolNet API?
+- **Cost Efficiency:** Saves 20-40% of context tokens by automatically compressing verbose tool outputs (e.g., `git diff`, `ls`).
+- **Zero Downtime:** Features intelligent routing with automatic fallback (Subscription → Cheap → Free).
+- **Load Balancing:** Add multiple API keys for the same provider to bypass rate limits using round-robin rotation.
+- **Universal API:** Fully compatible with the standard OpenAI `/v1` endpoint.
 
-Install globally via npm:
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+Install ToolNet API globally via NPM:
+
 ```bash
 npm install -g toolnetapi
 toolnetapi
 ```
-*The Dashboard will open at `http://localhost:20127`.*
+*The management dashboard will automatically open at `http://localhost:20127`.*
 
-Alternatively, run from source:
-```bash
-git clone https://github.com/LBT-AI/toolnetapi.git
-cd toolnetapi
-npm install
-./start-all.sh
-```
-
-### 2. Configure Your AI Tool
-
-Point your AI assistant (e.g. Claude Code, Cursor, OpenClaw) to the local proxy:
-
-- **Endpoint:** `http://localhost:20127/v1`
-- **API Key:** *(Copy from your ToolNet API Dashboard)*
-
-## 💡 Key Features
-
-- **RTK Token Saver:** Automatically minifies tool outputs (like `git diff`, `ls`, `grep`) to save 20-40% of context tokens.
-- **Smart Routing & Fallback:** Automatically switches to alternative models (Subscription → Cheap → Free) if your primary provider is rate-limited or exhausted.
-- **Multi-account Load Balancing:** Add multiple API keys for the same provider and ToolNet API will round-robin between them to prevent rate limits.
-- **Universal Compatibility:** Exposes an OpenAI-compatible `/v1` API, making it plug-and-play with almost any AI CLI or IDE.
-- **Interactive TUI:** Comes with a beautiful, Termius-friendly Terminal User Interface (TUI) for quick model switching and request monitoring.
-
-## 🐳 Docker Deployment
+<details>
+<summary><b>Alternative: Docker Deployment</b></summary>
 
 ```bash
 docker run -d \
@@ -52,15 +47,48 @@ docker run -d \
   -e DATA_DIR=/app/data \
   toolnet/toolnetapi:latest
 ```
+</details>
 
-## 🛠 Configuration
+### 2. Connect Your AI Assistant
 
-Default environment variables (can be set in `.env`):
+Configure your favorite IDE or CLI tool to point to your local ToolNet API proxy:
 
-- `PORT`: `20127`
-- `HOSTNAME`: `0.0.0.0`
-- `DATA_DIR`: `~/.toolnetapi`
+| Setting | Value |
+|---------|-------|
+| **Endpoint / Base URL** | `http://localhost:20127/v1` |
+| **API Key** | *Copy from your ToolNet API Dashboard* |
+| **Model** | *Select any model configured in your dashboard* |
+
+---
+
+## 🛠 Supported Providers & IDEs
+
+ToolNet API acts as a universal bridge. You can connect it to:
+
+- **IDEs & CLIs:** Cursor, Claude Code, Cline, OpenClaw, Windsurf, Trae, Zed, Devin.
+- **AI Providers:** OpenAI, Anthropic, Google Gemini, GitHub Copilot, Kilo Gateway, DeepSeek, and many more.
+
+<details>
+<summary><b>View full list of integrations</b></summary>
+
+- **Free Tier:** Kiro, OpenCode Free, Vertex AI
+- **China Providers:** GLM, MiniMax, Baidu, Tencent, DeepSeek
+- **Premium:** OpenAI, Anthropic, GitHub Copilot
+</details>
+
+---
+
+## ⚙️ Configuration
+
+ToolNet API works out-of-the-box, but you can customize its behavior using environment variables. 
+
+```env
+PORT=20127
+HOSTNAME=0.0.0.0
+DATA_DIR=~/.toolnetapi
+NEXT_PUBLIC_BASE_URL=http://localhost:20127
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+Distributed under the MIT License. See `LICENSE` for more information.

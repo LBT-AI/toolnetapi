@@ -640,10 +640,10 @@ function handleKey(data: Buffer) {
   // Model picker navigation
   if (showModelPicker) {
     if (hex === "1b5b41" || hex === "1b4f41") { // Up
-      modelPickerIdx = Math.max(0, modelPickerIdx - 1);
+      modelPickerIdx = modelPickerIdx <= 0 ? availableModels.length - 1 : modelPickerIdx - 1;
       renderAll(); renderModelPicker();
     } else if (hex === "1b5b42" || hex === "1b4f42") { // Down
-      modelPickerIdx = Math.min(availableModels.length - 1, modelPickerIdx + 1);
+      modelPickerIdx = modelPickerIdx >= availableModels.length - 1 ? 0 : modelPickerIdx + 1;
       renderAll(); renderModelPicker();
     } else if (hex === "0d" || hex === "0a") { // Enter
       if (availableModels[modelPickerIdx]) {

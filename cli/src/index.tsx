@@ -34,8 +34,10 @@ function isMobileOrIncompatibleTerminal(): boolean {
   return false;
 }
 
-function drainStdin() {
+function cleanupTerminal() {
   try {
+    // Disable mouse tracking (1000, 1002, 1003, 1006), focus tracking (1004), show cursor (25h), leave alt screen (1049l)
+    process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?25h\x1b[?1049l");
     if (process.stdin.isTTY && typeof process.stdin.setRawMode === "function") {
       process.stdin.setRawMode(false);
     }
@@ -46,6 +48,7 @@ function drainStdin() {
 }
 
 if (SIMPLE) {
+  cleanupTerminal();
   await startRepl();
   process.exit(0);
 }
@@ -54,9 +57,10 @@ if (SIMPLE) {
 try {
   const tui = await import("./tui-entry");
   await tui.main();
+  cleanupTerminal();
   process.exit(0);
 } catch {
-  drainStdin();
+  cleanupTerminal();
   await startRepl();
 }
 

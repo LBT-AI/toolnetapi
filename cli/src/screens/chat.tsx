@@ -479,14 +479,23 @@ export function ChatScreen() {
     if (v === lastSubmittedText && now - lastSubmitTime < 500) return;
     lastSubmittedText = v;
     lastSubmitTime = now;
+    const startTime = Date.now();
 
     setInputValue("");
     if (inputRef && typeof inputRef.focus === "function") inputRef.focus();
 
     if (v.startsWith("/")) {
       addMessage("user", v);
+      setStatusMsg(`▶ Running command: ${v}`);
       const commandCtx = { gateway, addMessage, setModel, setStatusMsg, exit, currentModel: selectedModel };
-      try { await dispatchCommand(v, commandCtx); } catch (e: any) { showToast(e?.message || String(e), "error"); }
+      try {
+        await dispatchCommand(v, commandCtx);
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        setStatusMsg(`✔ Done in ${duration}s`);
+      } catch (e: any) {
+        showToast(e?.message || String(e), "error");
+        setStatusMsg("Error executing command");
+      }
       return;
     }
 
@@ -503,7 +512,7 @@ export function ChatScreen() {
       const url = gateway.getBaseUrl() + "/v1/chat/completions";
       const msgs = [...getCurrentSession().messages];
 
-      setStatusMsg("Reading...");
+      setStatusMsg("Reading request...");
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -515,18 +524,20 @@ export function ChatScreen() {
         clearInterval(spinnerTimer);
         const errText = await res.text();
         addMessage("assistant", `Error: HTTP ${res.status} — ${errText.slice(0, 200)}`);
-        setIsStreaming(false); setStatusMsg("Error");
+        setIsStreaming(false);
+        setStatusMsg("Error response from API");
         return;
       }
 
       if (!res.body) {
         clearInterval(spinnerTimer);
         addMessage("assistant", "Error: No response body");
-        setIsStreaming(false); setStatusMsg("Error");
+        setIsStreaming(false);
+        setStatusMsg("Error: Empty body");
         return;
       }
 
-      setStatusMsg("Streaming...");
+      setStatusMsg("Streaming response...");
       let fullText = "";
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -566,17 +577,19 @@ export function ChatScreen() {
       sessionAddMessage("assistant", fullText);
       setMessages([...getCurrentSession().messages]);
       setIsStreaming(false);
-      setStatusMsg("Done");
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      setStatusMsg(`✔ Done in ${elapsed}s`);
       abortController = null;
     } catch (err: any) {
       clearInterval(spinnerTimer);
       if (err?.name === "AbortError") {
         addMessage("assistant", "(cancelled)");
+        setStatusMsg("Cancelled");
       } else {
         addMessage("assistant", "Error: " + (err?.message || String(err)));
+        setStatusMsg("Error");
       }
       setIsStreaming(false);
-      setStatusMsg("Error");
       abortController = null;
     }
   };
@@ -814,13 +827,20 @@ export function ChatScreen() {
           />
         </box>
 
-        {/* ── Footer with nav hints ── */}
+        {/* ── Footer status bar ── */}
         <box flexDirection="row" justifyContent="space-between" paddingLeft={1} paddingRight={1} borderStyle="single" borderColor={T.overlay} bg={T.surface}>
           <text fg={T.subtext}>{navHints(isStreaming(), hasDialogOpen())}</text>
           <box flexDirection="row">
-            <Show when={statusMsg()}><text fg={T.yellow}>{statusMsg()}</text></Show>
-            <Show when={!statusMsg() && isStreaming()}><text fg={T.yellow}>Streaming...</text></Show>
-            <Show when={!statusMsg() && !isStreaming()}><text fg={T.green} attributes={B}>Ready</text></Show>
+            <Show when={isStreaming()}>
+              <text fg={T.yellow} attributes={B}>{SPINNER_FRAMES[spinnerIdx()]} </text>
+              <text fg={T.yellow}>{statusMsg() || "Processing..."}</text>
+            </Show>
+            <Show when={!isStreaming() && statusMsg()}>
+              <text fg={statusMsg().startsWith("Error") ? T.red : statusMsg().startsWith("✔") ? T.green : T.cyan} attributes={B}>{statusMsg()}</text>
+            </Show>
+            <Show when={!isStreaming() && !statusMsg()}>
+              <text fg={T.green} attributes={B}>Ready</text>
+            </Show>
           </box>
         </box>
 

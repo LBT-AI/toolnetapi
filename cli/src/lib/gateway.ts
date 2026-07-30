@@ -315,8 +315,11 @@ export class GatewayClient {
 export function detectGatewayUrl(): string {
   const urlFile = path.join(DATA_DIR, "gateway-url");
   try {
-    const url = fs.readFileSync(urlFile, "utf8").trim();
-    if (url) return url;
+    let url = fs.readFileSync(urlFile, "utf8").trim();
+    if (url) {
+      if (url.includes("20128")) url = url.replace("20128", "20127");
+      return url;
+    }
   } catch {}
   if (process.env.TOOLNET_API_URL) return process.env.TOOLNET_API_URL;
   return "http://127.0.0.1:20127";

@@ -7,10 +7,12 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const srcPath = join(__dirname, "..", "src", "index.tsx");
 const args = process.argv.slice(2);
+const bunBin = process.execPath || "bun";
 
-const child = spawn("bun", [srcPath, ...args], {
+const child = spawn(bunBin, [srcPath, ...args], {
   stdio: "inherit",
   cwd: join(__dirname, ".."),
+  env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:${process.env.PATH}` },
 });
 
 child.on("exit", (code) => {

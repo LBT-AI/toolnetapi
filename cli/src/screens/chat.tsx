@@ -442,6 +442,10 @@ export function ChatScreen() {
   let lastSubmittedText = "";
   let lastSubmitTime = 0;
 
+  const [mode, setMode] = createSignal<"Build" | "Plan">("Build");
+  const [spinnerIdx, setSpinnerIdx] = createSignal(0);
+  const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
   onSessionsChange(() => {
     setSessions([...getSessions()]);
     setCurrentIdx(getCurrentIndex());
@@ -488,13 +492,18 @@ export function ChatScreen() {
 
     addMessage("user", v);
     setIsStreaming(true);
-    setStatusMsg("Sending...");
+    setStatusMsg("Thinking...");
     abortController = new AbortController();
+
+    const spinnerTimer = setInterval(() => {
+      setSpinnerIdx((i) => (i + 1) % SPINNER_FRAMES.length);
+    }, 80);
 
     try {
       const url = gateway.getBaseUrl() + "/v1/chat/completions";
       const msgs = [...getCurrentSession().messages];
 
+      setStatusMsg("Reading...");
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -503,6 +512,7 @@ export function ChatScreen() {
       });
 
       if (!res.ok) {
+        clearInterval(spinnerTimer);
         const errText = await res.text();
         addMessage("assistant", `Error: HTTP ${res.status} — ${errText.slice(0, 200)}`);
         setIsStreaming(false); setStatusMsg("Error");
@@ -510,6 +520,7 @@ export function ChatScreen() {
       }
 
       if (!res.body) {
+        clearInterval(spinnerTimer);
         addMessage("assistant", "Error: No response body");
         setIsStreaming(false); setStatusMsg("Error");
         return;
@@ -541,12 +552,13 @@ export function ChatScreen() {
           }
         }
 
-        if (fullText && fullText.length > 10) {
+        if (fullText && fullText.length > 5) {
           sessionAddMessage("assistant", fullText + "▊");
           setMessages([...getCurrentSession().messages]);
         }
       }
 
+      clearInterval(spinnerTimer);
       const sess = getCurrentSession();
       if (sess.messages.length > 0 && sess.messages[sess.messages.length - 1].role === "assistant") {
         sess.messages.pop();
@@ -557,6 +569,7 @@ export function ChatScreen() {
       setStatusMsg("Done");
       abortController = null;
     } catch (err: any) {
+      clearInterval(spinnerTimer);
       if (err?.name === "AbortError") {
         addMessage("assistant", "(cancelled)");
       } else {
@@ -607,6 +620,25 @@ export function ChatScreen() {
       return;
     }
 
+    // Esc: close dialogs or cancel stream. NEVER exit program (only /exit exits)
+    if (key.name === "escape") {
+      pd();
+      if (hasDialogOpen()) {
+        setShowHelp(false);
+        setShowModels(false);
+        setShowPalette(false);
+        return;
+      }
+      if (isStreaming()) {
+        abortController?.abort();
+        setIsStreaming(false);
+        setStatusMsg("Cancelled");
+        showToast("Stream cancelled", "warning");
+        return;
+      }
+      return;
+    }
+
     const isEnter = key === "\r" || key === "\n" || key.name === "enter" || key.name === "return" || key.sequence === "\r" || key.sequence === "\n";
     if (isEnter) {
       if (key.shift) return;
@@ -625,7 +657,7 @@ export function ChatScreen() {
         abortController?.abort();
         setIsStreaming(false); setStatusMsg("");
       } else {
-        setStatusMsg("Press Ctrl+C again to exit");
+        setStatusMsg("Press Ctrl+C twice or /exit to exit");
         setTimeout(() => setStatusMsg(""), 2000);
       }
       return;
@@ -637,14 +669,24 @@ export function ChatScreen() {
     // Ctrl+P: command palette
     if (key.name === "p" && key.ctrl) { pd(); setShowPalette(true); return; }
 
-    // Tab: cycle sessions
-    if (key.name === "tab") { pd(); const arr = getSessions(); switchSession((getCurrentIndex() + 1) % arr.length); return; }
+    // Tab: toggle Build / Plan mode
+    if (key.name === "tab") {
+      pd();
+      setMode((m) => (m === "Build" ? "Plan" : "Build"));
+      showToast(`Switched mode to ${mode()}`, "info");
+      return;
+    }
 
     // ? : help
     if (key.sequence === "?" && !key.ctrl && !key.alt) { pd(); setShowHelp(true); return; }
 
-    // Ctrl+M : model picker
-    if (key.name === "m" && key.ctrl) { pd(); loadModels(); setShowModels(true); return; }
+    // Ctrl+K or Ctrl+M : model picker
+    if ((key.name === "k" && key.ctrl) || (key.name === "m" && key.ctrl)) {
+      pd();
+      loadModels();
+      setShowModels(true);
+      return;
+    }
 
     if (key.name === "z" && key.ctrl) { pd(); undoHistory(); return; }
     if (key.name === "y" && key.ctrl) { pd(); redoHistory(); return; }

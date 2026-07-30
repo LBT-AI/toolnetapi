@@ -17,21 +17,22 @@ const A = {
   dim:       CSI + "2m",
   italic:    CSI + "3m",
 
-  // Catppuccin Mocha palette
-  bg:        CSI + "48;2;30;30;46m",       // base
-  bgSurface: CSI + "48;2;49;50;68m",       // surface0
-  bgOverlay: CSI + "48;2;88;91;112m",      // overlay0
-  fgText:    CSI + "38;2;205;214;244m",    // text
-  fgSubtext: CSI + "38;2;166;173;200m",    // subtext1
-  fgCyan:    CSI + "38;2;137;220;235m",    // sky
-  fgGreen:   CSI + "38;2;166;227;161m",    // green
-  fgYellow:  CSI + "38;2;249;226;175m",    // yellow
-  fgRed:     CSI + "38;2;243;139;168m",    // red
-  fgBlue:    CSI + "38;2;137;180;250m",    // blue
-  fgMauve:   CSI + "38;2;203;166;247m",    // mauve
-  fgPeach:   CSI + "38;2;250;179;135m",    // peach
-  bgHeader:  CSI + "48;2;24;24;37m",       // mantle
-  bgInput:   CSI + "48;2;36;36;54m",       // slightly lighter base
+  // Clean dark theme — no purple background
+  bg:        CSI + "48;2;18;18;18m",       // near black
+  bgSurface: CSI + "48;2;28;28;28m",       // dark gray
+  bgOverlay: CSI + "48;2;42;42;42m",       // medium gray (for selections)
+  fgText:    CSI + "38;2;220;220;220m",    // light gray text
+  fgSubtext: CSI + "38;2;140;140;140m",    // dimmed text
+  fgCyan:    CSI + "38;2;86;182;194m",     // cyan accent
+  fgGreen:   CSI + "38;2;98;209;150m",     // green
+  fgYellow:  CSI + "38;2;229;192;123m",    // yellow
+  fgRed:     CSI + "38;2;224;108;117m",    // red
+  fgBlue:    CSI + "38;2;97;175;239m",     // blue
+  fgMauve:   CSI + "38;2;180;180;220m",    // light blue-gray (replace purple)
+  fgPeach:   CSI + "38;2;209;154;102m",    // orange
+  bgHeader:  CSI + "48;2;10;10;10m",       // header: almost pure black
+  bgInput:   CSI + "48;2;22;22;22m",       // input: slightly lighter than bg
+  bgSuggest: CSI + "48;2;35;35;35m",       // suggestion popup bg
 };
 
 const T = {
@@ -94,6 +95,28 @@ let ctrlCCount = 0;
 let ctrlCTimer: ReturnType<typeof setTimeout> | null = null;
 let startTime = 0;
 let elapsedDisplay = "";
+
+// ─── Slash command suggestions ──────────────────────────────────────────────
+const COMMANDS = [
+  { name: "/exit",      desc: "Exit ToolNet CLI" },
+  { name: "/help",      desc: "Toggle help/hints" },
+  { name: "/model",     desc: "Pick AI model (Ctrl+K)" },
+  { name: "/clear",     desc: "Clear chat history" },
+  { name: "/agent",     desc: "Toggle Build/Plan mode" },
+  { name: "/plan",      desc: "Switch to Plan mode" },
+  { name: "/build",     desc: "Switch to Build mode" },
+  { name: "/providers", desc: "Show providers (open Web UI)" },
+  { name: "/keys",      desc: "Manage API keys (open Web UI)" },
+  { name: "/settings",  desc: "Open gateway settings" },
+  { name: "/status",    desc: "Show gateway connection status" },
+];
+let cmdSuggestIdx = 0;
+
+function getSuggestions(input: string) {
+  if (!input.startsWith("/")) return [];
+  const search = input.toLowerCase();
+  return COMMANDS.filter(c => c.name.startsWith(search));
+}
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 const HEADER_ROWS = 1;
@@ -163,6 +186,28 @@ function renderAll() {
     out.push(line + A.bg + " ".repeat(pad) + A.reset + "\r\n");
   }
 
+  // ── Slash command suggestions popup (above input) ──
+  const activeSuggests = getSuggestions(inputBuffer);
+  if (activeSuggests.length > 0) {
+    const popupRows = Math.min(activeSuggests.length, 8);
+    // Clamp cmdSuggestIdx
+    if (cmdSuggestIdx >= activeSuggests.length) cmdSuggestIdx = activeSuggests.length - 1;
+    for (let si = 0; si < popupRows; si++) {
+      const cmd = activeSuggests[si];
+      const selected = si === cmdSuggestIdx;
+      const bg = selected ? A.bgOverlay : A.bgSuggest;
+      const nameFg = selected ? A.fgCyan + A.bold : A.fgCyan;
+      const descFg = A.fgSubtext;
+      const nameText = cmd.name.padEnd(14);
+      const descText = truncate(cmd.desc, cols - 18);
+      const line = bg + "  " + nameFg + nameText + A.reset + bg + descFg + descText + A.reset;
+      const stripped = ("  " + nameText + descText).length;
+      const pad = Math.max(0, cols - stripped - 2);
+      out.push(line + bg + " ".repeat(pad) + A.reset + "\r\n");
+    }
+    out.push(A.bgSuggest + A.fgSubtext + " ↑↓ navigate  Tab/Enter select  Esc cancel ".padEnd(cols) + A.reset + "\r\n");
+  }
+
   // ── Input border ──
   const borderLine = A.bgSurface + A.fgSubtext + "─".repeat(cols) + A.reset;
   out.push(borderLine + "\r\n");
@@ -174,11 +219,9 @@ function renderAll() {
     ? "…" + inputBuffer.slice(-(cols - promptWidth - 5))
     : inputBuffer;
   const placeholder = inputBuffer === ""
-    ? A.fgSubtext + A.dim + "Type a message… (/help for commands)" + A.reset
+    ? A.fgSubtext + A.dim + "Type a message…  (/help to see commands)" + A.reset
     : A.bgInput + A.fgText + inputVisible + A.reset;
 
-  const inputArea = A.bgInput + " ".repeat(cols - 1) + A.reset;
-  // We'll draw by position
   out.push(
     A.bgInput +
     prompt +
@@ -566,7 +609,37 @@ function handleKey(data: Buffer) {
   if (s === "\x0b") { openModelPicker(); return; } // Ctrl+K
   if (s === "\x0e") { openModelPicker(); return; } // Ctrl+N alternate
 
-  // Tab — toggle mode
+  // Slash command suggestions navigation
+  const suggests = getSuggestions(inputBuffer);
+  if (suggests.length > 0) {
+    if (hex === "1b5b41" || hex === "1b4f41") { // Up
+      cmdSuggestIdx = Math.max(0, cmdSuggestIdx - 1);
+      renderAll(); return;
+    }
+    if (hex === "1b5b42" || hex === "1b4f42") { // Down
+      cmdSuggestIdx = Math.min(suggests.length - 1, cmdSuggestIdx + 1);
+      renderAll(); return;
+    }
+    if (hex === "09") { // Tab
+      const selected = suggests[cmdSuggestIdx]?.name;
+      if (selected) {
+        inputBuffer = selected + " ";
+        cursorPos = inputBuffer.length;
+        renderAll();
+      }
+      return;
+    }
+    if (hex === "0d" || hex === "0a") { // Enter
+      const selected = suggests[cmdSuggestIdx]?.name;
+      if (selected && inputBuffer !== selected) {
+        inputBuffer = selected;
+        cursorPos = inputBuffer.length;
+        // fall through to normal Enter handler
+      }
+    }
+  }
+
+  // Tab — toggle mode (only if not autocompleting)
   if (hex === "09") {
     agentMode = agentMode === "Build" ? "Plan" : "Build";
     setStatus("Mode: " + agentMode);
@@ -593,6 +666,7 @@ function handleKey(data: Buffer) {
     const text = inputBuffer;
     inputBuffer = "";
     cursorPos = 0;
+    cmdSuggestIdx = 0;
     setStatus("");
     renderAll();
     if (text.trim()) sendMessage(text);
@@ -604,6 +678,7 @@ function handleKey(data: Buffer) {
     if (cursorPos > 0) {
       inputBuffer = inputBuffer.slice(0, cursorPos - 1) + inputBuffer.slice(cursorPos);
       cursorPos--;
+      cmdSuggestIdx = 0;
       renderAll();
     }
     return;
@@ -613,6 +688,7 @@ function handleKey(data: Buffer) {
   if (hex === "1b5b337e") {
     if (cursorPos < inputBuffer.length) {
       inputBuffer = inputBuffer.slice(0, cursorPos) + inputBuffer.slice(cursorPos + 1);
+      cmdSuggestIdx = 0;
       renderAll();
     }
     return;
@@ -634,6 +710,7 @@ function handleKey(data: Buffer) {
     const trimmed = before.replace(/\S+\s*$/, "");
     inputBuffer = trimmed + after;
     cursorPos = trimmed.length;
+    cmdSuggestIdx = 0;
     renderAll();
     return;
   }
@@ -650,6 +727,7 @@ function handleKey(data: Buffer) {
   if (s.length === 1 && s.charCodeAt(0) >= 32) {
     inputBuffer = inputBuffer.slice(0, cursorPos) + s + inputBuffer.slice(cursorPos);
     cursorPos++;
+    cmdSuggestIdx = 0;
     renderAll();
     return;
   }
@@ -658,6 +736,7 @@ function handleKey(data: Buffer) {
   if (data.length > 1 && !s.startsWith("\x1b")) {
     inputBuffer = inputBuffer.slice(0, cursorPos) + s + inputBuffer.slice(cursorPos);
     cursorPos += s.length;
+    cmdSuggestIdx = 0;
     renderAll();
     return;
   }

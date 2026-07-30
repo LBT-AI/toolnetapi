@@ -20,22 +20,20 @@ function cleanupTerminal() {
   } catch {}
 }
 
-if (SIMPLE) {
-  cleanupTerminal();
-  await startRepl();
-  process.exit(0);
+if (FORCE_TUI) {
+  try {
+    const tui = await import("./tui-entry");
+    await tui.main();
+    cleanupTerminal();
+    process.exit(0);
+  } catch (err) {
+    cleanupTerminal();
+  }
 }
 
-// Launch Full TUI Chat Interface by default when 'toolnet' is executed!
-try {
-  const tui = await import("./tui-entry");
-  await tui.main();
-  cleanupTerminal();
-  process.exit(0);
-} catch (err) {
-  console.error("TUI Error:", err);
-  cleanupTerminal();
-  await startRepl();
-}
+// Default: Run robust AGY-style interactive CLI (simple-repl)
+cleanupTerminal();
+await startRepl();
+process.exit(0);
 
 export {};

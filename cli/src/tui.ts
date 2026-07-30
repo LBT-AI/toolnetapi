@@ -17,22 +17,22 @@ const A = {
   dim:       CSI + "2m",
   italic:    CSI + "3m",
 
-  // Clean dark theme — no purple background
-  bg:        CSI + "48;2;18;18;18m",       // near black
-  bgSurface: CSI + "48;2;28;28;28m",       // dark gray
-  bgOverlay: CSI + "48;2;42;42;42m",       // medium gray (for selections)
-  fgText:    CSI + "38;2;220;220;220m",    // light gray text
-  fgSubtext: CSI + "38;2;140;140;140m",    // dimmed text
-  fgCyan:    CSI + "38;2;86;182;194m",     // cyan accent
+  // Clean dark theme — minimal transparent/black
+  bg:        "",                           // transparent
+  bgSurface: CSI + "48;2;15;15;15m",       // very dark gray for status/bars
+  bgOverlay: CSI + "48;2;30;30;30m",       // for selected items
+  fgText:    CSI + "38;2;230;230;230m",    // bright text
+  fgSubtext: CSI + "38;2;120;120;120m",    // dimmed text
+  fgCyan:    CSI + "38;2;0;175;255m",      // sharp cyan (user icon)
   fgGreen:   CSI + "38;2;98;209;150m",     // green
-  fgYellow:  CSI + "38;2;229;192;123m",    // yellow
+  fgYellow:  CSI + "38;2;229;192;123m",    // yellow (ai icon)
   fgRed:     CSI + "38;2;224;108;117m",    // red
   fgBlue:    CSI + "38;2;97;175;239m",     // blue
-  fgMauve:   CSI + "38;2;180;180;220m",    // light blue-gray (replace purple)
+  fgMauve:   CSI + "38;2;180;180;220m",    // light blue-gray
   fgPeach:   CSI + "38;2;209;154;102m",    // orange
-  bgHeader:  CSI + "48;2;10;10;10m",       // header: almost pure black
-  bgInput:   CSI + "48;2;22;22;22m",       // input: slightly lighter than bg
-  bgSuggest: CSI + "48;2;35;35;35m",       // suggestion popup bg
+  bgHeader:  "",                           // transparent header
+  bgInput:   "",                           // transparent input
+  bgSuggest: CSI + "48;2;20;20;20m",       // popup bg
 };
 
 const T = {
@@ -134,40 +134,32 @@ function renderAll() {
   out.push(T.hide + T.home);
 
   // ── Header ──
-  const modeLabel = A.fgPeach + A.bold + ` [${agentMode}] ` + A.reset;
-  const modelLabel = A.fgSubtext + "Model: " + A.reset + A.fgCyan + A.bold + truncate(currentModel, 30) + A.reset;
-  const gwLabel = A.fgSubtext + " │ GW: " + A.reset + A.fgGreen + "●" + A.reset;
-  const title = A.fgMauve + A.bold + " TOOLNET " + A.reset;
+  const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + A.reset;
+  const modelLabel = A.fgSubtext + "Model: " + A.fgText + truncate(currentModel, 30) + A.reset;
+  const gwLabel = A.fgSubtext + " │ GW: " + A.fgGreen + "●" + A.reset + " ";
   const headerRight = modelLabel + gwLabel + modeLabel;
   const headerRightStripped = headerRight.replace(/\x1b\[[^m]*m/g, "");
-  const titleStripped = " TOOLNET ";
-  const padding = Math.max(0, cols - titleStripped.length - headerRightStripped.length);
+  const padding = Math.max(0, cols - headerRightStripped.length);
 
-  out.push(
-    A.bgHeader + A.bold +
-    title +
-    " ".repeat(padding) +
-    headerRight +
-    A.reset + A.bgHeader + " ".repeat(Math.max(0, cols - titleStripped.length - headerRightStripped.length - padding)) +
-    A.reset + "\r\n"
-  );
+  out.push(" ".repeat(padding) + headerRight + A.reset + "\r\n");
 
   // ── Chat area ──
   const chatLines: string[] = [];
   for (const msg of messages) {
     const isUser = msg.role === "user";
     const prefix = isUser
-      ? A.fgYellow + A.bold + "  You  " + A.reset + " "
-      : A.fgCyan + A.bold + " ToolNet" + A.reset + " ";
-    const prefixStripped = isUser ? "  You   " : " ToolNet ";
+      ? A.fgCyan + A.bold + " ❯ " + A.reset
+      : A.fgYellow + A.bold + " ✦ " + A.reset;
+    const prefixStripped = " ❯ ";
     const wrapWidth = cols - prefixStripped.length - 2;
 
     const lines = wrapText(msg.content, wrapWidth);
     for (let i = 0; i < lines.length; i++) {
       const linePrefix = i === 0 ? prefix : " ".repeat(prefixStripped.length);
-      chatLines.push(A.bg + linePrefix + A.fgText + lines[i] + A.reset);
+      const color = isUser ? A.fgText : A.fgText + A.dim; // dim AI text slightly for contrast
+      chatLines.push(linePrefix + color + lines[i] + A.reset);
     }
-    chatLines.push(A.bg + A.reset); // blank line between messages
+    chatLines.push(""); // blank line between messages for whitespace
   }
 
   // Scroll: show last chatRows lines
@@ -179,11 +171,10 @@ function renderAll() {
 
   // Pad if fewer lines than chatRows
   for (let i = 0; i < chatRows; i++) {
-    const line = visibleLines[i] ?? (A.bg + A.reset);
-    // strip trailing ANSI and pad to cols
+    const line = visibleLines[i] ?? "";
     const stripped = line.replace(/\x1b\[[^m]*m/g, "");
     const pad = Math.max(0, cols - stripped.length);
-    out.push(line + A.bg + " ".repeat(pad) + A.reset + "\r\n");
+    out.push(line + " ".repeat(pad) + A.reset + "\r\n");
   }
 
   // ── Slash command suggestions popup (above input) ──
@@ -209,24 +200,22 @@ function renderAll() {
   }
 
   // ── Input border ──
-  const borderLine = A.bgSurface + A.fgSubtext + "─".repeat(cols) + A.reset;
-  out.push(borderLine + "\r\n");
+  out.push(A.fgSubtext + A.dim + "─".repeat(cols) + A.reset + "\r\n");
 
   // ── Input bar ──
-  const prompt = A.fgPeach + A.bold + "▸ " + A.reset + A.bgInput;
-  const promptWidth = 2;
+  const prompt = A.fgCyan + A.bold + " ❯ " + A.reset;
+  const promptWidth = 3;
   const inputVisible = inputBuffer.length > cols - promptWidth - 4
     ? "…" + inputBuffer.slice(-(cols - promptWidth - 5))
     : inputBuffer;
   const placeholder = inputBuffer === ""
-    ? A.fgSubtext + A.dim + "Type a message…  (/help to see commands)" + A.reset
-    : A.bgInput + A.fgText + inputVisible + A.reset;
+    ? A.fgSubtext + A.dim + "Ask anything... (/help for commands)" + A.reset
+    : A.fgText + inputVisible + A.reset;
 
   out.push(
-    A.bgInput +
     prompt +
     (inputBuffer === "" ? placeholder : A.fgText + inputVisible + A.reset) +
-    A.bgInput + A.reset + "\r\n"
+    A.reset + "\r\n"
   );
 
   // ── Status bar ──

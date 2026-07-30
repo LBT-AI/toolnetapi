@@ -76,7 +76,7 @@ const readConfig = async () => {
 // Check if config has ToolNet API settings
 const hasToolNetAPIConfig = (config) => {
   if (!config) return false;
-  return config.includes("model_provider = \"9router\"") || config.includes("[model_providers.9router]");
+  return config.includes("model_provider = \"toolnetapi\"") || config.includes("[model_providers.toolnetapi]");
 };
 
 // GET - Check codex CLI and read current settings
@@ -130,12 +130,12 @@ export async function POST(request) {
 
     // Update only ToolNet API related fields (api_key goes to auth.json, not config.toml)
     parsed.model = model;
-    parsed.model_provider = "9router";
+    parsed.model_provider = "toolnetapi";
 
-    // Update or create 9router provider section (no api_key - Codex reads from auth.json)
+    // Update or create toolnetapi provider section (no api_key - Codex reads from auth.json)
     // Ensure /v1 suffix is added only once
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-    setNestedSection(parsed, "model_providers.9router", {
+    setNestedSection(parsed, "model_providers.toolnetapi", {
       name: "ToolNet API",
       base_url: normalizedBaseUrl,
       wire_api: "responses",
@@ -195,14 +195,14 @@ export async function DELETE() {
       throw error;
     }
 
-    // Remove ToolNet API related root fields only if they point to 9router
-    if (parsed.model_provider === "9router") {
+    // Remove ToolNet API related root fields only if they point to toolnetapi
+    if (parsed.model_provider === "toolnetapi") {
       delete parsed.model;
       delete parsed.model_provider;
     }
 
-    // Remove 9router provider section
-    deleteNestedSection(parsed, "model_providers.9router");
+    // Remove toolnetapi provider section
+    deleteNestedSection(parsed, "model_providers.toolnetapi");
 
     // Remove subagent configuration
     deleteNestedSection(parsed, "agents.subagent");

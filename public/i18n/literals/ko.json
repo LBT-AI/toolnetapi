@@ -176,7 +176,7 @@
   "How it works:": "작동 방식:",
   "Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → ToolNet API → response to Antigravity/Copilot": "Antigravity/Copilot IDE 요청 → localhost:443로 DNS 리디렉션 → MITM 프록시가 가로챔 → ToolNet API → Antigravity/Copilot으로 응답",
   "No API keys — create one in Keys page": "API 키 없음 — 키 페이지에서 만들기",
-  "sk_9router (default)": "sk_9router (기본값)",
+  "sk_toolnetapi (default)": "sk_toolnetapi (기본값)",
   "Server started": "서버 시작됨",
   "Failed to start server": "서버 시작 실패",
   "Server stopped — all DNS cleared": "서버 중지됨 — 모든 DNS 지워짐",

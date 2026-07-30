@@ -176,7 +176,7 @@
   "How it works:": "Nasıl çalışır:",
   "Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → ToolNet API → response to Antigravity/Copilot": "Antigravity/Copilot IDE isteği → DNS'i localhost:443'e yönlendir → MITM proxy yakalar → ToolNet API → Antigravity/Copilot'a yanıt",
   "No API keys — create one in Keys page": "API anahtarı yok — Keys sayfasında bir tane oluşturun",
-  "sk_9router (default)": "sk_9router (varsayılan)",
+  "sk_toolnetapi (default)": "sk_toolnetapi (varsayılan)",
   "Server started": "Sunucu başlatıldı",
   "Failed to start server": "Sunucu başlatılamadı",
   "Server stopped — all DNS cleared": "Sunucu durduruldu — tüm DNS temizlendi",

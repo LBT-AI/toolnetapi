@@ -15,7 +15,7 @@ const getConfigPath = () => path.join(getJcodeConfigDir(), "config.toml");
 
 const getProviderEnvPath = () => {
   const configDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(configDir, "jcode", "provider-9router.env");
+  return path.join(configDir, "jcode", "provider-toolnetapi.env");
 };
 
 const checkJcodeInstalled = async () => {
@@ -49,7 +49,7 @@ const hasToolNetAPIConfig = (config) => {
 
   const providers = config.providers;
 
-  if (providers["9router"]) return true;
+  if (providers["toolnetapi"]) return true;
 
   for (const [name, provider] of Object.entries(providers)) {
     if (provider.base_url && provider.base_url.includes("localhost:20128")) {
@@ -149,12 +149,12 @@ export async function POST(request) {
       config.providers = {};
     }
 
-    config.providers["9router"] = {
+    config.providers["toolnetapi"] = {
       type: "openai-compatible",
       base_url: normalizedBaseUrl,
       auth: "bearer",
       api_key_env: "JCODE_9ROUTER_API_KEY",
-      env_file: "provider-9router.env",
+      env_file: "provider-toolnetapi.env",
       default_model: models && models.length > 0 ? models[0] : "cc/claude-opus-4-7",
       requires_api_key: true,
     };
@@ -174,7 +174,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: "jcode configured successfully. Use: jcode --provider-profile 9router",
+      message: "jcode configured successfully. Use: jcode --provider-profile toolnetapi",
       configPath: getConfigPath(),
     });
   } catch (error) {
@@ -194,7 +194,7 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: "No configuration to remove" });
     }
 
-    delete config.providers["9router"];
+    delete config.providers["toolnetapi"];
 
     await writeConfig(config);
 
@@ -204,7 +204,7 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
-      message: "9router configuration removed from jcode",
+      message: "toolnetapi configuration removed from jcode",
     });
   } catch (error) {
     console.error("Error removing jcode configuration:", error);

@@ -236,7 +236,7 @@ export const DOCS_CONFIG = {
   title: "ToolNet API Documentation",
   description: "Smart AI model router - Maximize subscriptions, minimize costs",
   logo: "ToolNet API",
-  appUrl: "https://9router.com",
+  appUrl: "https://toolnetapi.com",
   githubUrl: "https://github.com/LBT-AI/toolnetapi",
   navigation: getNavigation(DEFAULT_LANG)
 };

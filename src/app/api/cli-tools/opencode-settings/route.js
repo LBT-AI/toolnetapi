@@ -50,7 +50,7 @@ const readConfig = async () => {
 
 const hasToolNetAPIConfig = (config) => {
   if (!config?.provider) return false;
-  return !!config.provider["9router"];
+  return !!config.provider["toolnetapi"];
 };
 
 // GET - Check opencode CLI and read current settings
@@ -67,7 +67,7 @@ export async function GET() {
     }
 
     const config = await readConfig();
-    const providerConfig = config?.provider?.["9router"];
+    const providerConfig = config?.provider?.["toolnetapi"];
     const modelMap = providerConfig?.models || {};
 
     return NextResponse.json({
@@ -77,7 +77,7 @@ export async function GET() {
       configPath: getConfigPath(),
         opencode: {
           models: Object.keys(modelMap),
-          activeModel: config?.model?.startsWith("9router/") ? config.model.replace(/^9router\//, "") : null,
+          activeModel: config?.model?.startsWith("toolnetapi/") ? config.model.replace(/^toolnetapi\//, "") : null,
           baseURL: providerConfig?.options?.baseURL || null,
         },
     });
@@ -112,14 +112,14 @@ export async function POST(request) {
     } catch { /* No existing config */ }
 
     const normalizedBaseUrl = baseUrl.endsWith("/v1") ? baseUrl : `${baseUrl}/v1`;
-    const keyToUse = apiKey || "sk_9router";
+    const keyToUse = apiKey || "sk_toolnetapi";
     const effectiveSubagentModel = subagentModel || modelsArray[0];
 
     // Ensure provider object
     if (!config.provider) config.provider = {};
 
-    // Preserve any existing 9router provider entry and its models
-    const existingProvider = config.provider["9router"] || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
+    // Preserve any existing toolnetapi provider entry and its models
+    const existingProvider = config.provider["toolnetapi"] || { npm: "@ai-sdk/openai-compatible", options: {}, models: {} };
 
     // Merge options (overwrite baseURL/apiKey)
     existingProvider.options = {
@@ -138,7 +138,7 @@ export async function POST(request) {
     }
 
     // Save merged provider back
-    config.provider["9router"] = existingProvider;
+    config.provider["toolnetapi"] = existingProvider;
 
     // Set the active model: prefer explicit activeModel, else first of modelsArray
     // If activeModel is explicitly empty string, clear the model
@@ -147,7 +147,7 @@ export async function POST(request) {
     } else {
       const finalActive = activeModel || modelsArray[0];
       if (finalActive) {
-        config.model = `9router/${finalActive}`;
+        config.model = `toolnetapi/${finalActive}`;
       }
     }
 
@@ -156,7 +156,7 @@ export async function POST(request) {
     config.agent.explorer = {
       description: "Fast explorer subagent for codebase exploration",
       mode: "subagent",
-      model: `9router/${effectiveSubagentModel}`,
+      model: `toolnetapi/${effectiveSubagentModel}`,
     };
 
     await fs.writeFile(configPath, JSON.stringify(config, null, 2));
@@ -191,7 +191,7 @@ export async function PATCH(request) {
 
     if (clearActiveModel === true) {
       // Clear active model but keep models in the list
-      if (config.model?.startsWith("9router/")) {
+      if (config.model?.startsWith("toolnetapi/")) {
         config.model = "";
       }
     }
@@ -227,26 +227,26 @@ export async function DELETE(request) {
     }
 
     // If specific model provided, remove just that model
-    if (modelToRemove && config.provider?.["9router"]?.models) {
-      delete config.provider["9router"].models[modelToRemove];
+    if (modelToRemove && config.provider?.["toolnetapi"]?.models) {
+      delete config.provider["toolnetapi"].models[modelToRemove];
       
       // If no models left, remove the provider
-      if (Object.keys(config.provider["9router"].models).length === 0) {
-        delete config.provider["9router"];
-        if (config.model?.startsWith("9router/")) delete config.model;
-      } else if (config.model === `9router/${modelToRemove}`) {
+      if (Object.keys(config.provider["toolnetapi"].models).length === 0) {
+        delete config.provider["toolnetapi"];
+        if (config.model?.startsWith("toolnetapi/")) delete config.model;
+      } else if (config.model === `toolnetapi/${modelToRemove}`) {
         // If removed model was active, switch to first remaining model
-        const remainingModels = Object.keys(config.provider["9router"].models);
-        config.model = `9router/${remainingModels[0]}`;
+        const remainingModels = Object.keys(config.provider["toolnetapi"].models);
+        config.model = `toolnetapi/${remainingModels[0]}`;
       }
     } else {
-      // No specific model - remove entire 9router provider
-      if (config.provider) delete config.provider["9router"];
-      if (config.model?.startsWith("9router/")) delete config.model;
+      // No specific model - remove entire toolnetapi provider
+      if (config.provider) delete config.provider["toolnetapi"];
+      if (config.model?.startsWith("toolnetapi/")) delete config.model;
     }
 
     // Remove subagent configuration
-    if (config.agent?.explorer?.model?.startsWith("9router/")) {
+    if (config.agent?.explorer?.model?.startsWith("toolnetapi/")) {
       delete config.agent.explorer;
       // Clean up empty agent object
       if (Object.keys(config.agent).length === 0) delete config.agent;

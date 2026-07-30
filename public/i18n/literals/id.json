@@ -176,7 +176,7 @@
   "How it works:": "Cara kerjanya:",
   "Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → ToolNet API → response to Antigravity/Copilot": "Permintaan Antigravity/Copilot IDE → Pengalihan DNS ke localhost:443 → Proxy MITM mengintersep → ToolNet API → respons ke Antigravity/Copilot",
   "No API keys — create one in Keys page": "Tidak ada kunci API — buat satu di halaman Keys",
-  "sk_9router (default)": "sk_9router (bawaan)",
+  "sk_toolnetapi (default)": "sk_toolnetapi (bawaan)",
   "Server started": "Server dimulai",
   "Failed to start server": "Gagal memulai server",
   "Server stopped — all DNS cleared": "Server dihentikan — semua DNS dihapus",

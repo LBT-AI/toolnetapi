@@ -176,7 +176,7 @@
   "How it works:": "یہ کیسے کام کرتا ہے:",
   "Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → ToolNet API → response to Antigravity/Copilot": "Antigravity/Copilot IDE درخواست → DNS کو localhost:443 کی طرف ری ڈائریکٹ کریں → MITM پروکسی روکے → ToolNet API → Antigravity/Copilot کو جواب",
   "No API keys — create one in Keys page": "کوئی API کلید نہیں — Keys صفحہ میں ایک بنائیں",
-  "sk_9router (default)": "sk_9router (ڈیفالٹ)",
+  "sk_toolnetapi (default)": "sk_toolnetapi (ڈیفالٹ)",
   "Server started": "سرور شروع ہوگیا",
   "Failed to start server": "سرور شروع کرنے میں ناکام",
   "Server stopped — all DNS cleared": "سرور بند — تمام DNS صاف کیے گئے",

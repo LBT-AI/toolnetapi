@@ -349,7 +349,7 @@ amp --model "{{model}}"
       },
       {
         type: "info",
-        text: "Configure 9router as an OpenAI-compatible provider to route all jcode requests through 9router's optimization layer."
+        text: "Configure toolnetapi as an OpenAI-compatible provider to route all jcode requests through toolnetapi's optimization layer."
       },
       {
         type: "warning",
@@ -375,11 +375,11 @@ amp --model "{{model}}"
     notes: [
       {
         type: "info",
-        text: "Grok Build uses ~/.grok/config.toml. ToolNet API writes a [model.9router] custom model and sets it as the default.",
+        text: "Grok Build uses ~/.grok/config.toml. ToolNet API writes a [model.toolnetapi] custom model and sets it as the default.",
       },
       {
         type: "info",
-        text: "After Apply, run grok (or /model 9router) to use the routed model. Switch back anytime with /model grok-build.",
+        text: "After Apply, run grok (or /model toolnetapi) to use the routed model. Switch back anytime with /model grok-build.",
       },
       {
         type: "warning",

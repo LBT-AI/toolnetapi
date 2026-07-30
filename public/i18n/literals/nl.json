@@ -176,7 +176,7 @@
   "How it works:": "Hoe het werkt:",
   "Antigravity/Copilot IDE request → DNS redirect to localhost:443 → MITM proxy intercepts → ToolNet API → response to Antigravity/Copilot": "Antigravity/Copilot IDE-aanvraag → DNS-omleiding naar localhost:443 → MITM-proxy onderschept → ToolNet API → antwoord naar Antigravity/Copilot",
   "No API keys — create one in Keys page": "Geen API-sleutels — maak er één aan op de pagina Sleutels",
-  "sk_9router (default)": "sk_9router (standaard)",
+  "sk_toolnetapi (default)": "sk_toolnetapi (standaard)",
   "Server started": "Server gestart",
   "Failed to start server": "Server starten mislukt",
   "Server stopped — all DNS cleared": "Server gestopt — alle DNS gewist",

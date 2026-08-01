@@ -17,9 +17,12 @@ export const bashCommand: Command = {
       return;
     }
 
-    const command = args.join(" ");
+    const command = args.map(a => {
+      if (/^[a-zA-Z0-9_\\-\\.\\/]+$/.test(a)) return a;
+      return `'${a.replace(/'/g, "'\\''")}'`;
+    }).join(" ");
     addMessage("assistant", `$ ${command}`);
-    const result = toolBash(command);
+    const result = await toolBash(command);
     if (!result.success) {
       const output = result.data || result.error;
       addMessage("assistant", `\u001b[31mExit code: ${result.error?.startsWith("Bash error") ? "?" : "1"}\u001b[0m\n${output || result.error}`);

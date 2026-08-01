@@ -48,18 +48,38 @@ export function toolGlob(pattern: string, searchPath = "."): ToolResult {
     const absPath = path.resolve(searchPath);
     if (!fs.existsSync(absPath)) return { success: false, error: `Path not found: ${absPath}` };
 
-    const { Glob } = require("bun") as any;
-    const glob = new Glob(pattern);
     const matches: string[] = [];
     let count = 0;
-    for (const match of glob.scanSync({ cwd: absPath, absolute: false })) {
-      if (count >= 1000) {
-        matches.push(`... (1000+ matches, truncated)`);
-        break;
-      }
-      matches.push(match);
-      count++;
+
+    const regexPattern = pattern
+      .replace(/[.+^${}()|[\\]\\\\]/g, '\\\\$&')
+      .replace(/\\\\\\*/g, '.*')
+      .replace(/\\\\\\?/g, '.');
+    const regex = new RegExp(`^${regexPattern}$`);
+
+    function walkDir(dir: string, relBase: string): void {
+      if (count >= 1000) return;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (count >= 1000) return;
+          if (entry.name.startsWith(".") && entry.name !== ".env") continue;
+          if (entry.name === "node_modules") continue;
+
+          const relPath = relBase ? `${relBase}/${entry.name}` : entry.name;
+          if (regex.test(relPath) || regex.test(entry.name)) {
+            matches.push(relPath);
+            count++;
+          }
+          
+          if (entry.isDirectory()) {
+            walkDir(path.join(dir, entry.name), relPath);
+          }
+        }
+      } catch {}
     }
+    
+    walkDir(absPath, "");
 
     if (matches.length === 0) return { success: true, data: "No matches found." };
     const result = matches.join("\n");
@@ -76,54 +96,37 @@ export function toolGrep(pattern: string, searchPath = ".", include?: string): T
     const stat = fs.statSync(absPath);
     if (!stat.isDirectory()) return { success: false, error: `Not a directory: ${absPath}` };
 
-    const regex = new RegExp(pattern, "g");
-    const results: string[] = [];
-    let fileCount = 0;
-    let totalLines = 0;
+    const { spawnSync } = require("node:child_process");
+    const args = ["-rnI"]; // recursive, line number, ignore binary
+    // Emulate original exclusions: exclude hidden files and node_modules
+    args.push("--exclude-dir=.*", "--exclude-dir=node_modules", "--exclude=.*");
+    
+    if (include) {
+      args.push(`--include=${include}`);
+    }
+    args.push(pattern, ".");
 
-    function walkDir(dir: string): void {
-      if (totalLines >= MAX_OUTPUT_LINES) return;
-      try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (totalLines >= MAX_OUTPUT_LINES) return;
-          if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
-          const fullPath = path.join(dir, entry.name);
+    const result = spawnSync("grep", args, { cwd: absPath, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
 
-          if (entry.isDirectory()) {
-            walkDir(fullPath);
-          } else if (entry.isFile()) {
-            if (include && !entry.name.endsWith(include.replace("*", ""))) continue;
-            try {
-              const content = fs.readFileSync(fullPath, "utf8");
-              const lines = content.split("\n");
-              for (let i = 0; i < lines.length; i++) {
-                if (regex.test(lines[i])) {
-                  const relPath = path.relative(absPath, fullPath);
-                  results.push(`${relPath}:${i + 1}: ${lines[i].trim()}`);
-                  totalLines++;
-                  regex.lastIndex = 0;
-                  if (totalLines >= MAX_OUTPUT_LINES) break;
-                }
-              }
-              fileCount++;
-            } catch {}
-          }
-        }
-      } catch {}
+    if (result.error) {
+      return { success: false, error: `Grep execution error: ${result.error.message}` };
     }
 
-    walkDir(absPath);
+    if (result.status === 1) {
+      return { success: true, data: "No matches found." };
+    }
 
-    if (results.length === 0) return { success: true, data: "No matches found." };
-    const result = results.join("\n");
-    const truncated = totalLines >= MAX_OUTPUT_LINES;
-    return { success: true, data: `${results.length} match(es) in ${fileCount} file(s):\n${result}${truncated ? "\n... (truncated)" : ""}` };
+    if (result.status === 0) {
+      const lines = result.stdout.trim().split("\n");
+      const { data, truncated } = truncateOutput(`${lines.length} match(es):\n${result.stdout}`);
+      return { success: true, data, truncated };
+    }
+
+    return { success: false, error: `Grep error: ${result.stderr}` };
   } catch (err: unknown) {
     return { success: false, error: `Grep error: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
-
 export function toolEdit(filePath: string, oldString: string, newString: string): ToolResult {
   try {
     const absPath = path.resolve(filePath);
@@ -184,23 +187,22 @@ export function toolWrite(filePath: string, content: string): ToolResult {
   }
 }
 
-export function toolBash(command: string, timeoutMs = 30000): ToolResult {
-  try {
-    const { execSync } = require("node:child_process");
-    const output = execSync(command, {
+export async function toolBash(command: string, timeoutMs = 30000): Promise<ToolResult> {
+  const { exec } = require("node:child_process");
+  return new Promise((resolve) => {
+    exec(command, {
       encoding: "utf8",
       timeout: timeoutMs,
       maxBuffer: 10 * 1024 * 1024,
       cwd: process.cwd(),
+    }, (error: any, stdout: string, stderr: string) => {
+      if (error) {
+        const combined = [stderr, stdout].filter(Boolean).join("\n").trim();
+        resolve({ success: false, error: combined || error.message, data: combined || error.message });
+      } else {
+        const { data, truncated } = truncateOutput(stdout.trim() || "(no output)");
+        resolve({ success: true, data, truncated });
+      }
     });
-
-    const { data, truncated } = truncateOutput(output.trim() || "(no output)");
-    return { success: true, data, truncated };
-  } catch (err: any) {
-    if (err.stdout || err.stderr) {
-      const combined = [err.stderr, err.stdout].filter(Boolean).join("\n").trim();
-      return { success: false, error: combined || err.message, data: combined || err.message };
-    }
-    return { success: false, error: `Bash error: ${err.message}` };
-  }
+  });
 }

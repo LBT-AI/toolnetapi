@@ -1,4 +1,5 @@
 // Auto-generated: static imports for all registry entries
+import p100 from "./toolnet.js";
 import p0 from "./alicode-intl.js";
 import p1 from "./alicode.js";
 import p2 from "./anthropic.js";
@@ -201,4 +202,5 @@ export default [
   p97,
   p98,
   p99,
+  p100,
 ];

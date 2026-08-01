@@ -72,7 +72,9 @@ export function LoginScreen(props: LoginScreenProps) {
             <input
               value={password()}
               onInput={(val: string) => setPassword(val)}
-              onSubmit={handleSubmit as any}
+              onSubmit={(event) => {
+                if (event && event.value) handleSubmit(event.value);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Password..."
               width="100%"

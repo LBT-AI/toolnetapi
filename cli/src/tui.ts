@@ -10,49 +10,17 @@ import { createInterface } from "node:readline";
 // ─── ANSI Helpers ───────────────────────────────────────────────────────────
 const ESC = "\x1b";
 const CSI = ESC + "[";
+const ANSI_REGEX = /\x1b\[[^m]*m/g;
 
-const A = {
-  reset:     CSI + "0m",
-  bold:      CSI + "1m",
-  dim:       CSI + "2m",
-  italic:    CSI + "3m",
+import { providerPicker } from "./components/ProviderPicker";
+import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
+import { agentTools, executeTool } from "./lib/agentTools";
 
-  // Clean dark theme — minimal transparent/black
-  bg:        "",                           // transparent
-  bgSurface: CSI + "48;2;15;15;15m",       // very dark gray for status/bars
-  bgOverlay: CSI + "48;2;30;30;30m",       // for selected items
-  fgText:    CSI + "38;2;230;230;230m",    // bright text
-  fgSubtext: CSI + "38;2;120;120;120m",    // dimmed text
-  fgCyan:    CSI + "38;2;0;175;255m",      // sharp cyan (user icon)
-  fgGreen:   CSI + "38;2;98;209;150m",     // green
-  fgYellow:  CSI + "38;2;229;192;123m",    // yellow (ai icon)
-  fgRed:     CSI + "38;2;224;108;117m",    // red
-  fgBlue:    CSI + "38;2;97;175;239m",     // blue
-  fgMauve:   CSI + "38;2;180;180;220m",    // light blue-gray
-  fgPeach:   CSI + "38;2;209;154;102m",    // orange
-  bgHeader:  "",                           // transparent header
-  bgInput:   "",                           // transparent input
-  bgSuggest: CSI + "48;2;20;20;20m",       // popup bg
-};
-
-const T = {
-  // Cursor
-  hide:      CSI + "?25l",
-  show:      CSI + "?25h",
-  home:      CSI + "H",
-  goto: (r: number, c: number) => CSI + r + ";" + c + "H",
-  clearLine: CSI + "2K",
-  clearDown: CSI + "J",
-  altOn:     CSI + "?1049h",
-  altOff:    CSI + "?1049l",
-  // No mouse, no xterm version query — Termius safe
-};
-
-function write(s: string) { process.stdout.write(s); }
+import { A, T, write, getSize } from "./term";
 function writeln(s: string) { write(s + "\r\n"); }
 
 function fillLine(text: string, width: number, fg = A.fgText, bg = A.bgSurface): string {
-  const stripped = text.replace(/\x1b\[[^m]*m/g, "");
+  const stripped = text.replace(ANSI_REGEX, "");
   const pad = Math.max(0, width - stripped.length);
   return bg + fg + text + " ".repeat(pad) + A.reset;
 }
@@ -62,18 +30,12 @@ function truncate(s: string, maxLen: number): string {
   return s.slice(0, maxLen - 1) + "…";
 }
 
-// ─── Terminal Size ───────────────────────────────────────────────────────────
-function getSize(): { cols: number; rows: number } {
-  return {
-    cols: process.stdout.columns || 100,
-    rows: process.stdout.rows || 30,
-  };
-}
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 // ─── State ───────────────────────────────────────────────────────────────────
 const SPINNER = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
-type Role = "user" | "assistant" | "system";
-interface Msg { role: Role; content: string; }
+type Role = "user" | "assistant" | "system" | "tool";
+interface Msg { role: Role; content: string; tool_calls?: any[]; tool_call_id?: string; name?: string; }
 
 let messages: Msg[] = [];
 let inputBuffer = "";
@@ -89,8 +51,10 @@ let bypassMode = false;
 let gatewayUrl = "http://127.0.0.1:20127";
 let showHelp = false;
 let showModelPicker = false;
-let availableModels: string[] = [];
 let modelPickerIdx = 0;
+let availableModels: string[] = [];
+let filteredModels: string[] = [];
+let modelSearchQuery = "";
 let abortController: AbortController | null = null;
 let ctrlCCount = 0;
 let ctrlCTimer: ReturnType<typeof setTimeout> | null = null;
@@ -122,6 +86,7 @@ const COMMANDS = [
   { name: "/providers", desc: "Show providers (open Web UI)" },
   { name: "/combos",    desc: "Manage AI combos (open Web UI)" },
   { name: "/keys",      desc: "Manage API keys (open Web UI)" },
+  { name: "/key ",      desc: "/key <provider> <apikey> to add key directly" },
   { name: "/settings",  desc: "Open gateway settings" },
   { name: "/status",    desc: "Show gateway connection status" },
 ];
@@ -165,7 +130,7 @@ function renderAll() {
   const gwLabel = A.fgSubtext + " │ GW: " + A.fgGreen + "●" + A.reset + " ";
   const tokenLabel = lastTokens ? A.fgSubtext + "│ Tokens: " + A.fgYellow + lastTokens + A.reset + " " : "";
   const headerRight = modelLabel + gwLabel + tokenLabel + modeLabel;
-  const headerRightStripped = headerRight.replace(/\x1b\[[^m]*m/g, "");
+  const headerRightStripped = headerRight.replace(ANSI_REGEX, "");
   const padding = Math.max(0, cols - headerRightStripped.length);
 
   out.push(" ".repeat(padding) + headerRight + A.reset + "\r\n");
@@ -228,7 +193,7 @@ function renderAll() {
   // Pad if fewer lines than chatRows
   for (let i = 0; i < chatRows; i++) {
     const line = visibleLines[i] ?? "";
-    const stripped = line.replace(/\x1b\[[^m]*m/g, "");
+    const stripped = line.replace(ANSI_REGEX, "");
     const pad = Math.max(0, cols - stripped.length);
     out.push(line + " ".repeat(pad) + A.reset + "\r\n");
   }
@@ -298,16 +263,23 @@ function renderAll() {
   } else {
     statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model" + A.reset;
   }
-  const statusStripped = statusContent.replace(/\x1b\[[^m]*m/g, "");
+  const statusStripped = statusContent.replace(ANSI_REGEX, "");
   const statusPad = Math.max(0, cols - statusStripped.length);
   out.push(A.bgSurface + statusContent + " ".repeat(statusPad) + A.reset);
 
   // Position cursor in input line
   const cursorRow = rows - INPUT_ROWS + 1;  // 1-indexed
   const cursorCol = Math.min(promptWidth + 1 + cursorPos, cols - 1) + 1;
-  out.push(T.goto(cursorRow, cursorCol) + T.show);
+  if (!showHelp && !showModelPicker && !providerPicker.show) {
+    out.push(T.goto(cursorRow, cursorCol) + T.show);
+  } else {
+    out.push(T.hide);
+  }
 
   write(out.join(""));
+
+  if (showModelPicker) renderModelPicker();
+  if (providerPicker.show) providerPicker.render();
 }
 
 // ─── Text wrapping ───────────────────────────────────────────────────────────
@@ -346,7 +318,7 @@ async function sendMessage(text: string) {
   messages.push({ role: "user", content: text });
   // Add placeholder for assistant immediately so spinner shows in chat
   messages.push({ role: "assistant", content: "" });
-  const assistantIdx = messages.length - 1;
+  let assistantIdx = messages.length - 1;
 
   scrollOffset = 0;
   startTime = Date.now();
@@ -368,87 +340,152 @@ async function sendMessage(text: string) {
   }, 100);
 
   try {
-    setStatus("Calling API…");
+    let continueAgentLoop = true;
+    while (continueAgentLoop) {
+      continueAgentLoop = false;
+      setStatus("Calling API…");
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (bypassMode) headers["x-bypass-toolnet"] = "true";
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (bypassMode) headers["x-bypass-toolnet"] = "true";
 
-    const res = await fetch(gatewayUrl + "/v1/chat/completions", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
+      const providerStr = currentModel.includes("/") ? currentModel.split("/")[0] : currentModel;
+      let localKey = getCliKey(providerStr);
+      if (!localKey) {
+        localKey = getCliKey("toolnet") || getCliKey("gateway") || getCliKey("default");
+      }
+      if (localKey) {
+        headers["Authorization"] = `Bearer ${localKey}`;
+      }
+
+      const bodyPayload: any = {
         model: currentModel,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: messages.map(m => {
+          const out: any = { role: m.role, content: m.content };
+          if (m.tool_calls) out.tool_calls = m.tool_calls;
+          if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
+          if (m.name) out.name = m.name;
+          return out;
+        }),
         stream: true,
-      }),
-      signal: abortController.signal,
-    });
+      };
+      // Only include tools if we are in Build mode or always (we'll include them always for now)
+      if (agentMode === "Build") {
+        bodyPayload.tools = agentTools;
+      }
 
-    if (!res.ok) {
-      const errText = await res.text();
-      let errMsg = `HTTP ${res.status}`;
-      try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch {}
-      stopSpinner();
-      messages.push({ role: "assistant", content: "✖ Error: " + errMsg });
-      setStatus("✖ " + errMsg);
-      renderAll();
-      return;
-    }
+      const res = await fetch(gatewayUrl + "/v1/chat/completions", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(bodyPayload),
+        signal: abortController.signal,
+      });
 
-    if (!res.body) {
-      stopSpinner();
-      messages.push({ role: "assistant", content: "✖ Error: No response body" });
-      setStatus("✖ No response body");
-      renderAll();
-      return;
-    }
+      if (!res.ok) {
+        const errText = await res.text();
+        let errMsg = `HTTP ${res.status}`;
+        try { const j = JSON.parse(errText); errMsg = j.error?.message || errMsg; } catch {}
+        stopSpinner();
+        messages.push({ role: "assistant", content: "✖ Error: " + errMsg });
+        setStatus("✖ " + errMsg);
+        renderAll();
+        return;
+      }
 
-    setStatus("Streaming response…");
-    isReceivingStream = true;
+      if (!res.body) {
+        stopSpinner();
+        messages.push({ role: "assistant", content: "✖ Error: No response body" });
+        setStatus("✖ No response body");
+        renderAll();
+        return;
+      }
 
-    let fullText = "";
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+      setStatus("Streaming response…");
+      isReceivingStream = true;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      let fullText = "";
+      const toolCallsMap: Record<number, any> = {};
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split("\n");
-      buffer = parts.pop() ?? "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const line of parts) {
-        const t = line.trim();
-        if (!t || t === "data: [DONE]") continue;
-        if (t.startsWith("data: ")) {
-          try {
-            const json = JSON.parse(t.slice(6));
-            const delta = json.choices?.[0]?.delta?.content;
-            if (delta) {
-              fullText += delta;
-              messages[assistantIdx] = { role: "assistant", content: fullText + "▊" };
-              scrollOffset = 0;
-            }
-            if (json.usage) {
-              const u = json.usage;
-              lastTokens = `${u.prompt_tokens || 0} \u2192 ${u.completion_tokens || 0} (${u.total_tokens || 0})`;
-            }
-          } catch {}
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n");
+        buffer = parts.pop() ?? "";
+
+        for (const line of parts) {
+          const t = line.trim();
+          if (!t || t === "data: [DONE]") continue;
+          if (t.startsWith("data: ")) {
+            try {
+              const json = JSON.parse(t.slice(6));
+              const delta = json.choices?.[0]?.delta;
+              if (delta?.content) {
+                fullText += delta.content;
+                messages[assistantIdx] = { role: "assistant", content: fullText + "▊" };
+                scrollOffset = 0;
+              }
+              if (delta?.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  const idx = tc.index;
+                  if (!toolCallsMap[idx]) {
+                    toolCallsMap[idx] = { id: tc.id, type: "function", function: { name: tc.function?.name || "", arguments: "" } };
+                  }
+                  if (tc.function?.arguments) {
+                    toolCallsMap[idx].function.arguments += tc.function.arguments;
+                  }
+                }
+              }
+              if (json.usage) {
+                const u = json.usage;
+                lastTokens = `${u.prompt_tokens || 0} \u2192 ${u.completion_tokens || 0} (${u.total_tokens || 0})`;
+              }
+            } catch {}
+          }
         }
       }
-    }
 
-    // Finalize message with a micro-interaction (check mark briefly)
-    const finalContent = fullText || "(empty response)";
-    messages[assistantIdx] = { role: "assistant", content: A.fgGreen + "✔ " + A.reset + finalContent };
-    setTimeout(() => {
-      if (messages[assistantIdx]) {
-        messages[assistantIdx].content = finalContent;
+      const toolCallsArr = Object.values(toolCallsMap);
+      
+      if (toolCallsArr.length > 0) {
+        // AI called a tool! Update assistant message with tool calls
+        messages[assistantIdx] = { 
+          role: "assistant", 
+          content: fullText || "(running tools...)", 
+          tool_calls: toolCallsArr 
+        };
         renderAll();
+        
+        // Execute tools
+        for (const tc of toolCallsArr) {
+          setStatus(`Executing tool: ${tc.function.name}…`);
+          renderAll();
+          let parsedArgs = {};
+          try { parsedArgs = JSON.parse(tc.function.arguments); } catch {}
+          const result = await executeTool(tc.function.name, parsedArgs);
+          messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: result });
+        }
+        
+        // Push a new empty assistant message for the next iteration
+        messages.push({ role: "assistant", content: "" });
+        assistantIdx = messages.length - 1;
+        continueAgentLoop = true;
+      } else {
+        // Finalize message with a micro-interaction (check mark briefly)
+        const finalContent = fullText || "(empty response)";
+        messages[assistantIdx] = { role: "assistant", content: A.fgGreen + "✔ " + A.reset + finalContent };
+        setTimeout(() => {
+          if (messages[assistantIdx]) {
+            messages[assistantIdx].content = finalContent;
+            renderAll();
+          }
+        }, 1500);
       }
-    }, 1500);
+    }
 
     scrollOffset = 0;
     stopSpinner();
@@ -485,6 +522,24 @@ async function handleCommand(cmd: string) {
   const parts = cmd.split(" ");
   const name = parts[0].toLowerCase();
 
+  // Special parameterized commands
+  if (cmd.startsWith("/key ")) {
+    const parts = cmd.split(" ").filter(Boolean);
+    if (parts.length < 3) {
+      showToast("Usage: /key <provider> <apikey>");
+      return;
+    }
+    const provider = parts[1];
+    const apiKey = parts.slice(2).join(" ");
+    
+    showToast("Saving local CLI key for " + provider + "...");
+    saveCliKey(provider, apiKey);
+    showToast("Local CLI Key saved successfully!");
+    messages.push({ role: "system", content: `→ Saved local CLI API key for ${provider}` });
+    renderAll();
+    return;
+  }
+
   switch (name) {
     case "/exit":
     case "/quit":
@@ -500,8 +555,11 @@ async function handleCommand(cmd: string) {
       await openModelPicker();
       break;
 
-    case "/providers":
     case "/keys":
+      providerPicker.open(setStatus, renderAll);
+      break;
+
+    case "/providers":
     case "/combos":
     case "/settings": {
       showToast(`Redirecting to Web UI...`);
@@ -554,18 +612,49 @@ async function handleCommand(cmd: string) {
 }
 
 // ─── Model Picker ────────────────────────────────────────────────────────────
+function updateModelSearch() {
+  const query = modelSearchQuery.toLowerCase();
+  filteredModels = availableModels.filter(m => m.toLowerCase().includes(query));
+  if (filteredModels.length === 0) filteredModels = ["No matches"];
+  modelPickerIdx = 0;
+  renderAll();
+}
+
 async function openModelPicker() {
   showModelPicker = true;
-  if (availableModels.length === 0) {
+  modelSearchQuery = "";
+  if (availableModels.length === 0 || availableModels[0] === "Gateway offline") {
     availableModels = ["Loading..."];
+    filteredModels = availableModels;
     modelPickerIdx = 0;
     setStatus("Fetching models...");
     renderAll();
     try {
-      const res = await fetch(gatewayUrl + "/v1/models");
+      const localKeys = loadCliKeys();
+      const masterKey = localKeys["toolnet"] || localKeys["gateway"] || localKeys["default"];
+      const fetchHeaders: Record<string, string> = {};
+      if (masterKey) fetchHeaders["Authorization"] = `Bearer ${masterKey}`;
+      
+      const res = await fetch(gatewayUrl + "/v1/models", { headers: fetchHeaders });
       if (res.ok) {
         const data = await res.json() as any;
-        availableModels = (data.data || []).map((m: any) => m.id as string);
+        const allModels = (data.data || []).map((m: any) => m.id as string);
+        
+        const configuredProviders = Object.keys(localKeys);
+        const freeProviders = ["opencode", "blackbox", "duckduckgo", "github", "bazaarlink", "qoder", "qwen"];
+        
+        if (masterKey) {
+          // If we have a master gateway key, we can use any model exposed by the gateway router!
+          availableModels = allModels;
+        } else {
+          // Otherwise, only show models for which we have a specific local key or free providers
+          availableModels = allModels.filter((m: string) => {
+            const prov = m.split("/")[0];
+            return configuredProviders.includes(prov) || freeProviders.includes(prov);
+          });
+        }
+        
+        if (availableModels.length === 0) availableModels = ["No models available (No keys added)"];
       } else {
         availableModels = ["Error loading models"];
       }
@@ -573,9 +662,11 @@ async function openModelPicker() {
       availableModels = ["Gateway offline"];
     }
   }
-  modelPickerIdx = availableModels.indexOf(currentModel);
+  
+  filteredModels = [...availableModels];
+  modelPickerIdx = filteredModels.indexOf(currentModel);
   if (modelPickerIdx < 0) modelPickerIdx = 0;
-  setStatus("↑↓ navigate  Enter select  Esc cancel");
+  setStatus("Type to search  ↑↓ navigate  Enter select  Esc cancel");
   renderAll();
 }
 
@@ -594,21 +685,28 @@ function renderModelPicker() {
 
   // Title
   out.push(T.goto(startRow + 1, startCol));
-  const titleText = " Select Model (" + availableModels.length + " available) ";
+  const titleText = " Select Model (" + filteredModels.length + " available) ";
   const titlePad = Math.max(0, boxW - 2 - titleText.length);
   out.push(A.bgSurface + A.fgBlue + A.bold + "│" + titleText + " ".repeat(titlePad) + "│" + A.reset);
 
-  // Separator
+  // Search bar
   out.push(T.goto(startRow + 2, startCol));
+  const searchInput = modelSearchQuery + "█";
+  const searchDisp = " Search: " + searchInput;
+  const searchPad = Math.max(0, boxW - 2 - searchDisp.length);
+  out.push(A.bgSurface + A.fgBlue + "│" + A.fgText + searchDisp + " ".repeat(searchPad) + A.fgBlue + "│" + A.reset);
+
+  // Separator
+  out.push(T.goto(startRow + 3, startCol));
   out.push(A.bgSurface + A.fgBlue + "│" + "─".repeat(boxW - 2) + "│" + A.reset);
 
   // Models list
-  const listRows = boxH - 4;
+  const listRows = boxH - 5;
   const listStart = Math.max(0, modelPickerIdx - Math.floor(listRows / 2));
-  const visible = availableModels.slice(listStart, listStart + listRows);
+  const visible = filteredModels.slice(listStart, listStart + listRows);
 
   for (let i = 0; i < listRows; i++) {
-    out.push(T.goto(startRow + 3 + i, startCol));
+    out.push(T.goto(startRow + 4 + i, startCol));
     const modelIdx = listStart + i;
     const model = visible[i];
     if (!model) {
@@ -618,7 +716,7 @@ function renderModelPicker() {
       const current = model === currentModel;
       const marker = selected ? "▸ " : current ? "✔ " : "  ";
       const text = truncate(marker + model, boxW - 3);
-      const textPad = Math.max(0, boxW - 3 - text.replace(/\x1b\[[^m]*m/g, "").length);
+      const textPad = Math.max(0, boxW - 3 - text.replace(ANSI_REGEX, "").length);
       const fg = selected ? A.fgYellow + A.bold : current ? A.fgGreen : A.fgText;
       const bg = selected ? A.bgOverlay : A.bgSurface;
       out.push(bg + A.fgBlue + "│" + fg + " " + text + " ".repeat(textPad) + A.reset + A.bgSurface + A.fgBlue + "│" + A.reset);
@@ -632,6 +730,7 @@ function renderModelPicker() {
   write(out.join(""));
 }
 
+
 // ─── Input handling ──────────────────────────────────────────────────────────
 function handleKey(data: Buffer) {
   const s = data.toString("utf8");
@@ -640,14 +739,15 @@ function handleKey(data: Buffer) {
   // Model picker navigation
   if (showModelPicker) {
     if (hex === "1b5b41" || hex === "1b4f41") { // Up
-      modelPickerIdx = modelPickerIdx <= 0 ? availableModels.length - 1 : modelPickerIdx - 1;
-      renderAll(); renderModelPicker();
+      modelPickerIdx = modelPickerIdx <= 0 ? filteredModels.length - 1 : modelPickerIdx - 1;
+      renderAll();
     } else if (hex === "1b5b42" || hex === "1b4f42") { // Down
-      modelPickerIdx = modelPickerIdx >= availableModels.length - 1 ? 0 : modelPickerIdx + 1;
-      renderAll(); renderModelPicker();
+      modelPickerIdx = modelPickerIdx >= filteredModels.length - 1 ? 0 : modelPickerIdx + 1;
+      renderAll();
     } else if (hex === "0d" || hex === "0a") { // Enter
-      if (availableModels[modelPickerIdx]) {
-        currentModel = availableModels[modelPickerIdx];
+      const sel = filteredModels[modelPickerIdx];
+      if (sel && !sel.includes("No models") && !sel.includes("Gateway offline") && !sel.includes("Error") && !sel.includes("No matches")) {
+        currentModel = sel;
         setStatus("Model: " + currentModel);
       }
       showModelPicker = false;
@@ -656,7 +756,30 @@ function handleKey(data: Buffer) {
       showModelPicker = false;
       setStatus("");
       renderAll();
+    } else if (hex === "7f" || hex === "08") { // Backspace
+      if (modelSearchQuery.length > 0) {
+        modelSearchQuery = modelSearchQuery.slice(0, -1);
+        updateModelSearch();
+      }
+    } else if (s.length === 1 && s >= " " && s <= "~") { // Printable
+      modelSearchQuery += s;
+      updateModelSearch();
     }
+    return;
+  }
+
+  // Provider picker navigation
+  if (providerPicker.show) {
+    providerPicker.handleKey(hex, {
+      renderAll,
+      setStatus,
+      onSelect: (sel) => {
+        inputBuffer = "/key " + sel + " ";
+        cursorPos = inputBuffer.length;
+        setStatus("Paste your API key and press Enter");
+        renderAll();
+      }
+    });
     return;
   }
 
@@ -692,6 +815,7 @@ function handleKey(data: Buffer) {
   if (hex === "1b") {
     if (showHelp) { showHelp = false; renderAll(); return; }
     if (showModelPicker) { showModelPicker = false; renderAll(); return; }
+    if (providerPicker.show) { providerPicker.show = false; renderAll(); return; }
     if (isStreaming) {
       abortController?.abort();
       stopSpinner();
@@ -849,8 +973,9 @@ function exitApp() {
 }
 
 function handleResize() {
-  renderAll();
+  if (showHelp) renderHelp();
   if (showModelPicker) renderModelPicker();
+  if (providerPicker.show) providerPicker.render();
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────

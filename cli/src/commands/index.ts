@@ -25,6 +25,7 @@ import { configCommand } from "./config";
 import { sessionCommand } from "./session";
 import { jailbreakCommand } from "./jailbreak";
 import { tuiCommand } from "./tui";
+import { teamworkCommand } from "./teamwork";
 
 export interface CommandContext {
   gateway: GatewayClient;
@@ -70,6 +71,7 @@ const builtinCommands: Command[] = [
   sessionCommand,
   jailbreakCommand,
   tuiCommand,
+  teamworkCommand,
 ];
 
 export function getAllCommands(): Command[] {
@@ -87,9 +89,22 @@ export function findCommand(input: string): { command: Command; args: string[] }
   const trimmed = input.trim();
   if (!trimmed.startsWith("/")) return null;
 
-  const parts = trimmed.slice(1).split(/\s+/);
+  const rawArgsString = trimmed.slice(1);
+  // Match non-space words, OR double-quoted strings, OR single-quoted strings
+  const tokenRegex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+  const parts: string[] = [];
+  let match;
+  
+  while ((match = tokenRegex.exec(rawArgsString)) !== null) {
+    // match[1] is double quotes content, match[2] is single quotes content
+    // match[0] is unquoted word
+    parts.push(match[1] ?? match[2] ?? match[0]);
+  }
+
+  if (parts.length === 0) return null;
+
   const cmdName = parts[0].toLowerCase();
-  const args = parts.slice(1).map(stripQuotes);
+  const args = parts.slice(1);
 
   for (const cmd of builtinCommands) {
     if (cmd.name === cmdName || cmd.aliases.includes(cmdName)) {

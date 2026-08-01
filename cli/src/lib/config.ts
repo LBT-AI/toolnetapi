@@ -50,8 +50,9 @@ export function loadConfig(): CliConfig {
     const raw = fs.readFileSync(CONFIG_FILE, "utf8");
     const parsed = JSON.parse(raw);
     cachedConfig = { ...DEFAULT_CONFIG, ...parsed };
-    if (cachedConfig.baseUrl && cachedConfig.baseUrl.includes("20128")) {
+    if (cachedConfig?.baseUrl && cachedConfig.baseUrl.includes("20128")) {
       cachedConfig.baseUrl = cachedConfig.baseUrl.replace("20128", "20127");
+      saveConfig();
     }
   } catch {
     cachedConfig = { ...DEFAULT_CONFIG };

@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createMemo } from "solid-js/dist/solid.js";
+import { createSignal, For, Show, createMemo, onCleanup } from "solid-js";
 import { TextAttributes } from "@opentui/core";
 import { exitTui } from "../exit";
 import { getGateway } from "../lib/gateway";
@@ -16,6 +16,7 @@ import {
   setModel as sessionSetModel,
 } from "../lib/session";
 import { canUndo, canRedo, onHistoryChange, undo as undoHistory, redo as redoHistory } from "../lib/history";
+import { TeamworkDashboard } from "../teamwork/dashboard";
 
 const B = TextAttributes.BOLD;
 const I = TextAttributes.ITALIC;
@@ -192,7 +193,7 @@ function HelpDialog(props: { onClose: () => void }) {
   const commands = getAllCommands();
   return (
     <box flexDirection="column" width="100%" height="100%" justifyContent="center" alignItems="center" paddingLeft={10} paddingRight={10}>
-      <box flexDirection="column" width="70%" maxWidth={80} borderStyle="double" borderColor={T.yellow} bg={T.base}>
+      <box flexDirection="column" width="70%" maxWidth={80} borderStyle="double" borderColor={T.yellow} backgroundColor={T.base}>
         <box paddingTop={1} paddingLeft={2} paddingRight={2}>
           <text fg={T.yellow} attributes={B}>TOOLNET — Commands</text>
         </box>
@@ -243,7 +244,7 @@ function CommandPalette(props: { onClose: () => void; onRun: (cmd: string) => vo
 
   return (
     <box flexDirection="column" width="100%" height="100%" justifyContent="center" alignItems="center" paddingLeft={15} paddingRight={15}>
-      <box flexDirection="column" width="50%" maxWidth={60} maxHeight="60%" borderStyle="double" borderColor={T.blue} bg={T.base}>
+      <box flexDirection="column" width="50%" maxWidth={60} maxHeight="60%" borderStyle="double" borderColor={T.blue} backgroundColor={T.base}>
         <box paddingTop={1} paddingLeft={1} paddingRight={1}>
           <input
             ref={(el: any) => { inputEl = el; setTimeout(() => el?.focus?.()); }}
@@ -260,8 +261,8 @@ function CommandPalette(props: { onClose: () => void; onRun: (cmd: string) => vo
             {(cmd, i) => (
               <box
                 flexDirection="row"
-                bg={i() === selectedIdx() ? T.surface : undefined}
-                onClick={() => { props.onRun("/" + cmd.name); props.onClose(); }}
+                backgroundColor={i() === selectedIdx() ? T.surface : undefined}
+                onMouseDown={() => { props.onRun("/" + cmd.name); props.onClose(); }}
               >
                 <text fg={i() === selectedIdx() ? T.blue : T.cyan} attributes={B} width={16}>
                   {"/" + cmd.name}
@@ -292,7 +293,7 @@ function Sidebar() {
       width={26}
       borderStyle="single"
       borderColor={T.overlay}
-      bg={T.surface}
+      backgroundColor={T.surface}
       paddingLeft={1}
       paddingRight={1}
     >
@@ -347,7 +348,7 @@ function WelcomeScreen(props: { onSend: (text: string) => void }) {
 
   return (
     <box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
-      <text fg={T.peach} attributes={B} fontSize={2}>ToolNet</text>
+      <text fg={T.peach} attributes={B}>ToolNet</text>
       <text fg={T.subtext}>AI Coding Agent Gateway</text>
       <text> </text>
       <text fg={T.text}>Type a message or use a command to start</text>
@@ -363,8 +364,8 @@ function WelcomeScreen(props: { onSend: (text: string) => void }) {
               borderColor={T.overlay}
               paddingLeft={1}
               paddingRight={1}
-              onClick={() => props.onSend(s.label)}
-              bg={T.surface}
+              onMouseDown={() => props.onSend(s.label)}
+              backgroundColor={T.surface}
             >
               <text fg={T.cyan} attributes={B}>{s.label}</text>
               <text fg={T.subtext}>  {s.desc}</text>
@@ -380,7 +381,7 @@ function WelcomeScreen(props: { onSend: (text: string) => void }) {
 
 function ErrorFallback(props: { error: Error | null; onRetry: () => void }) {
   return (
-    <box flexDirection="column" width="100%" height="100%" justifyContent="center" alignItems="center" bg={T.base} paddingLeft={5} paddingRight={5}>
+    <box flexDirection="column" width="100%" height="100%" justifyContent="center" alignItems="center" backgroundColor={T.base} paddingLeft={5} paddingRight={5}>
       <text fg={T.red} attributes={B}>Something went wrong</text>
       <text> </text>
       <text fg={T.subtext}>{props.error?.message || "Unknown error"}</text>
@@ -389,7 +390,7 @@ function ErrorFallback(props: { error: Error | null; onRetry: () => void }) {
         borderStyle="single"
         borderColor={T.blue}
         paddingLeft={2} paddingRight={2}
-        onClick={props.onRetry}
+        onMouseDown={props.onRetry}
       >
         <text fg={T.blue}>Retry</text>
       </box>
@@ -398,7 +399,7 @@ function ErrorFallback(props: { error: Error | null; onRetry: () => void }) {
         borderStyle="single"
         borderColor={T.overlay}
         paddingLeft={2} paddingRight={2}
-        onClick={() => exitTui()}
+        onMouseDown={() => exitTui()}
       >
         <text fg={T.subtext}>Exit</text>
       </box>
@@ -437,6 +438,11 @@ export function ChatScreen() {
   const [models, setModels] = createSignal<{ id: string; owned_by?: string }[]>([]);
   const [error, setError] = createSignal<Error | null>(null);
   const [tick, setTick] = createSignal(0);
+
+  let currentSpinnerTimer: ReturnType<typeof setInterval> | null = null;
+  onCleanup(() => {
+    if (currentSpinnerTimer) clearInterval(currentSpinnerTimer);
+  });
 
   let inputRef: any = null;
   let lastSubmittedText = "";
@@ -504,7 +510,8 @@ export function ChatScreen() {
     setStatusMsg("Thinking...");
     abortController = new AbortController();
 
-    const spinnerTimer = setInterval(() => {
+    if (currentSpinnerTimer) clearInterval(currentSpinnerTimer);
+    currentSpinnerTimer = setInterval(() => {
       setSpinnerIdx((i) => (i + 1) % SPINNER_FRAMES.length);
     }, 80);
 
@@ -521,7 +528,6 @@ export function ChatScreen() {
       });
 
       if (!res.ok) {
-        clearInterval(spinnerTimer);
         const errText = await res.text();
         addMessage("assistant", `Error: HTTP ${res.status} — ${errText.slice(0, 200)}`);
         setIsStreaming(false);
@@ -530,7 +536,6 @@ export function ChatScreen() {
       }
 
       if (!res.body) {
-        clearInterval(spinnerTimer);
         addMessage("assistant", "Error: No response body");
         setIsStreaming(false);
         setStatusMsg("Error: Empty body");
@@ -569,7 +574,6 @@ export function ChatScreen() {
         }
       }
 
-      clearInterval(spinnerTimer);
       const sess = getCurrentSession();
       if (sess.messages.length > 0 && sess.messages[sess.messages.length - 1].role === "assistant") {
         sess.messages.pop();
@@ -581,7 +585,6 @@ export function ChatScreen() {
       setStatusMsg(`✔ Done in ${elapsed}s`);
       abortController = null;
     } catch (err: any) {
-      clearInterval(spinnerTimer);
       if (err?.name === "AbortError") {
         addMessage("assistant", "(cancelled)");
         setStatusMsg("Cancelled");
@@ -591,6 +594,8 @@ export function ChatScreen() {
       }
       setIsStreaming(false);
       abortController = null;
+    } finally {
+      if (currentSpinnerTimer) clearInterval(currentSpinnerTimer);
     }
   };
 
@@ -602,7 +607,7 @@ export function ChatScreen() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), duration);
   };
 
-  const sendMessageToServer = (value: any) => {
+  const sendMessageToServer = (value?: string) => {
     const textValue = typeof value === "string" ? value : inputValue();
     sendToServer(textValue || "");
   };
@@ -720,11 +725,12 @@ export function ChatScreen() {
   );
 
   const isFirstLaunch = createMemo(() => messages().length === 0 && sessions().length === 1);
+  const isTeamworkActive = createMemo(() => messages().some((m) => m.content.includes("ToolNet Teamwork v2")) || statusMsg().includes("Teamwork"));
 
   return (
-      <box flexDirection="column" width="100%" height="100%" overflow="hidden" bg={T.base}>
+      <box flexDirection="column" width="100%" height="100%" overflow="hidden" backgroundColor={T.base}>
         {/* ── Header ── */}
-        <box flexDirection="row" alignItems="center" paddingLeft={1} paddingRight={1} borderStyle="single" borderColor={T.overlay} bg={T.surface}>
+        <box flexDirection="row" alignItems="center" paddingLeft={1} paddingRight={1} borderStyle="single" borderColor={T.overlay} backgroundColor={T.surface}>
           <text fg={T.peach} attributes={B}>ToolNet</text>
           <text fg={T.subtext}>  </text>
           <For each={sessions()}>
@@ -761,8 +767,12 @@ export function ChatScreen() {
         <box flexDirection="row" flexGrow={1}>
           {/* Messages area */}
           <Show when={isFirstLaunch()} fallback={
-            <scrollbox flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1} paddingTop={1} stickyScroll={true} stickyStart="bottom">
-              <For each={parseMsgSegments()}>
+            <box flexDirection="column" flexGrow={1}>
+              <Show when={isTeamworkActive()}>
+                <TeamworkDashboard />
+              </Show>
+              <scrollbox flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1} paddingTop={1} stickyScroll={true} stickyStart="bottom">
+                <For each={parseMsgSegments()}>
                 {(entry) => (
                   <box flexDirection="column" marginBottom={1}>
                     <box flexDirection="row" marginBottom={0} paddingLeft={1}>
@@ -775,21 +785,21 @@ export function ChatScreen() {
                         <box flexDirection="column" paddingLeft={2}>
                           {seg.type === "code" ? (
                             <box flexDirection="column" marginTop={0} marginBottom={0}>
-                              <box flexDirection="row" borderStyle="single" borderColor={T.overlay} paddingLeft={1} paddingRight={1} bg={T.surface}>
+                              <box flexDirection="row" borderStyle="single" borderColor={T.overlay} paddingLeft={1} paddingRight={1} backgroundColor={T.surface}>
                                 <text fg={T.subtext} attributes={B}>{seg.lang || "code"}</text>
                               </box>
-                              <box flexDirection="column" borderStyle="single" borderColor={T.overlay} paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} bg={T.surface}>
+                              <box flexDirection="column" borderStyle="single" borderColor={T.overlay} paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} backgroundColor={T.surface}>
                                 <For each={seg.highlighted}>
                                   {(line) => (
                                     <box flexDirection="row">
-                                      <For each={line}>{(span) => <text fg={span.fg} attributes={span.attr || 0}>{span.text}</text>}</For>
+                                      <For each={line}>{(span) => <text fg={span.fg} attributes={span.attributes || span.attr || 0}>{span.text}</text>}</For>
                                     </box>
                                   )}
                                 </For>
                               </box>
                             </box>
                           ) : (
-                            <box flexDirection="row" wrap="wrap">
+                            <box flexDirection="row" flexWrap="wrap">
                               <For each={renderInline(seg.content)}>
                                 {(span) => <text fg={span.fg || T.text} attributes={span.attr || 0}>{span.text}</text>}
                               </For>
@@ -802,6 +812,7 @@ export function ChatScreen() {
                 )}
               </For>
             </scrollbox>
+            </box>
           }>
             <WelcomeScreen onSend={(t) => { addMessage("user", t); }} />
           </Show>
@@ -813,14 +824,16 @@ export function ChatScreen() {
         </box>
 
         {/* ── Input ── */}
-        <box flexDirection="row" borderStyle="single" borderColor={T.overlay} paddingLeft={1} paddingRight={1} bg={T.surface}>
+        <box flexDirection="row" borderStyle="single" borderColor={T.overlay} paddingLeft={1} paddingRight={1} backgroundColor={T.surface}>
           <text fg={T.peach} attributes={B}>{"▸ "}</text>
           <input
             ref={(el: any) => (inputRef = el)}
             focused={!hasDialogOpen() && !error()}
             value={inputValue()}
             onInput={(val: string) => setInputValue(val)}
-            onSubmit={sendMessageToServer as any}
+            onSubmit={(event: SubmitEvent) => {
+              sendMessageToServer((event as any).value);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             width="100%"
@@ -828,7 +841,7 @@ export function ChatScreen() {
         </box>
 
         {/* ── Footer status bar ── */}
-        <box flexDirection="row" justifyContent="space-between" paddingLeft={1} paddingRight={1} borderStyle="single" borderColor={T.overlay} bg={T.surface}>
+        <box flexDirection="row" justifyContent="space-between" paddingLeft={1} paddingRight={1} borderStyle="single" borderColor={T.overlay} backgroundColor={T.surface}>
           <text fg={T.subtext}>{navHints(isStreaming(), hasDialogOpen())}</text>
           <box flexDirection="row">
             <Show when={isStreaming()}>
@@ -853,14 +866,14 @@ export function ChatScreen() {
 
         <Show when={showModels()}>
           <box flexDirection="column" width="100%" height="100%" justifyContent="center" alignItems="center" paddingLeft={10} paddingRight={10}>
-            <box flexDirection="column" width="60%" maxWidth={60} maxHeight="60%" borderStyle="double" borderColor={T.blue} bg={T.base}>
+            <box flexDirection="column" width="60%" maxWidth={60} maxHeight="60%" borderStyle="double" borderColor={T.blue} backgroundColor={T.base}>
               <box paddingTop={1} paddingLeft={2} paddingRight={2}>
                 <text fg={T.blue} attributes={B}>Select Model</text>
               </box>
               <scrollbox flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
                 <For each={models()}>
                   {(m) => (
-                    <box flexDirection="row" marginBottom={0} onClick={() => setModel(m.id)}>
+                    <box flexDirection="row" marginBottom={0} onMouseDown={() => setModel(m.id)}>
                       <text fg={m.id === selectedModel() ? T.green : T.text} attributes={m.id === selectedModel() ? B : 0}>
                         {"  "}{m.id === selectedModel() ? "▸ " : "  "}{m.id}
                       </text>
@@ -888,7 +901,7 @@ export function ChatScreen() {
             return (
               <box position="absolute" bottom={0} left={0} width="100%" justifyContent="center" paddingBottom={1}>
                 <box paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0}
-                  bg={last.type === "error" ? "#3a1a1a" : last.type === "warning" ? "#3a3010" : last.type === "success" ? "#1a3a1a" : T.surface}
+                  backgroundColor={last.type === "error" ? "#3a1a1a" : last.type === "warning" ? "#3a3010" : last.type === "success" ? "#1a3a1a" : T.surface}
                   borderStyle="single"
                   borderColor={last.type === "error" ? T.red : last.type === "warning" ? T.yellow : last.type === "success" ? T.green : T.overlay}>
                   <text fg={last.type === "error" ? T.red : last.type === "warning" ? T.yellow : last.type === "success" ? T.green : T.text}>

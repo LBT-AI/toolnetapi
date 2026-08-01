@@ -12,3 +12,7 @@ if (SIMPLE) {
 // Launch full-screen TUI (raw terminal mode, Termius compatible)
 const { main: mainTui } = await import("./tui");
 await mainTui();
+
+export {};
+
+export {};

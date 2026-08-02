@@ -27,7 +27,7 @@ describe("turboExecutor", () => {
 
     let fetchCount = 0;
     
-    global.fetch = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+    global.fetch = (mock as any)(async (input: RequestInfo | URL, init?: RequestInit) => {
       fetchCount++;
       const reqBody = typeof init?.body === "string" ? JSON.parse(init.body) : {};
       const messages = reqBody.messages || [];

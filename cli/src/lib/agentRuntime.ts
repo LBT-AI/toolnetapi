@@ -29,8 +29,14 @@ Guidelines:
    - Use 'glob_search' for locating files by pattern.
    - Use 'write_file' for creating new files.
    - Use 'run_command' for shell execution (run 'pwd'/'ls' if unsure of directories).
-2. Complete tasks efficiently in minimum iterations.
-3. ALWAYS provide a final textual response summarizing your work when tool iterations finish.`;
+2. COMPLETE THE QA LOOP (Automatic Verification):
+   - Whenever you edit or create code files, you MUST automatically detect the project framework (by checking package.json, scripts, config files).
+   - Automatically run the appropriate verification commands (e.g. typecheck, lint, build, or unit tests) using 'run_command'.
+   - If a test or command fails, read the stderr/stdout, identify the root cause, fix the code, and re-verify. 
+   - Limit retry attempts to avoid infinite loops. Only report completion when verification passes.
+   - For sandboxed artifact testing, use 'mktemp -d' to create a clean temporary workspace if needed.
+3. Complete tasks efficiently in minimum iterations.
+4. ALWAYS provide a final textual response summarizing your work when tool iterations finish.`;
 
 export class AgentRuntime {
   private gatewayUrl: string;

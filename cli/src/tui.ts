@@ -329,12 +329,12 @@ function renderAll() {
         const state = s.getState();
         const activeCount = state.activeWorkers || 0;
         const maxCount = state.maxWorkers || 1;
-        const line = `  [${state.status}] W:${activeCount}/${maxCount} T:${state.completedTaskIds.length}/${state.graph.nodes?.length || 0}`;
+        const line = `  [${state.status}] W:${activeCount}/${maxCount} T:${state.completedTaskIds.length}/${state.graph?.nodes?.length || 0}`;
         const lineStr = truncate(line, PANEL_WIDTH);
         panelLines.push(A.bgSurface + A.fgText + lineStr + " ".repeat(Math.max(0, PANEL_WIDTH - lineStr.length)) + A.reset);
         
         for (const tid of (state.runningTaskIds || [])) {
-          const node = s.getReadyNodes().find(n => n.id === tid) || state.graph.nodes?.find(n => n.id === tid);
+          const node = s.getReadyNodes().find(n => n.id === tid) || (Array.isArray(state.graph?.nodes) ? (state.graph!.nodes as any[]).find((n: any) => n.id === tid) : undefined);
           if (node) {
             const nLine = `   - ${node.role || 'Agent'}: ${node.title}`;
             const nLineStr = truncate(nLine, PANEL_WIDTH);
@@ -1237,7 +1237,7 @@ function exitApp() {
 }
 
 function handleResize() {
-  if (showHelp) renderHelp();
+  if (showHelp) showHelp = false; // renderHelp is currently unimplemented
   if (showModelPicker) renderModelPicker();
   if (providerPicker.show) providerPicker.render();
 }
@@ -1267,7 +1267,7 @@ async function main() {
     const loaded = loadSession(requestedSessionId);
     if (loaded && Array.isArray(loaded.messages)) {
       currentSessionId = loaded.sessionId;
-      messages = loaded.messages;
+      messages = loaded.messages as Msg[];
       if (loaded.metadata?.model) currentModel = loaded.metadata.model;
       if (loaded.metadata?.agentMode) agentMode = loaded.metadata.agentMode;
       setStatus(`Loaded session: ${currentSessionId}`);
@@ -1281,7 +1281,7 @@ async function main() {
       const loaded = loadSession(lastId);
       if (loaded && Array.isArray(loaded.messages)) {
         currentSessionId = loaded.sessionId;
-        messages = loaded.messages;
+        messages = loaded.messages as Msg[];
         if (loaded.metadata?.model) currentModel = loaded.metadata.model;
         if (loaded.metadata?.agentMode) agentMode = loaded.metadata.agentMode;
         setStatus(`Resumed session: ${currentSessionId}`);

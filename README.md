@@ -22,6 +22,12 @@
 - **Load Balancing:** Add multiple API keys for the same provider to bypass rate limits using round-robin rotation.
 - **Universal API:** Fully compatible with the standard OpenAI `/v1` endpoint.
 
+### Built-In Agentic CLI (`toolnetapi`)
+- **Autonomous Execution:** Features an advanced ReAct execution loop with a complete 7-toolset engine (`read_file`, `write_file`, `edit_file`, `replace_all`, `run_command`, `grep_search`, `glob_search`).
+- **Resilient Sessions:** Automatic disk persistence (`~/.toolnetapi/sessions/`) and `--resume` support.
+- **Developer UX:** Bracketed paste protection (`\x1b[?2004h`), inline unified diffs, `<thought>` rendering, and visual multi-agent Teamwork side-panels.
+- **Extensible:** Natively scans and loads local `.gemini/skills/` and local `mcp.json` Stdio MCP servers.
+
 ---
 
 ## 🚀 Quick Start

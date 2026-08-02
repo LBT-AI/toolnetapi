@@ -36,7 +36,7 @@ describe("Step 2 - P0-A Agent Execution Foundation", () => {
     const origFetch = global.fetch;
     let fetchCount = 0;
 
-    global.fetch = mock(async () => {
+    global.fetch = (mock as any)(async () => {
       fetchCount++;
       return new Response(
         JSON.stringify({
@@ -80,7 +80,7 @@ describe("Step 2 - P0-A Agent Execution Foundation", () => {
     const origFetch = global.fetch;
     let step = 0;
 
-    global.fetch = mock(async () => {
+    global.fetch = (mock as any)(async () => {
       step++;
       if (step === 1) {
         return new Response(

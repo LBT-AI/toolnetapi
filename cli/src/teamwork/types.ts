@@ -15,6 +15,7 @@ export type AgentRole =
   | 'EXPLORER'
   | 'IMPLEMENTER'
   | 'REVIEWER'
+  | 'QA_ENGINEER'
   | 'TURBO_AGENT';
 
 export type QualityLevel = 'FAST' | 'BALANCED' | 'THOROUGH' | 'DRAFT' | 'NORMAL' | 'HIGH' | 'MAX';

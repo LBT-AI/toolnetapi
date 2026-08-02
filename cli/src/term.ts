@@ -24,6 +24,7 @@ export const A = {
   bgHeader:  "",
   bgInput:   "",
   bgSuggest: CSI + "48;2;20;20;20m",
+  bgRed:     CSI + "48;2;224;108;117m",
 };
 
 export const T = {

@@ -792,7 +792,7 @@ export function ChatScreen() {
                                 <For each={seg.highlighted}>
                                   {(line) => (
                                     <box flexDirection="row">
-                                      <For each={line}>{(span) => <text fg={span.fg} attributes={span.attributes || span.attr || 0}>{span.text}</text>}</For>
+                                      <For each={line}>{(span) => <text fg={(span as any).fg} attributes={(span as any).attributes || (span as any).attr || 0}>{(span as any).text}</text>}</For>
                                     </box>
                                   )}
                                 </For>
@@ -831,9 +831,9 @@ export function ChatScreen() {
             focused={!hasDialogOpen() && !error()}
             value={inputValue()}
             onInput={(val: string) => setInputValue(val)}
-            onSubmit={(event: SubmitEvent) => {
-              sendMessageToServer((event as any).value);
-            }}
+            onSubmit={((event: any) => {
+              sendMessageToServer(event.value);
+            }) as any}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             width="100%"

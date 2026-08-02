@@ -1,3 +1,24 @@
+# v1.0.0 (2026-08-02)
+
+## Phase 1-3 Major Release: The Agentic CLI Overhaul
+
+This release completely revamps the ToolNet CLI into a fully autonomous, production-grade agentic coding assistant with 100% Feature Parity compared to the standard.
+
+### Core Architecture & Execution (Phase 1)
+- **AgentRuntime ReAct Loop**: Unified ReAct tool execution loop for REPL and TUI, with infinite loop detection (3 repeats) and deterministic fallbacks.
+- **7-Toolset Engine**: Full schema exposure for `run_command`, `read_file` (with pagination), `write_file`, `edit_file`, `replace_all`, `grep_search`, `glob_search`.
+- **Idempotent Lifecycle & Crash Boundaries**: Graceful terminal restoration on SIGINT/SIGTERM or uncaught exceptions, writing stateful crash logs.
+- **Session Persistence**: Chat history and tool contexts are now saved locally to `~/.toolnetapi/sessions/` and can be resumed with the `--resume` or `--session <id>` flag.
+
+### UX, Rendering & Extensibility (Phase 2 & 3)
+- **Bracketed Paste Mode**: Pasting 500+ lines of code into the terminal is now safe and will not corrupt buffers or execute raw control characters (`\x1b[?2004h`).
+- **Readline Navigation Shortcuts**: `Ctrl+A`, `Ctrl+E`, `Ctrl+K`, `Ctrl+U`, `Ctrl+W` support.
+- **Visuals**: Distinct italicized `<thought>` blocks, Unified Diff rendering (green/red) for file edits, and Model Metadata tags (`[Vision]`, `[Reasoning]`) in picker menus.
+- **Context Management**: Sliding window truncation to avoid 400 Token Limit errors.
+- **Local Skills & MCP**: Auto-scans local `SKILL.md` frontmatter and loads local stdio MCP servers from `mcp.json`.
+- **Security & Planning**: Confirmation modals for dangerous shell commands and a functional `/plan` & `/approve` workflow.
+- **Multi-Agent UX**: Dynamic responsive Side Panel tracking Background Tasks and active Subagents (Teamwork v2) real-time.
+
 # v0.5.40 (2026-07-20)
 
 ## Features

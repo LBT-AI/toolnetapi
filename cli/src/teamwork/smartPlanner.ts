@@ -15,7 +15,7 @@ JSON Output Schema:
     {
       "id": "task-1",
       "title": "Short title describing task node",
-      "role": "EXPLORER" | "IMPLEMENTER" | "REVIEWER",
+      "role": "EXPLORER" | "IMPLEMENTER" | "REVIEWER" | "QA_ENGINEER",
       "prompt": "Detailed instructions for worker agent",
       "dependsOn": [],
       "targetFiles": ["cli/src/example.ts"],
@@ -31,8 +31,8 @@ JSON Output Schema:
 Rules:
 1. Every node MUST have a unique ID (e.g. task-1, task-2).
 2. \`dependsOn\` must contain ONLY node IDs that appear in the graph. NO circular dependencies!
-3. \`role\` MUST be one of: "EXPLORER", "IMPLEMENTER", "REVIEWER".
-4. Max 1 REVIEWER node across the entire task graph (Intelligent Review Policy).
+3. \`role\` MUST be one of: "EXPLORER", "IMPLEMENTER", "REVIEWER", "QA_ENGINEER".
+4. Max 1 QA/Review node across the entire task graph (Intelligent Review Policy). If code changes are made, ALWAYS include a "QA_ENGINEER" node to run tests/build/verification commands and fix errors.
 5. Output ONLY raw JSON matching the schema.`;
 
 /**
@@ -119,16 +119,19 @@ export function enforceSingleReviewRound(nodes: TaskNode[]): TaskNode[] {
     let updatedRole = node.role;
     let reviewRequired = Boolean(node.reviewRequired ?? node.requiresReview);
 
-    if (roleUpper === 'REVIEWER' || roleUpper === 'REVIEW') {
+    if (roleUpper === 'REVIEWER' || roleUpper === 'REVIEW' || roleUpper === 'QA_ENGINEER') {
       reviewerCount++;
       if (reviewerCount > 1) {
         updatedRole = 'IMPLEMENTER';
         reviewRequired = false;
+      } else {
+        // Normalize role name for validation/display
+        updatedRole = roleUpper === 'QA_ENGINEER' ? 'QA_ENGINEER' : 'REVIEWER';
       }
     }
     return {
       ...node,
-      role: updatedRole,
+      role: updatedRole as AgentRole,
       dependsOn: node.dependsOn || node.dependencies || [],
       dependencies: node.dependencies || node.dependsOn || [],
       reviewRequired,
@@ -185,8 +188,8 @@ export function createFallbackTaskGraph(
     nodes.push({
       id: "task-3",
       title: "QA Verification & Code Review",
-      prompt: `Verify implementation of task-2 against prompt: "${userPrompt}". Run typecheck and tests.`,
-      role: "REVIEWER" as AgentRole,
+      prompt: `Verify implementation of task-2 against prompt: "${userPrompt}". 1. Detect project framework. 2. Run typecheck, lint, build, or tests using run_command. 3. If tests fail, read stderr, identify root cause, fix, and rerun. Loop until passed or max retries reached.`,
+      role: "QA_ENGINEER" as AgentRole,
       dependencies: ["task-2"],
       dependsOn: ["task-2"],
       targetFiles: analysisResult?.extractedFileTargets || [],

@@ -478,13 +478,13 @@ export async function main() {
 
       try {
         const runtime = new AgentRuntime({
-          gatewayUrl: gw.baseUrl,
+          gatewayUrl: gw.getBaseUrl(),
           model: currentModel,
           onEvent: (event, data) => {
             if (event === "TOOL_START") {
               print(color.yellow + `  ● Executing ${data.toolName}...` + C.reset);
             } else if (event === "TOOL_END") {
-              print(color.dim + `    └ Result received.` + C.reset);
+              print(color.subtext + `    └ Result received.` + C.reset);
             }
           }
         });
@@ -493,7 +493,7 @@ export async function main() {
         if (!res.success && res.error) {
           printError("\nError: " + res.error);
         } else {
-          print("\n" + renderMarkdown(res.output, termWidth()));
+          print("\n" + renderMarkdown(res.output));
         }
       } catch (err) {
         printError("\nError: " + (err instanceof Error ? err.message : String(err)));

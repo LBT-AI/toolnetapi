@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const srcPath = join(__dirname, "..", "src", "index.tsx");
+const srcPath = join(__dirname, "..", "dist", "index.js");
 const args = process.argv.slice(2);
 const bunBin = process.execPath;
 

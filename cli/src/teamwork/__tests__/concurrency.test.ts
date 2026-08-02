@@ -7,9 +7,10 @@ describe("Concurrency & UX Tests", () => {
   it("should support dynamic scheduler tracking", () => {
     const graph: TaskGraph = {
       sessionId: "test-sess",
-      intent: "Test UX",
+      mode: "STANDARD",
+      createdAt: Date.now(),
       nodes: [
-        { id: "node1", title: "Task 1", prompt: "Do something", status: "PENDING", role: "coder", dependencies: [] },
+        { id: "node1", title: "Task 1", prompt: "Do something", status: "PENDING", role: "EXPLORER", dependencies: [] },
         { id: "node2", title: "Task 2", prompt: "Do something else", status: "PENDING", role: "reviewer", dependencies: ["node1"] }
       ]
     };

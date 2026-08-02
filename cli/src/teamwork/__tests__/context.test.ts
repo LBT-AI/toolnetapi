@@ -4,7 +4,7 @@ import { AgentRuntime } from "../../lib/agentRuntime";
 describe("Context Truncation", () => {
   test("should truncate context when messages exceed the maximum character limit", async () => {
     // Setup fetch mock
-    globalThis.fetch = mock().mockResolvedValue({
+    globalThis.fetch = (mock as any)().mockResolvedValue({
       ok: true,
       json: async () => ({
         choices: [{ message: { role: "assistant", content: "Final answer" } }],
@@ -25,7 +25,7 @@ describe("Context Truncation", () => {
     const result = await runtime.runLoop(messages as any);
     expect(result.success).toBe(true);
 
-    const fetchMock = globalThis.fetch as ReturnType<typeof mock>;
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof mock>;
     const fetchCallArg = fetchMock.mock.calls[0][1].body;
     const body = JSON.parse(fetchCallArg);
     

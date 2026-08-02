@@ -6,13 +6,11 @@ const SIMPLE = args.includes("--simple") || args.includes("-s");
 if (SIMPLE) {
   const { main: mainRepl } = await import("./simple-repl");
   await mainRepl();
-  process.exit(0);
+} else {
+  // Launch full-screen TUI (raw terminal mode, Termius compatible)
+  const { main: mainTui } = await import("./tui");
+  await mainTui();
 }
-
-// Launch full-screen TUI (raw terminal mode, Termius compatible)
-const { main: mainTui } = await import("./tui");
-await mainTui();
-
 export {};
 
 export {};

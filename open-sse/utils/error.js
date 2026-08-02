@@ -143,5 +143,5 @@ export function formatProviderError(error, provider, model, statusCode) {
   const causeCode = error.cause?.code;
   const causeMsg = error.cause?.message;
   const causeStr = causeCode || causeMsg ? ` (cause: ${[causeCode, causeMsg].filter(Boolean).join(": ")})` : "";
-  return `[${code}]: ${message}${causeStr}`;
+  return `[${code}] [${provider}/${model}]: ${message}${causeStr}`;
 }

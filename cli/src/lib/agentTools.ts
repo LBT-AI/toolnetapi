@@ -5,7 +5,7 @@ export const agentTools = [
     type: "function",
     function: {
       name: "run_command",
-      description: "Run a bash shell command on the user's local machine.",
+      description: "Run a bash shell command on the user's local machine. ALWAYS run `pwd` and `ls` first to understand the directory structure before trying to access relative paths, or use absolute paths to avoid path hallucinations.",
       parameters: {
         type: "object",
         properties: { command: { type: "string", description: "The bash command to run" } },
@@ -17,7 +17,7 @@ export const agentTools = [
     type: "function",
     function: {
       name: "read_file",
-      description: "Read a file from the user's filesystem.",
+      description: "Read a file from the user's filesystem. ALWAYS use absolute paths.",
       parameters: {
         type: "object",
         properties: { path: { type: "string" } },
@@ -29,7 +29,7 @@ export const agentTools = [
     type: "function",
     function: {
       name: "write_file",
-      description: "Write content to a file on the user's filesystem.",
+      description: "Write content to a file on the user's filesystem. ALWAYS use absolute paths.",
       parameters: {
         type: "object",
         properties: { path: { type: "string" }, content: { type: "string" } },
@@ -43,7 +43,11 @@ export async function executeTool(name: string, args: any): Promise<string> {
   try {
     if (name === "run_command") {
       const res = await toolBash(args.command, 30000);
-      return res.success ? (res.data || "") : (res.error || "");
+      return JSON.stringify({
+        stdout: res.stdout || "",
+        stderr: res.stderr || "",
+        exitCode: res.exitCode
+      });
     } else if (name === "read_file") {
       const res = toolRead(args.path);
       return res.success ? (res.data || "") : (res.error || "");

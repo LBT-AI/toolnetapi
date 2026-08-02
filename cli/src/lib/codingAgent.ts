@@ -6,6 +6,9 @@ export interface ToolResult {
   success: boolean;
   data?: string;
   error?: string;
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
   truncated?: boolean;
 }
 
@@ -196,12 +199,31 @@ export async function toolBash(command: string, timeoutMs = 30000): Promise<Tool
       maxBuffer: 10 * 1024 * 1024,
       cwd: process.cwd(),
     }, (error: any, stdout: string, stderr: string) => {
+      const exitCode = error ? (error.code ?? 1) : 0;
+      const { data: stdoutData, truncated: stdoutTrunc } = truncateOutput(stdout || "");
+      const { data: stderrData, truncated: stderrTrunc } = truncateOutput(stderr || "");
+      
       if (error) {
-        const combined = [stderr, stdout].filter(Boolean).join("\n").trim();
-        resolve({ success: false, error: combined || error.message, data: combined || error.message });
+        const combined = [stderrData, stdoutData].filter(Boolean).join("\n").trim();
+        resolve({
+          success: false,
+          error: combined || error.message,
+          data: combined || error.message,
+          stdout: stdoutData,
+          stderr: stderrData,
+          exitCode,
+          truncated: stdoutTrunc || stderrTrunc
+        });
       } else {
-        const { data, truncated } = truncateOutput(stdout.trim() || "(no output)");
-        resolve({ success: true, data, truncated });
+        const data = stdoutData.trim() || "(no output)";
+        resolve({
+          success: true,
+          data,
+          stdout: stdoutData,
+          stderr: stderrData,
+          exitCode,
+          truncated: stdoutTrunc || stderrTrunc
+        });
       }
     });
   });

@@ -18,8 +18,10 @@ export default {
   transport: {
     baseUrl: "https://integrate.api.nvidia.com/v1/chat/completions",
     validateUrl: "https://integrate.api.nvidia.com/v1/models",
+    thinkingFormat: "openai",
   },
   models: [
+    { id: "meta/llama-3.1-8b-instruct", name: "Meta Llama 3.1 8B Instruct", kind: "llm" },
     { id: "minimaxai/minimax-m2.7", name: "MiniMax M2.7" },
     { id: "minimaxai/minimax-m3", name: "MiniMax M3" },
     { id: "z-ai/glm-5.2", name: "GLM 5.2" },

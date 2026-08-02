@@ -1,10 +1,3 @@
-# ToolNet Teamwork v2 Architecture Updates
-
-- [x] Implemented SQLite Event Bus using `bun:sqlite` for logging Task events (`cli/src/teamwork/eventBus.ts`).
-- [x] Implemented Context Cache to store AST, Dependency Graphs, and File Maps (`cli/src/teamwork/contextCache.ts`).
-- [x] Implemented Checkpoint & Resume logic to enable ultra-fast state recovery (<5s) (`cli/src/teamwork/checkpoint.ts`).
-- [x] Refactored Dynamic Agent Scheduler algorithm to use Complexity Scale (Tiny, Small, Medium, Large) (`cli/src/teamwork/dynamicScheduler.ts`).
-- [x] Implemented Token/Time Budget Control logic (`cli/src/teamwork/budget.ts`).
-- [x] Implemented Real-time Live Dashboard TUI component with SolidJS (`cli/src/teamwork/dashboard.tsx`).
-- [x] Connected Smart Planner and Dynamic Scheduler to Teamwork Orchestrator (`cli/src/commands/teamwork.ts`), bridging pipeline to ToolNet's LLM generation via Gateway.
-- [x] Integrated TeamworkDashboard conditionally into the main Chat interface (`cli/src/screens/chat.tsx`).
+- Updated open-sse/providers/registry/groq.js to include metadata properties like supportsTools, supportsVision, supportsReasoning, and supportsStreaming on each model. Set ALLaM and Prompt Guard to supportsTools: false.
+- Modified open-sse/handlers/chatCore.js to check if the model supports tools. If not, the tools and tool_choice payloads are stripped from the request body to prevent HTTP 400 errors.
+- Updated open-sse/utils/error.js formatProviderError to include the [provider/model] identity in the error message so the UI can log the true model name instead of aliased names during fallback/failures.

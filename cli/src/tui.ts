@@ -15,6 +15,7 @@ const ANSI_REGEX = /\x1b\[[^m]*m/g;
 import { providerPicker } from "./components/ProviderPicker";
 import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
 import { agentTools, executeTool } from "./lib/agentTools";
+import { getAllCommands } from "./commands/index";
 
 import { A, T, write, getSize } from "./term";
 function writeln(s: string) { write(s + "\r\n"); }
@@ -74,28 +75,14 @@ function showToast(msg: string, ms = 2500) {
 }
 
 // ─── Slash command suggestions ──────────────────────────────────────────────
-const COMMANDS = [
-  { name: "/exit",      desc: "Exit ToolNet CLI" },
-  { name: "/help",      desc: "Toggle help/hints" },
-  { name: "/model",     desc: "Pick AI model (Ctrl+K)" },
-  { name: "/clear",     desc: "Clear chat history" },
-  { name: "/agent",     desc: "Toggle Build/Plan mode" },
-  { name: "/bypass",    desc: "Toggle bypass mode on/off" },
-  { name: "/plan",      desc: "Switch to Plan mode" },
-  { name: "/build",     desc: "Switch to Build mode" },
-  { name: "/providers", desc: "Show providers (open Web UI)" },
-  { name: "/combos",    desc: "Manage AI combos (open Web UI)" },
-  { name: "/keys",      desc: "Manage API keys (open Web UI)" },
-  { name: "/key ",      desc: "/key <provider> <apikey> to add key directly" },
-  { name: "/settings",  desc: "Open gateway settings" },
-  { name: "/status",    desc: "Show gateway connection status" },
-];
 let cmdSuggestIdx = 0;
 
 function getSuggestions(input: string) {
   if (!input.startsWith("/")) return [];
-  const search = input.toLowerCase();
-  return COMMANDS.filter(c => c.name.startsWith(search));
+  const search = input.toLowerCase().slice(1);
+  return getAllCommands()
+    .filter(c => c.name.startsWith(search) || c.aliases.some(a => a.startsWith(search)))
+    .map(c => ({ name: "/" + c.name, desc: c.description }));
 }
 
 // ─── Layout constants ────────────────────────────────────────────────────────
@@ -144,6 +131,83 @@ function renderAll() {
       : A.fgYellow + A.bold + " ✦ " + A.reset;
     const prefixStripped = " ❯ ";
     const wrapWidth = cols - prefixStripped.length - 2;
+
+    let isToolResponse = msg.role === "tool";
+    let parsedTool: any = null;
+
+    if (!isToolResponse && typeof msg.content === "string" && msg.content.trim().startsWith("{")) {
+      try {
+        const tmp = JSON.parse(msg.content);
+        if (tmp && (tmp.stdout !== undefined || tmp.stderr !== undefined || tmp.exitCode !== undefined)) {
+          isToolResponse = true;
+          parsedTool = tmp;
+        }
+      } catch {}
+    } else if (isToolResponse && typeof msg.content === "string") {
+      try { parsedTool = JSON.parse(msg.content); } catch {}
+    }
+
+    if (isToolResponse) {
+      let toolCmd = "";
+      let toolName = msg.name || "Tool";
+
+      if (msg.tool_call_id) {
+        for (const prev of messages) {
+          if (prev.tool_calls) {
+            const tc = prev.tool_calls.find((t: any) => t.id === msg.tool_call_id);
+            if (tc) {
+              toolName = tc.function?.name || toolName;
+              try {
+                const args = JSON.parse(tc.function.arguments);
+                toolCmd = args.command || args.cmd || args.script || args.code || args.query || args.path || args.text || "";
+                if (typeof toolCmd !== "string") toolCmd = JSON.stringify(toolCmd);
+              } catch {}
+            }
+          }
+        }
+      }
+
+      const isSuccess = parsedTool ? (parsedTool.exitCode === 0 || !("exitCode" in parsedTool)) : true;
+      const statusIcon = isSuccess ? A.fgGreen + "✓" : A.fgRed + "✗";
+      toolName = toolName.charAt(0).toUpperCase() + toolName.slice(1);
+      const exitSuffix = (!isSuccess && parsedTool && parsedTool.exitCode !== undefined) ? A.fgRed + "  exit " + parsedTool.exitCode : "";
+      
+      const headerText = `${statusIcon} ${A.fgBlue}${A.bold}${toolName}${A.reset}  ${A.fgSubtext}${truncate(toolCmd.replace(/[\r\n]+/g, " "), 50)}${exitSuffix}${A.reset}`;
+      
+      chatLines.push(" " + headerText);
+      
+      let outStr = "";
+      if (parsedTool) {
+        let outText = parsedTool.stdout || parsedTool.output || parsedTool.result || "";
+        let errText = parsedTool.stderr || parsedTool.error || "";
+        if (typeof outText !== "string") outText = JSON.stringify(outText);
+        if (typeof errText !== "string") errText = JSON.stringify(errText);
+        outStr = outText;
+        if (errText) outStr += (outStr ? "\n" : "") + errText;
+      } else if (typeof msg.content === "string") {
+        outStr = msg.content;
+      }
+
+      if (outStr.trim()) {
+        const lines = outStr.trim().split("\n");
+        const maxLines = 3;
+        for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+          chatLines.push("    " + A.fgSubtext + A.dim + truncate(lines[i], cols - 6) + A.reset);
+        }
+        if (lines.length > maxLines) {
+          chatLines.push("    " + A.fgSubtext + A.dim + `... (${lines.length - maxLines} more lines)` + A.reset);
+        }
+      }
+      chatLines.push("");
+      continue;
+    }
+
+    if (msg.tool_calls && msg.tool_calls.length > 0) {
+      for (const tc of msg.tool_calls) {
+        chatLines.push(" " + A.fgSubtext + A.fgYellow + "● Running " + tc.function.name + "..." + A.reset);
+      }
+      if (!msg.content) { chatLines.push(""); continue; }
+    }
 
     const lines = wrapText(msg.content, wrapWidth);
     let inCodeBlock = false;
@@ -203,7 +267,16 @@ function renderAll() {
     const listRows = popupRows - 1;
     // Clamp cmdSuggestIdx
     if (cmdSuggestIdx >= activeSuggests.length) cmdSuggestIdx = activeSuggests.length - 1;
-    for (let si = 0; si < listRows; si++) {
+    
+    // Sliding window for scrolling
+    let startIdx = 0;
+    if (cmdSuggestIdx >= listRows) {
+      startIdx = cmdSuggestIdx - listRows + 1;
+    }
+    
+    for (let i = 0; i < listRows; i++) {
+      const si = startIdx + i;
+      if (si >= activeSuggests.length) break;
       const cmd = activeSuggests[si];
       const selected = si === cmdSuggestIdx;
       const bg = selected ? A.bgOverlay : A.bgSuggest;
@@ -244,6 +317,7 @@ function renderAll() {
     : A.fgText + inputVisible + A.reset;
 
   out.push(
+    T.clearLine +
     prompt +
     (inputBuffer === "" ? placeholder : A.fgText + inputVisible + A.reset) +
     A.reset + "\r\n"
@@ -359,7 +433,7 @@ async function sendMessage(text: string) {
 
       const bodyPayload: any = {
         model: currentModel,
-        messages: messages.map(m => {
+        messages: messages.filter((m, i) => i !== assistantIdx).map(m => {
           const out: any = { role: m.role, content: m.content };
           if (m.tool_calls) out.tool_calls = m.tool_calls;
           if (m.tool_call_id) out.tool_call_id = m.tool_call_id;

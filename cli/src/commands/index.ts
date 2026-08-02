@@ -3,22 +3,9 @@ import { helpCommand } from "./help";
 import { statusCommand } from "./status";
 import { modelCommand } from "./model";
 import { exitCommand } from "./exit";
-import { providersCommand } from "./providers";
-import { combosCommand } from "./combos";
-import { settingsCommand } from "./settings";
-import { keysCommand } from "./keys";
 import { toolsCommand } from "./tools";
 import { mcpCommand } from "./mcp";
 import { skillsCommand } from "./skills";
-import { readCommand } from "./read";
-import { globCommand } from "./glob";
-import { grepCommand } from "./grep";
-import { editCommand } from "./edit";
-import { writeCommand } from "./write";
-import { bashCommand } from "./bash";
-import { websearchCommand } from "./websearch";
-import { webfetchCommand } from "./webfetch";
-import { questionCommand } from "./question";
 import { undoCommand } from "./undo";
 import { redoCommand } from "./redo";
 import { configCommand } from "./config";
@@ -26,6 +13,11 @@ import { sessionCommand } from "./session";
 import { jailbreakCommand } from "./jailbreak";
 import { tuiCommand } from "./tui";
 import { teamworkCommand } from "./teamwork";
+import { clearCommand } from "./clear";
+import { resetCommand } from "./reset";
+import { historyCommand } from "./history";
+import { planCommand } from "./plan";
+import { exportCommand } from "./export";
 
 export interface CommandContext {
   gateway: GatewayClient;
@@ -49,22 +41,9 @@ const builtinCommands: Command[] = [
   statusCommand,
   modelCommand,
   exitCommand,
-  providersCommand,
-  combosCommand,
-  settingsCommand,
-  keysCommand,
   toolsCommand,
   mcpCommand,
   skillsCommand,
-  readCommand,
-  globCommand,
-  grepCommand,
-  editCommand,
-  writeCommand,
-  bashCommand,
-  websearchCommand,
-  webfetchCommand,
-  questionCommand,
   undoCommand,
   redoCommand,
   configCommand,
@@ -72,6 +51,11 @@ const builtinCommands: Command[] = [
   jailbreakCommand,
   tuiCommand,
   teamworkCommand,
+  clearCommand,
+  resetCommand,
+  historyCommand,
+  planCommand,
+  exportCommand,
 ];
 
 export function getAllCommands(): Command[] {

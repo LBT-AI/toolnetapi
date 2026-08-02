@@ -9,6 +9,7 @@ import { createRequestLogger } from "../utils/requestLogger.js";
 import { getModelTargetFormat, getModelStrip, getModelUpstreamId, getModelType, PROVIDER_ID_TO_ALIAS } from "../config/providerModels.js";
 import { PROVIDERS } from "../config/providers.js";
 import { createErrorResult, parseUpstreamError, formatProviderError } from "../utils/error.js";
+import REGISTRY from "../providers/registry/index.js";
 import { HTTP_STATUS, TOKEN_SAVER_HEADER } from "../config/runtimeConfig.js";
 import { handleBypassRequest } from "../utils/bypassHandler.js";
 import { trackPendingRequest, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
@@ -120,9 +121,22 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Expose raw client headers to translators/executors for session-id resolution
   if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
 
+  const caps = getCapabilitiesForModel(provider, model);
+
+  // Strip tools if the model explicitly does not support them in the registry or capabilities
+  const registryProvider = REGISTRY.find(p => p.id === provider || p.alias === provider);
+  const registryModel = registryProvider?.models?.find(m => m.id === model);
+  const supportsTools = registryModel?.supportsTools ?? caps.tools ?? true;
+  if (!supportsTools) {
+    if (body.tools || body.tool_choice) {
+      log?.debug?.("TOOLS", `stripped tools payload for ${provider}/${model} (model does not support tools)`);
+      delete body.tools;
+      delete body.tool_choice;
+    }
+  }
+
   // Auto-strip media blocks the model can't read (vision/audio/pdf) before translation.
   if (!passthrough) {
-    const caps = getCapabilitiesForModel(provider, model);
     if (stripUnsupportedModalities(body, sourceFormat, caps)) {
       log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
     }

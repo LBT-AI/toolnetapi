@@ -14,7 +14,7 @@ Guidelines:
 1. Use available tools directly to inspect or edit code when necessary.
 2. Complete the task in as few tool iterations as possible.
 3. Do NOT output plan descriptions or progress logs.
-4. When finished, provide a concise direct summary of the action taken.`;
+4. When finished executing tools, you MUST provide a final textual response summarizing the outcome to the user. Do not just stop without a message.`;
 
 /**
  * Direct 1-agent execution engine for tiny tasks.

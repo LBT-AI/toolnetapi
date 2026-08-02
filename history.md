@@ -1,3 +1,9 @@
-- Updated open-sse/providers/registry/groq.js to include metadata properties like supportsTools, supportsVision, supportsReasoning, and supportsStreaming on each model. Set ALLaM and Prompt Guard to supportsTools: false.
-- Modified open-sse/handlers/chatCore.js to check if the model supports tools. If not, the tools and tool_choice payloads are stripped from the request body to prevent HTTP 400 errors.
-- Updated open-sse/utils/error.js formatProviderError to include the [provider/model] identity in the error message so the UI can log the true model name instead of aliased names during fallback/failures.
+- [COMPLETED] Step 1 — P0-B: Runtime Reliability (TUI Error Boundary, Terminal Reset Lifecycle, Graceful Exception & Signal Handling).
+- Created cli/src/lib/terminalLifecycle.ts and integrated setupTerminalLifecycle(), restoreTerminal(), and wrapErrorBoundary() into cli/src/tui.ts.
+- Passed 5/5 unit & crash tests in cli/src/teamwork/__tests__/terminalLifecycle.test.ts.
+- Completed open-sse updates for model capabilities.
+- Completed comprehensive Capability Gap Analysis comparing ToolNet CLI against Antigravity standard (19 gaps identified).
+- Formulated the Shared Agent Runtime Architecture blueprint (UI -> Agent Runtime -> Model Router -> Tool Registry -> Tool Executor).
+- Documented step-by-step reproduction tests, verified root causes, dependency order, and acceptance checklists for all 9 P0 gaps in audit_gap_analysis.md.
+
+

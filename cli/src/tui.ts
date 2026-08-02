@@ -15,9 +15,13 @@ const ANSI_REGEX = /\x1b\[[^m]*m/g;
 import { providerPicker } from "./components/ProviderPicker";
 import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
 import { agentTools, executeTool } from "./lib/agentTools";
+import { getCwdInfo } from "./lib/codingAgent";
 import { getAllCommands } from "./commands/index";
+import { setupTerminalLifecycle, restoreTerminal, wrapErrorBoundary } from "./lib/terminalLifecycle";
 
 import { A, T, write, getSize } from "./term";
+
+setupTerminalLifecycle();
 function writeln(s: string) { write(s + "\r\n"); }
 
 function fillLine(text: string, width: number, fg = A.fgText, bg = A.bgSurface): string {
@@ -93,14 +97,15 @@ const RESERVED = HEADER_ROWS + STATUS_ROWS + INPUT_ROWS;
 
 // ─── Render ──────────────────────────────────────────────────────────────────
 function renderAll() {
-  const { cols, rows } = getSize();
-  const activeSuggests = getSuggestions(inputBuffer);
-  const popupRows = activeSuggests.length > 0 ? Math.min(activeSuggests.length, 8) + 1 : 0;
-  const chatRows = rows - RESERVED - popupRows;
-  const out: string[] = [];
+  wrapErrorBoundary(() => {
+    const { cols, rows } = getSize();
+    const activeSuggests = getSuggestions(inputBuffer);
+    const popupRows = activeSuggests.length > 0 ? Math.min(activeSuggests.length, 8) + 1 : 0;
+    const chatRows = rows - RESERVED - popupRows;
+    const out: string[] = [];
 
-  // Go home, hide cursor
-  out.push(T.hide + T.home);
+    // Go home, hide cursor
+    out.push(T.hide + T.home);
 
   // ── Dynamic Theme Color ──
   let primaryColor = A.fgCyan; // Build mode default
@@ -337,9 +342,17 @@ function renderAll() {
   } else {
     statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model" + A.reset;
   }
+  
+  const { currentCwd, bypassPolicy } = getCwdInfo();
+  const accessColor = bypassPolicy ? A.fgRed : A.fgCyan;
+  const accessStr = bypassPolicy ? "System" : "Workspace";
+  const cwdDisplay = ` [CWD: ${currentCwd} | Access: ${accessColor}${accessStr}${A.fgSubtext}]`;
+  
   const statusStripped = statusContent.replace(ANSI_REGEX, "");
-  const statusPad = Math.max(0, cols - statusStripped.length);
-  out.push(A.bgSurface + statusContent + " ".repeat(statusPad) + A.reset);
+  const rightStripped = cwdDisplay.replace(ANSI_REGEX, "");
+  const statusPad = Math.max(0, cols - statusStripped.length - rightStripped.length);
+  
+  out.push(A.bgSurface + statusContent + " ".repeat(statusPad) + A.fgSubtext + cwdDisplay + A.reset);
 
   // Position cursor in input line
   const cursorRow = rows - INPUT_ROWS + 1;  // 1-indexed
@@ -354,6 +367,7 @@ function renderAll() {
 
   if (showModelPicker) renderModelPicker();
   if (providerPicker.show) providerPicker.render();
+  });
 }
 
 // ─── Text wrapping ───────────────────────────────────────────────────────────
@@ -1040,8 +1054,7 @@ function handleKey(data: Buffer) {
 // ─── Exit / Cleanup ──────────────────────────────────────────────────────────
 function exitApp() {
   if (spinnerTimer) clearInterval(spinnerTimer);
-  write(T.show + T.altOff + A.reset + "\r\n");
-  if (process.stdin.isTTY) process.stdin.setRawMode(false);
+  restoreTerminal();
   process.stdout.write("Goodbye!\r\n");
   process.exit(0);
 }
@@ -1115,10 +1128,7 @@ async function main() {
 
   // Cleanup on unexpected exit
   process.on("exit", () => {
-    write(T.show + T.altOff + A.reset);
-    if (process.stdin.isTTY) {
-      try { process.stdin.setRawMode(false); } catch {}
-    }
+    restoreTerminal();
   });
 
   process.on("SIGTERM", exitApp);

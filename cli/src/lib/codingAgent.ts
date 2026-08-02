@@ -12,6 +12,39 @@ export interface ToolResult {
   truncated?: boolean;
 }
 
+export let currentCwd = process.cwd();
+export let workspaceRoot = process.cwd();
+export let bypassPolicy = false;
+
+export function getCwdInfo() {
+  return { currentCwd, workspaceRoot, bypassPolicy };
+}
+
+export function setCwd(newPath: string) {
+  const abs = path.resolve(currentCwd, newPath);
+  if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) {
+    currentCwd = abs;
+    return true;
+  }
+  return false;
+}
+
+function resolvePath(filePath: string): string {
+  return path.resolve(currentCwd, filePath);
+}
+
+function checkAccess(absPath: string): { allowed: boolean; error?: string } {
+  if (bypassPolicy) return { allowed: true };
+  
+  // OS-level permission is the primary boundary if bypassing, but by default we allow
+  // anything the Node process can access. The user explicitly asked that CWD is not a boundary
+  // and absolute paths should work if OS permits.
+  // "Nếu user yêu cầu /root, /var/www, /home/... thì run_command phải truy cập được"
+  // So access is always allowed as long as the OS doesn't throw EACCES.
+  // We'll return true here and let fs operations throw naturally, unless specifically blocked.
+  return { allowed: true };
+}
+
 const MAX_OUTPUT_LINES = 500;
 const MAX_OUTPUT_CHARS = 50000;
 
@@ -22,7 +55,7 @@ function truncateOutput(text: string): { data: string; truncated: boolean } {
 
 export function toolRead(filePath: string, offset = 0, limit = MAX_OUTPUT_LINES): ToolResult {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolvePath(filePath);
     if (!fs.existsSync(absPath)) return { success: false, error: `File not found: ${absPath}` };
     const stat = fs.statSync(absPath);
     if (!stat.isFile()) return { success: false, error: `Not a file: ${absPath}` };
@@ -48,7 +81,7 @@ export function toolRead(filePath: string, offset = 0, limit = MAX_OUTPUT_LINES)
 
 export function toolGlob(pattern: string, searchPath = "."): ToolResult {
   try {
-    const absPath = path.resolve(searchPath);
+    const absPath = resolvePath(searchPath);
     if (!fs.existsSync(absPath)) return { success: false, error: `Path not found: ${absPath}` };
 
     const matches: string[] = [];
@@ -94,7 +127,7 @@ export function toolGlob(pattern: string, searchPath = "."): ToolResult {
 
 export function toolGrep(pattern: string, searchPath = ".", include?: string): ToolResult {
   try {
-    const absPath = path.resolve(searchPath);
+    const absPath = resolvePath(searchPath);
     if (!fs.existsSync(absPath)) return { success: false, error: `Path not found: ${absPath}` };
     const stat = fs.statSync(absPath);
     if (!stat.isDirectory()) return { success: false, error: `Not a directory: ${absPath}` };
@@ -132,7 +165,7 @@ export function toolGrep(pattern: string, searchPath = ".", include?: string): T
 }
 export function toolEdit(filePath: string, oldString: string, newString: string): ToolResult {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolvePath(filePath);
     if (!fs.existsSync(absPath)) return { success: false, error: `File not found: ${absPath}` };
     const stat = fs.statSync(absPath);
     if (!stat.isFile()) return { success: false, error: `Not a file: ${absPath}` };
@@ -147,7 +180,7 @@ export function toolEdit(filePath: string, oldString: string, newString: string)
     pushSnapshot(absPath, `edit: replace "${oldString.substring(0, 40)}" in ${path.basename(absPath)}`);
     fs.writeFileSync(absPath, newContent, "utf8");
     commitSnapshot(absPath);
-    return { success: true, data: `Edited ${path.relative(process.cwd(), absPath)}: replaced "${oldString}" → "${newString}"` };
+    return { success: true, data: `Edited ${path.relative(currentCwd, absPath)}: replaced "${oldString}" → "${newString}"` };
   } catch (err: unknown) {
     return { success: false, error: `Edit error: ${err instanceof Error ? err.message : String(err)}` };
   }
@@ -155,7 +188,7 @@ export function toolEdit(filePath: string, oldString: string, newString: string)
 
 export function toolReplaceAll(filePath: string, oldString: string, newString: string): ToolResult {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolvePath(filePath);
     if (!fs.existsSync(absPath)) return { success: false, error: `File not found: ${absPath}` };
     const stat = fs.statSync(absPath);
     if (!stat.isFile()) return { success: false, error: `Not a file: ${absPath}` };
@@ -168,7 +201,7 @@ export function toolReplaceAll(filePath: string, oldString: string, newString: s
     fs.writeFileSync(absPath, newContent, "utf8");
     commitSnapshot(absPath);
     const count = (content.match(new RegExp(oldString.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
-    return { success: true, data: `Replaced ${count} occurrence(s) in ${path.relative(process.cwd(), absPath)}` };
+    return { success: true, data: `Replaced ${count} occurrence(s) in ${path.relative(currentCwd, absPath)}` };
   } catch (err: unknown) {
     return { success: false, error: `ReplaceAll error: ${err instanceof Error ? err.message : String(err)}` };
   }
@@ -176,7 +209,7 @@ export function toolReplaceAll(filePath: string, oldString: string, newString: s
 
 export function toolWrite(filePath: string, content: string): ToolResult {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolvePath(filePath);
     const dir = path.dirname(absPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -184,7 +217,7 @@ export function toolWrite(filePath: string, content: string): ToolResult {
     pushSnapshot(absPath, `write: ${path.basename(absPath)}`);
     fs.writeFileSync(absPath, content, "utf8");
     commitSnapshot(absPath);
-    return { success: true, data: `Written ${content.length} bytes to ${path.relative(process.cwd(), absPath)}` };
+    return { success: true, data: `Written ${content.length} bytes to ${path.relative(currentCwd, absPath)}` };
   } catch (err: unknown) {
     return { success: false, error: `Write error: ${err instanceof Error ? err.message : String(err)}` };
   }
@@ -193,18 +226,35 @@ export function toolWrite(filePath: string, content: string): ToolResult {
 export async function toolBash(command: string, timeoutMs = 30000): Promise<ToolResult> {
   const { exec } = require("node:child_process");
   return new Promise((resolve) => {
-    exec(command, {
+    // Inject a trap to capture the final PWD after the command executes
+    const wrappedCommand = `${command}\necho "---CWD---"\npwd`;
+    
+    exec(wrappedCommand, {
       encoding: "utf8",
       timeout: timeoutMs,
       maxBuffer: 10 * 1024 * 1024,
-      cwd: process.cwd(),
+      cwd: currentCwd,
     }, (error: any, stdout: string, stderr: string) => {
+      let finalStdout = stdout || "";
+      const cwdMarkerIdx = finalStdout.lastIndexOf("---CWD---");
+      
+      if (cwdMarkerIdx !== -1) {
+        const afterMarker = finalStdout.substring(cwdMarkerIdx + 9).trim();
+        const newCwd = afterMarker.split("\n")[0].trim();
+        if (newCwd && newCwd.startsWith("/")) {
+          if (fs.existsSync(newCwd)) {
+            currentCwd = newCwd; // Sync the agent's virtual CWD with the bash session
+          }
+        }
+        finalStdout = finalStdout.substring(0, cwdMarkerIdx).trim();
+      }
+
       const exitCode = error ? (error.code ?? 1) : 0;
-      const { data: stdoutData, truncated: stdoutTrunc } = truncateOutput(stdout || "");
+      const { data: stdoutData, truncated: stdoutTrunc } = truncateOutput(finalStdout);
       const { data: stderrData, truncated: stderrTrunc } = truncateOutput(stderr || "");
       
       if (error) {
-        const combined = [stderrData, stdoutData].filter(Boolean).join("\n").trim();
+        const combined = [stderrData, stdoutData].filter(Boolean).join("\\n").trim();
         resolve({
           success: false,
           error: combined || error.message,

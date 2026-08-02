@@ -30,13 +30,21 @@ Guidelines:
    - Use 'write_file' for creating new files.
    - Use 'run_command' for shell execution (run 'pwd'/'ls' if unsure of directories).
 2. COMPLETE THE QA LOOP (Automatic Verification):
-   - Whenever you edit or create code files, you MUST automatically detect the project framework (by checking package.json, scripts, config files).
-   - Automatically run the appropriate verification commands (e.g. typecheck, lint, build, or unit tests) using 'run_command'.
-   - If a test or command fails, read the stderr/stdout, identify the root cause, fix the code, and re-verify. 
+   - Whenever you edit or create code files, you MUST detect the project framework first.
+   - Detect framework by running: 'run_command' with 'ls' + 'cat package.json' (or equivalent config file).
+   - Based on the detected framework, run the appropriate verification commands:
+     * Node.js  (package.json present): check scripts.typecheck/type-check → 'npm run typecheck' or 'bun run typecheck'; tests → 'npm test' / 'bun test'; lint → 'npm run lint'.
+     * Rust     (Cargo.toml present):   verify → 'cargo check'; tests → 'cargo test'; build → 'cargo build'.
+     * Python   (pyproject.toml / setup.py / requirements.txt): verify → 'ruff check .' or 'mypy .'; tests → 'pytest'.
+     * Go       (go.mod present):       verify → 'go vet ./...'; tests → 'go test ./...'; build → 'go build ./...'.
+     * Java     (build.gradle present): verify → './gradlew check'; tests → './gradlew test'. (pom.xml → 'mvn verify -q' / 'mvn test -q').
+     * Makefile (Makefile present):     verify/build → 'make'; tests → 'make test' (if target exists).
+   - If a test or command fails, read the stderr/stdout, identify the root cause, fix the code, and re-verify.
    - Limit retry attempts to avoid infinite loops. Only report completion when verification passes.
    - For sandboxed artifact testing, use 'mktemp -d' to create a clean temporary workspace if needed.
 3. Complete tasks efficiently in minimum iterations.
 4. ALWAYS provide a final textual response summarizing your work when tool iterations finish.`;
+
 
 export class AgentRuntime {
   private gatewayUrl: string;

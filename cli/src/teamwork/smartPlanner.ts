@@ -150,6 +150,8 @@ export function createFallbackTaskGraph(
 ): TaskGraph {
   const mode = analysisResult?.mode || "STANDARD";
   const isComplex = mode === "COMPLEX" || (analysisResult?.score ?? 50) >= 60;
+  // QA is enabled for any task that isn't explicitly TURBO (score < 20)
+  const needsQA = isComplex || (analysisResult?.requiresQA ?? true);
 
   const nodes: TaskNode[] = [
     {
@@ -175,8 +177,8 @@ export function createFallbackTaskGraph(
       dependencies: ["task-1"],
       dependsOn: ["task-1"],
       targetFiles: analysisResult?.extractedFileTargets || [],
-      reviewRequired: isComplex,
-      requiresReview: isComplex,
+      reviewRequired: needsQA,
+      requiresReview: needsQA,
       status: "PENDING",
       estimatedTokens: 4000,
       attempts: 0,
@@ -184,7 +186,7 @@ export function createFallbackTaskGraph(
     },
   ];
 
-  if (isComplex) {
+  if (needsQA) {
     nodes.push({
       id: "task-3",
       title: "QA Verification & Code Review",
@@ -212,7 +214,7 @@ export function createFallbackTaskGraph(
     mode,
     nodes: sanitizedNodes,
     maxConcurrency: 2,
-    totalEstimatedTokens: isComplex ? 7500 : 6000,
+    totalEstimatedTokens: needsQA ? 7500 : 6000,
     createdAt: Date.now(),
     rationale: "Deterministic fallback TaskGraph generated for reliable task execution.",
   };
@@ -299,6 +301,32 @@ export async function generateTaskGraph(
 
     // Enforce max 1 review round
     nodes = enforceSingleReviewRound(nodes);
+
+    // Auto-inject QA_ENGINEER node if missing and requiresQA is not explicitly false
+    const hasQAOrReviewer = nodes.some(
+      (n) => String(n.role).toUpperCase() === "QA_ENGINEER" || String(n.role).toUpperCase() === "REVIEWER"
+    );
+    if (!hasQAOrReviewer && analysisResult?.requiresQA !== false) {
+      // Find the last IMPLEMENTER node to depend on
+      const lastImplementer = [...nodes].reverse().find((n) => String(n.role).toUpperCase() === "IMPLEMENTER");
+      const qaNodeId = `task-${nodes.length + 1}`;
+      nodes.push({
+        id: qaNodeId,
+        title: "QA Verification",
+        prompt:
+          "Run project verification: detect framework (check package.json/Cargo.toml/pyproject.toml/Makefile/go.mod), run appropriate typecheck/lint/test commands, read errors, fix failing code, re-run until clean.",
+        role: "QA_ENGINEER" as AgentRole,
+        dependencies: lastImplementer ? [lastImplementer.id] : [],
+        dependsOn: lastImplementer ? [lastImplementer.id] : [],
+        targetFiles: [],
+        reviewRequired: false,
+        requiresReview: false,
+        status: "PENDING",
+        estimatedTokens: 1500,
+        attempts: 0,
+        maxAttempts: 1,
+      });
+    }
 
     const taskGraph: TaskGraph = {
       id: `graph-${sessionId}`,

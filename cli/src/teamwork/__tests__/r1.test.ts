@@ -193,6 +193,48 @@ describe("R1 Core Architecture - SmartPlanner & TaskGraph", () => {
     expect(reviewerNodes.length).toBeLessThanOrEqual(1);
   });
 
+  test("STANDARD mode fallback includes QA_ENGINEER node (requiresQA = true)", () => {
+    const fallback = createFallbackTaskGraph("std-123", "implement feature X in main.ts", {
+      score: 40,
+      mode: "STANDARD",
+      reasons: [],
+      breakdown: { promptLengthScore: 16, actionVerbScore: 8, fileTargetScore: 3, multiStepScore: 0 },
+      extractedFileTargets: ["main.ts"],
+      extractedKeywords: ["implement"],
+      requiresPlanner: true,
+      requiresQA: true,
+      suggestedRoles: ["explorer", "worker", "reviewer"],
+      analyzedAt: Date.now(),
+    });
+
+    expect(validateTaskGraph(fallback)).toBe(true);
+    const nodes = fallback.nodes as TaskNode[];
+    const qaNodes = nodes.filter((n) => String(n.role).toUpperCase() === "QA_ENGINEER");
+    expect(qaNodes.length).toBe(1);
+    expect(qaNodes[0].id).toBe("task-3");
+    expect(qaNodes[0].dependsOn).toContain("task-2");
+  });
+
+  test("TURBO mode fallback does NOT include QA_ENGINEER node (requiresQA = false)", () => {
+    const fallback = createFallbackTaskGraph("turbo-123", "fix typo", {
+      score: 10,
+      mode: "TURBO",
+      reasons: [],
+      breakdown: { promptLengthScore: 2, actionVerbScore: 3, fileTargetScore: 0, multiStepScore: 0 },
+      extractedFileTargets: [],
+      extractedKeywords: [],
+      requiresPlanner: false,
+      requiresQA: false,
+      suggestedRoles: ["worker"],
+      analyzedAt: Date.now(),
+    });
+
+    expect(validateTaskGraph(fallback)).toBe(true);
+    const nodes = fallback.nodes as TaskNode[];
+    const qaNodes = nodes.filter((n) => String(n.role).toUpperCase() === "QA_ENGINEER");
+    expect(qaNodes.length).toBe(0);
+  });
+
   test("enforces single review round on multi-reviewer arrays", () => {
     const nodes: TaskNode[] = [
       { id: "task-1", title: "R1", role: "REVIEWER", dependencies: [], dependsOn: [], status: "PENDING" },

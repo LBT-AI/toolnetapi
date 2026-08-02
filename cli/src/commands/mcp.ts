@@ -1,4 +1,5 @@
 import type { Command, CommandContext } from "./index";
+import { loadLocalMcpConfig } from "../lib/mcpRunner";
 
 async function showMcpStatus(ctx: CommandContext) {
   const { gateway, addMessage } = ctx;
@@ -13,6 +14,10 @@ async function showMcpStatus(ctx: CommandContext) {
   const plugins = cowork.plugins || [];
   const localPlugins = cowork.localPlugins || [];
   const customPlugins = cowork.customPlugins || [];
+
+  const localMcpConfig = loadLocalMcpConfig();
+  const localMcpNames = Object.keys(localMcpConfig);
+  const combinedLocal = Array.from(new Set([...localPlugins, ...localMcpNames]));
 
   const lines: string[] = [];
   lines.push("MCP — Status");
@@ -35,9 +40,9 @@ async function showMcpStatus(ctx: CommandContext) {
     }
   }
 
-  if (localPlugins.length > 0) {
+  if (combinedLocal.length > 0) {
     lines.push("");
-    lines.push(`  Local stdio plugins: ${localPlugins.join(", ")}`);
+    lines.push(`  Local stdio plugins: ${combinedLocal.join(", ")}`);
   }
 
   if (customPlugins.length > 0) {

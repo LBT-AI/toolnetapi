@@ -1,4 +1,5 @@
 import type { Command, CommandContext } from "./index";
+import { loadLocalSkills } from "../lib/skillsLoader";
 
 interface Skill {
   id: string;
@@ -21,14 +22,31 @@ const BUILTIN_SKILLS: Skill[] = [
 
 function showSkillsList(ctx: CommandContext) {
   const { addMessage } = ctx;
+  const localSkills = loadLocalSkills();
+  const totalCount = BUILTIN_SKILLS.length + localSkills.length;
+
   const lines: string[] = [];
-  lines.push(`Skills (${BUILTIN_SKILLS.length})`);
+  lines.push(`Skills (${totalCount})`);
   lines.push("───".repeat(10));
+
+  lines.push("\u001b[1mBuilt-in API Skills:\u001b[0m");
   for (const s of BUILTIN_SKILLS) {
     const ep = s.endpoint ? ` \u001b[90m${s.endpoint}\u001b[0m` : "";
     lines.push(`  ${s.icon} \u001b[1m${s.name}\u001b[0m${ep}`);
     lines.push(`           ${s.description}`);
   }
+
+  if (localSkills.length > 0) {
+    lines.push("");
+    lines.push("\u001b[1mLocal Discovered Skills:\u001b[0m");
+    for (const ls of localSkills) {
+      lines.push(`  \uD83D\uDCDD \u001b[1m${ls.name}\u001b[0m \u001b[90m[${ls.id}]\u001b[0m`);
+      if (ls.description) {
+        lines.push(`           ${ls.description}`);
+      }
+    }
+  }
+
   lines.push("");
   lines.push("Usage: /skills <name>  — Show skill details");
   addMessage("assistant", lines.join("\n"));
@@ -39,26 +57,48 @@ function showSkillDetail(name: string, ctx: CommandContext) {
   const skill = BUILTIN_SKILLS.find(
     s => s.id === name || s.name.toLowerCase().includes(name.toLowerCase())
   );
-  if (!skill) {
-    addMessage("assistant", `\u001b[31mSkill not found: ${name}\u001b[0m`);
+  if (skill) {
+    const lines: string[] = [];
+    lines.push(`${skill.icon}  \u001b[1m${skill.name}\u001b[0m`);
+    lines.push("───".repeat(10));
+    lines.push(`  ID:          ${skill.id}`);
+    lines.push(`  Description: ${skill.description}`);
+    lines.push(`  Endpoint:    ${skill.endpoint || "(entry skill)"}`);
+    lines.push("");
+    lines.push("Add this skill to your AI's instructions to teach it how");
+    lines.push(`to use the ${skill.name} feature of ToolNet API.`);
+    addMessage("assistant", lines.join("\n"));
     return;
   }
-  const lines: string[] = [];
-  lines.push(`${skill.icon}  \u001b[1m${skill.name}\u001b[0m`);
-  lines.push("───".repeat(10));
-  lines.push(`  ID:          ${skill.id}`);
-  lines.push(`  Description: ${skill.description}`);
-  lines.push(`  Endpoint:    ${skill.endpoint || "(entry skill)"}`);
-  lines.push("");
-  lines.push("Add this skill to your AI's instructions to teach it how");
-  lines.push(`to use the ${skill.name} feature of ToolNet API.`);
-  addMessage("assistant", lines.join("\n"));
+
+  const localSkills = loadLocalSkills();
+  const localSkill = localSkills.find(
+    s => s.id === name.toLowerCase() || s.name.toLowerCase().includes(name.toLowerCase())
+  );
+  if (localSkill) {
+    const lines: string[] = [];
+    lines.push(`\uD83D\uDCDD  \u001b[1m${localSkill.name}\u001b[0m`);
+    lines.push("───".repeat(10));
+    lines.push(`  ID:          ${localSkill.id}`);
+    lines.push(`  Description: ${localSkill.description || "(no description)"}`);
+    lines.push(`  Path:        ${localSkill.filepath}`);
+    lines.push("");
+    lines.push("Instructions:");
+    const snippet = localSkill.instructions.length > 500
+      ? localSkill.instructions.slice(0, 500) + "...\n(truncated)"
+      : localSkill.instructions;
+    lines.push(snippet);
+    addMessage("assistant", lines.join("\n"));
+    return;
+  }
+
+  addMessage("assistant", `\u001b[31mSkill not found: ${name}\u001b[0m`);
 }
 
 export const skillsCommand: Command = {
   name: "skills",
   aliases: ["skill"],
-  description: "List available API skills for AI agents",
+  description: "List available API and local skills for AI agents",
   usage: "/skills [skill-name]",
   async handler(args: string[], ctx: CommandContext) {
     if (args.length === 0) {
@@ -67,11 +107,11 @@ export const skillsCommand: Command = {
     }
     if (args[0] === "--help" || args[0] === "help") {
       ctx.addMessage("assistant",
-        "/skills — API Skills for AI Agents\n\n" +
-        "  /skills           List all available skills\n" +
+        "/skills — Skills for AI Agents\n\n" +
+        "  /skills           List all available skills (built-in and local)\n" +
         "  /skills <name>    Show skill details\n\n" +
-        "Skills are instructional guides that teach AI agents how\n" +
-        "to use specific ToolNet API features."
+        "Skills are instructional guides (SKILL.md) that teach AI agents\n" +
+        "how to execute specific workflows and API features."
       );
       return;
     }

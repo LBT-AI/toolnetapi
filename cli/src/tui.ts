@@ -18,6 +18,8 @@ import { agentTools, executeTool } from "./lib/agentTools";
 import { getCwdInfo } from "./lib/codingAgent";
 import { getAllCommands } from "./commands/index";
 import { setupTerminalLifecycle, restoreTerminal, wrapErrorBoundary } from "./lib/terminalLifecycle";
+import { saveSession, loadSession, getLastSessionId, parseSessionArgs } from "./lib/sessionPersistence";
+import { BracketedPasteParser, ENABLE_BRACKETED_PASTE } from "./lib/bracketedPaste";
 
 import { A, T, write, getSize } from "./term";
 
@@ -43,6 +45,16 @@ type Role = "user" | "assistant" | "system" | "tool";
 interface Msg { role: Role; content: string; tool_calls?: any[]; tool_call_id?: string; name?: string; }
 
 let messages: Msg[] = [];
+let currentSessionId = `sess_${Date.now()}`;
+
+function saveCurrentSession() {
+  if (currentSessionId) {
+    saveSession(currentSessionId, messages, {
+      model: currentModel,
+      agentMode,
+    });
+  }
+}
 let inputBuffer = "";
 let cursorPos = 0;
 let scrollOffset = 0;    // how many lines scrolled up from bottom
@@ -406,6 +418,7 @@ async function sendMessage(text: string) {
   messages.push({ role: "user", content: text });
   // Add placeholder for assistant immediately so spinner shows in chat
   messages.push({ role: "assistant", content: "" });
+  saveCurrentSession();
   let assistantIdx = messages.length - 1;
 
   scrollOffset = 0;
@@ -556,16 +569,19 @@ async function sendMessage(text: string) {
           try { parsedArgs = JSON.parse(tc.function.arguments); } catch {}
           const result = await executeTool(tc.function.name, parsedArgs);
           messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: result });
+          saveCurrentSession();
         }
         
         // Push a new empty assistant message for the next iteration
         messages.push({ role: "assistant", content: "" });
         assistantIdx = messages.length - 1;
+        saveCurrentSession();
         continueAgentLoop = true;
       } else {
         // Finalize message with a micro-interaction (check mark briefly)
         const finalContent = fullText || "(empty response)";
         messages[assistantIdx] = { role: "assistant", content: A.fgGreen + "✔ " + A.reset + finalContent };
+        saveCurrentSession();
         setTimeout(() => {
           if (messages[assistantIdx]) {
             messages[assistantIdx].content = finalContent;
@@ -585,11 +601,10 @@ async function sendMessage(text: string) {
     stopSpinner();
     if (err?.name === "AbortError") {
       messages.push({ role: "assistant", content: "(cancelled)" });
-      setStatus("Cancelled");
     } else {
       messages.push({ role: "assistant", content: "✖ Error: " + (err?.message || String(err)) });
-      setStatus("✖ " + (err?.message || "Unknown error"));
     }
+    saveCurrentSession();
   } finally {
     abortController = null;
   }
@@ -657,6 +672,7 @@ async function handleCommand(cmd: string) {
 
     case "/clear":
       messages = [];
+      saveCurrentSession();
       showToast("Chat history cleared");
       setStatus("Chat cleared");
       break;
@@ -913,9 +929,7 @@ function handleKey(data: Buffer) {
     return;
   }
 
-  // Ctrl+K / Ctrl+M — model picker
-  if (hex === "0b" || hex === "0d" && false) { /* placeholder */ }
-  if (s === "\x0b") { openModelPicker(); return; } // Ctrl+K
+  // Ctrl+N — model picker
   if (s === "\x0e") { openModelPicker(); return; } // Ctrl+N alternate
 
   // Slash command suggestions navigation
@@ -1003,14 +1017,15 @@ function handleKey(data: Buffer) {
     return;
   }
 
-  // Left/Right arrows in input
-  if (hex === "1b5b44") { cursorPos = Math.max(0, cursorPos - 1); renderAll(); return; }
-  if (hex === "1b5b43") { cursorPos = Math.min(inputBuffer.length, cursorPos + 1); renderAll(); return; }
-  if (hex === "1b5b48" || hex === "1b4f48") { cursorPos = 0; renderAll(); return; } // Home
-  if (hex === "1b5b46" || hex === "1b4f46") { cursorPos = inputBuffer.length; renderAll(); return; } // End
-
-  // Ctrl+U — clear line
-  if (hex === "15") { inputBuffer = ""; cursorPos = 0; renderAll(); return; }
+  // Readline Navigation Shortcuts:
+  // Ctrl+A — beginning of line
+  if (hex === "01" || s === "\x01") { cursorPos = 0; renderAll(); return; }
+  // Ctrl+E — end of line
+  if (hex === "05" || s === "\x05") { cursorPos = inputBuffer.length; renderAll(); return; }
+  // Ctrl+K — kill text from cursor to end of line
+  if (hex === "0b" || s === "\x0b") { inputBuffer = inputBuffer.slice(0, cursorPos); cmdSuggestIdx = 0; renderAll(); return; }
+  // Ctrl+U — clear entire input line
+  if (hex === "15" || s === "\x15") { inputBuffer = ""; cursorPos = 0; cmdSuggestIdx = 0; renderAll(); return; }
 
   // Ctrl+W — delete word back
   if (hex === "17") {
@@ -1084,8 +1099,36 @@ async function main() {
     if (cfg.baseUrl) gatewayUrl = cfg.baseUrl;
   } catch {}
 
-  // Switch to alt screen, hide cursor
-  write(T.altOn + T.hide + T.home + T.clearDown);
+  // Handle session persistence flags (--resume, --session <id>)
+  const { resume, sessionId: requestedSessionId } = parseSessionArgs(process.argv.slice(2));
+  if (requestedSessionId) {
+    const loaded = loadSession(requestedSessionId);
+    if (loaded && Array.isArray(loaded.messages)) {
+      currentSessionId = loaded.sessionId;
+      messages = loaded.messages;
+      if (loaded.metadata?.model) currentModel = loaded.metadata.model;
+      if (loaded.metadata?.agentMode) agentMode = loaded.metadata.agentMode;
+      setStatus(`Loaded session: ${currentSessionId}`);
+    } else {
+      currentSessionId = requestedSessionId;
+      setStatus(`New session: ${currentSessionId}`);
+    }
+  } else if (resume) {
+    const lastId = getLastSessionId();
+    if (lastId) {
+      const loaded = loadSession(lastId);
+      if (loaded && Array.isArray(loaded.messages)) {
+        currentSessionId = loaded.sessionId;
+        messages = loaded.messages;
+        if (loaded.metadata?.model) currentModel = loaded.metadata.model;
+        if (loaded.metadata?.agentMode) agentMode = loaded.metadata.agentMode;
+        setStatus(`Resumed session: ${currentSessionId}`);
+      }
+    }
+  }
+
+  // Switch to alt screen, hide cursor, enable bracketed paste mode
+  write(T.altOn + T.hide + T.home + T.clearDown + ENABLE_BRACKETED_PASTE);
 
   // Set raw mode
   if (process.stdin.isTTY) {
@@ -1099,29 +1142,42 @@ async function main() {
   // Initial render
   renderAll();
 
+  const pasteParser = new BracketedPasteParser();
+
   // Read keystrokes — parse byte sequences properly
   process.stdin.on("data", (data: Buffer) => {
-    let i = 0;
-    while (i < data.length) {
-      if (data[i] === 0x1b) {
-        // ESC sequence
-        if (i + 1 < data.length && (data[i+1] === 0x5b || data[i+1] === 0x4f)) {
-          let j = i + 2;
-          while (j < data.length && !((data[j] >= 0x40 && data[j] <= 0x7e))) j++;
-          handleKey(data.slice(i, j + 1)); i = j + 1;
-        } else if (i + 1 < data.length) {
-          handleKey(data.slice(i, i + 2)); i += 2;
-        } else {
-          handleKey(data.slice(i, i + 1)); i++;
-        }
+    const chunks = pasteParser.parse(data);
+    for (const chunk of chunks) {
+      if (chunk.type === "paste") {
+        inputBuffer = inputBuffer.slice(0, cursorPos) + chunk.content + inputBuffer.slice(cursorPos);
+        cursorPos += chunk.content.length;
+        cmdSuggestIdx = 0;
+        renderAll();
       } else {
-        // UTF-8 char
-        const b = data[i];
-        let len = 1;
-        if ((b & 0xe0) === 0xc0) len = 2;
-        else if ((b & 0xf0) === 0xe0) len = 3;
-        else if ((b & 0xf8) === 0xf0) len = 4;
-        handleKey(data.slice(i, i + len)); i += len;
+        const buf = Buffer.from(chunk.content);
+        let i = 0;
+        while (i < buf.length) {
+          if (buf[i] === 0x1b) {
+            // ESC sequence
+            if (i + 1 < buf.length && (buf[i+1] === 0x5b || buf[i+1] === 0x4f)) {
+              let j = i + 2;
+              while (j < buf.length && !((buf[j] >= 0x40 && buf[j] <= 0x7e))) j++;
+              handleKey(buf.slice(i, j + 1)); i = j + 1;
+            } else if (i + 1 < buf.length) {
+              handleKey(buf.slice(i, i + 2)); i += 2;
+            } else {
+              handleKey(buf.slice(i, i + 1)); i++;
+            }
+          } else {
+            // UTF-8 char
+            const b = buf[i];
+            let len = 1;
+            if ((b & 0xe0) === 0xc0) len = 2;
+            else if ((b & 0xf0) === 0xe0) len = 3;
+            else if ((b & 0xf8) === 0xf0) len = 4;
+            handleKey(buf.slice(i, i + len)); i += len;
+          }
+        }
       }
     }
   });
@@ -1134,4 +1190,18 @@ async function main() {
   process.on("SIGTERM", exitApp);
 }
 
-export { main };
+export function getInputState(): { buffer: string; cursor: number } {
+  return { buffer: inputBuffer, cursor: cursorPos };
+}
+
+export function setInputState(buffer: string, cursor?: number): void {
+  inputBuffer = buffer;
+  cursorPos = cursor !== undefined ? cursor : buffer.length;
+}
+
+export function resetInputState(): void {
+  inputBuffer = "";
+  cursorPos = 0;
+}
+
+export { main, handleKey };

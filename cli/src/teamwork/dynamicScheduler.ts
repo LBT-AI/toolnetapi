@@ -50,6 +50,8 @@ export interface SchedulerEvent {
 export type EventCallback = (event: SchedulerEvent) => void;
 export type NodeStatusCallback = (nodeId: string, status: TaskStatus, node: TaskNode) => void;
 
+export const activeSchedulers: Set<DynamicScheduler> = new Set();
+
 export class DynamicScheduler {
   private graph: TaskGraph;
   private options: SchedulerOptions;
@@ -76,6 +78,8 @@ export class DynamicScheduler {
         node.dependsOn = node.dependencies || [];
       }
     }
+
+    activeSchedulers.add(this);
 
     this.state = {
       sessionId: graph.sessionId,
@@ -168,7 +172,7 @@ export class DynamicScheduler {
         node.status === "ready";
       if (!isPendingOrReady) return false;
       const deps = node.dependsOn || node.dependencies || [];
-      return deps.every(depId => this.state.completedTaskIds.includes(depId));
+      return deps.every(depId => (this.state?.completedTaskIds || []).includes(depId));
     });
   }
 
@@ -193,6 +197,7 @@ export class DynamicScheduler {
               ? "FAILED"
               : "COMPLETED";
           this.emitEvent(this.state.status === "COMPLETED" ? "scheduler:complete" : "scheduler:failed");
+          activeSchedulers.delete(this);
           unsubscribeEvent();
           resolve(this.getState());
         }

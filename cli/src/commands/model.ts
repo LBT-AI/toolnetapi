@@ -1,5 +1,5 @@
 import type { Command, CommandContext } from "./index";
-
+import { getModelTags } from "../lib/modelTags";
 export const modelCommand: Command = {
   name: "model",
   aliases: ["m"],
@@ -68,7 +68,8 @@ export const modelCommand: Command = {
     for (const [provider, modelIds] of Object.entries(grouped)) {
       lines.push(`\u001b[1m${provider}\u001b[0m`);
       for (const id of modelIds.slice(0, 10)) {
-        lines.push(`  ${id}`);
+        const tags = getModelTags(id);
+        lines.push(`  ${id}\u001b[90m${tags}\u001b[0m`);
       }
       if (modelIds.length > 10) {
         lines.push(`  ... and ${modelIds.length - 10} more`);

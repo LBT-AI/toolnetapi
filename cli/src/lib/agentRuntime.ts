@@ -79,7 +79,20 @@ export class AgentRuntime {
       }
 
       // Filter out temporary TUI placeholders
-      const apiMessages = messages.filter((m) => m.content !== "Thinking...");
+      let apiMessages = messages.filter((m) => m.content !== "Thinking...");
+
+      // Sliding window context truncation
+      const MAX_CONTEXT_CHARS = 32000;
+      let totalLength = apiMessages.reduce((sum, m) => sum + (m.content ? m.content.length : 0), 0);
+      if (totalLength > MAX_CONTEXT_CHARS && apiMessages.length > 2) {
+        const sys = apiMessages[0];
+        const rest = apiMessages.slice(1);
+        while (totalLength > MAX_CONTEXT_CHARS && rest.length > 2) {
+          const removed = rest.shift();
+          totalLength -= (removed?.content?.length || 0);
+        }
+        apiMessages = [sys, ...rest];
+      }
 
       let response: Response;
       try {

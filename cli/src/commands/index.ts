@@ -18,6 +18,9 @@ import { resetCommand } from "./reset";
 import { historyCommand } from "./history";
 import { planCommand } from "./plan";
 import { exportCommand } from "./export";
+import { cdCommand } from "./cd";
+import { pwdCommand } from "./pwd";
+import { artifactCommand } from "./artifact";
 
 export interface CommandContext {
   gateway: GatewayClient;
@@ -56,6 +59,9 @@ const builtinCommands: Command[] = [
   historyCommand,
   planCommand,
   exportCommand,
+  cdCommand,
+  pwdCommand,
+  artifactCommand,
 ];
 
 export function getAllCommands(): Command[] {

@@ -14,16 +14,28 @@ const ANSI_REGEX = /\x1b\[[^m]*m/g;
 
 import { providerPicker } from "./components/ProviderPicker";
 import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
-import { agentTools, executeTool } from "./lib/agentTools";
+import { agentTools, executeTool, isDangerousCommand } from "./lib/agentTools";
 import { getCwdInfo } from "./lib/codingAgent";
 import { getAllCommands } from "./commands/index";
 import { setupTerminalLifecycle, restoreTerminal, wrapErrorBoundary } from "./lib/terminalLifecycle";
 import { saveSession, loadSession, getLastSessionId, parseSessionArgs } from "./lib/sessionPersistence";
 import { BracketedPasteParser, ENABLE_BRACKETED_PASTE } from "./lib/bracketedPaste";
+import { getModelTags } from "./lib/modelTags";
+import { activeSchedulers } from "./teamwork/dynamicScheduler";
+import { backgroundTasks } from "./lib/backgroundTasks";
 
 import { A, T, write, getSize } from "./term";
 
 setupTerminalLifecycle();
+backgroundTasks.onUpdate(() => {
+  if (typeof renderAll === "function") renderAll();
+});
+setInterval(() => {
+  if (activeSchedulers.size > 0) {
+    if (typeof renderAll === "function") renderAll();
+  }
+}, 500);
+
 function writeln(s: string) { write(s + "\r\n"); }
 
 function fillLine(text: string, width: number, fg = A.fgText, bg = A.bgSurface): string {
@@ -62,6 +74,7 @@ let statusText = "";
 let isStreaming = false;
 let spinnerIdx = 0;
 let spinnerTimer: ReturnType<typeof setInterval> | null = null;
+let pendingConfirmation: { prompt: string, resolve: (val: boolean) => void } | null = null;
 let currentModel = "openai/gpt-4o";
 let agentMode: "Build" | "Plan" = "Build";
 let bypassMode = false;
@@ -147,7 +160,10 @@ function renderAll() {
       ? primaryColor + A.bold + " ❯ " + A.reset
       : A.fgYellow + A.bold + " ✦ " + A.reset;
     const prefixStripped = " ❯ ";
-    const wrapWidth = cols - prefixStripped.length - 2;
+    const hasPanel = cols > 100;
+    const PANEL_WIDTH = 40;
+    const chatCols = hasPanel ? cols - PANEL_WIDTH : cols;
+    const wrapWidth = chatCols - prefixStripped.length - 2;
 
     let isToolResponse = msg.role === "tool";
     let parsedTool: any = null;
@@ -207,9 +223,22 @@ function renderAll() {
 
       if (outStr.trim()) {
         const lines = outStr.trim().split("\n");
-        const maxLines = 3;
+        const tNameLower = toolName.toLowerCase();
+        const isDiffTool = tNameLower.includes("edit") || tNameLower.includes("write") || tNameLower.includes("replace");
+        const maxLines = isDiffTool ? 30 : 3;
         for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
-          chatLines.push("    " + A.fgSubtext + A.dim + truncate(lines[i], cols - 6) + A.reset);
+          let lineContent = truncate(lines[i], cols - 6);
+          let color = A.fgSubtext + A.dim;
+          if (isDiffTool) {
+            if (lineContent.startsWith("+") && !lineContent.startsWith("+++")) {
+              color = A.fgGreen;
+            } else if (lineContent.startsWith("-") && !lineContent.startsWith("---")) {
+              color = A.fgRed;
+            } else if (lineContent.startsWith("@@")) {
+              color = A.fgCyan;
+            }
+          }
+          chatLines.push("    " + color + lineContent + A.reset);
         }
         if (lines.length > maxLines) {
           chatLines.push("    " + A.fgSubtext + A.dim + `... (${lines.length - maxLines} more lines)` + A.reset);
@@ -229,11 +258,17 @@ function renderAll() {
     const lines = wrapText(msg.content, wrapWidth);
     let inCodeBlock = false;
     let codeLang = "";
+    let inThoughtBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
       const linePrefix = i === 0 ? prefix : " ".repeat(prefixStripped.length);
       let content = lines[i];
       let color = isUser ? A.fgText : A.fgText + A.dim; // default
+
+      if (content.includes("<thought>")) {
+        inThoughtBlock = true;
+      }
+      const closeThought = content.includes("</thought>");
 
       // Syntax & Diff Highlighting
       if (content.startsWith("```")) {
@@ -257,6 +292,12 @@ function renderAll() {
             .replace(/\b(true|false|null|undefined)\b/g, A.fgPeach + "$1" + A.fgText)
             .replace(/(["'`])(.*?)(["'`])/g, A.fgGreen + "$1$2$3" + A.fgText);
         }
+      } else if (inThoughtBlock) {
+        color = A.fgSubtext + A.italic;
+      }
+
+      if (closeThought) {
+        inThoughtBlock = false;
       }
 
       chatLines.push(linePrefix + color + content + A.reset);
@@ -271,12 +312,64 @@ function renderAll() {
   const startLine = Math.max(0, totalLines - chatRows - clampedScroll);
   const visibleLines = chatLines.slice(startLine, startLine + chatRows);
 
+  // Generate Side Panel Lines
+  const panelLines: string[] = [];
+  const hasPanel = cols > 100;
+  const PANEL_WIDTH = 40;
+  const chatCols = hasPanel ? cols - PANEL_WIDTH : cols;
+
+  if (hasPanel) {
+    panelLines.push(A.bgSurface + A.fgBlue + A.bold + " Teamwork & Tasks" + " ".repeat(PANEL_WIDTH - 17) + A.reset);
+    panelLines.push(A.bgSurface + "─".repeat(PANEL_WIDTH) + A.reset);
+    
+    const scheds = Array.from(activeSchedulers);
+    if (scheds.length > 0) {
+      panelLines.push(A.bgSurface + A.fgYellow + A.bold + " Active Subagents" + " ".repeat(PANEL_WIDTH - 17) + A.reset);
+      for (const s of scheds) {
+        const state = s.getState();
+        const activeCount = state.activeWorkers || 0;
+        const maxCount = state.maxWorkers || 1;
+        const line = `  [${state.status}] W:${activeCount}/${maxCount} T:${state.completedTaskIds.length}/${state.graph.nodes?.length || 0}`;
+        const lineStr = truncate(line, PANEL_WIDTH);
+        panelLines.push(A.bgSurface + A.fgText + lineStr + " ".repeat(Math.max(0, PANEL_WIDTH - lineStr.length)) + A.reset);
+        
+        for (const tid of (state.runningTaskIds || [])) {
+          const node = s.getReadyNodes().find(n => n.id === tid) || state.graph.nodes?.find(n => n.id === tid);
+          if (node) {
+            const nLine = `   - ${node.role || 'Agent'}: ${node.title}`;
+            const nLineStr = truncate(nLine, PANEL_WIDTH);
+            panelLines.push(A.bgSurface + A.fgSubtext + nLineStr + " ".repeat(Math.max(0, PANEL_WIDTH - nLineStr.length)) + A.reset);
+          }
+        }
+      }
+      panelLines.push(A.bgSurface + " ".repeat(PANEL_WIDTH) + A.reset);
+    }
+
+    const tasks = backgroundTasks.getActiveTasks();
+    if (tasks.length > 0) {
+      panelLines.push(A.bgSurface + A.fgCyan + A.bold + " Background Tasks" + " ".repeat(PANEL_WIDTH - 17) + A.reset);
+      for (const t of tasks) {
+        const line = `  [${t.status}] ${t.name}`;
+        const lineStr = truncate(line, PANEL_WIDTH);
+        panelLines.push(A.bgSurface + A.fgText + lineStr + " ".repeat(Math.max(0, PANEL_WIDTH - lineStr.length)) + A.reset);
+      }
+      panelLines.push(A.bgSurface + " ".repeat(PANEL_WIDTH) + A.reset);
+    }
+  }
+
   // Pad if fewer lines than chatRows
   for (let i = 0; i < chatRows; i++) {
     const line = visibleLines[i] ?? "";
     const stripped = line.replace(ANSI_REGEX, "");
-    const pad = Math.max(0, cols - stripped.length);
-    out.push(line + " ".repeat(pad) + A.reset + "\r\n");
+    const chatPad = Math.max(0, chatCols - stripped.length);
+    const chatPart = line + " ".repeat(chatPad) + A.reset;
+    
+    if (hasPanel) {
+      const panelPart = panelLines[i] || (A.bgSurface + " ".repeat(PANEL_WIDTH) + A.reset);
+      out.push(chatPart + panelPart + "\r\n");
+    } else {
+      out.push(chatPart + "\r\n");
+    }
   }
 
   // ── Slash command suggestions popup (above input) ──
@@ -316,6 +409,30 @@ function renderAll() {
     const toastC = Math.max(1, Math.floor((cols - toastW) / 2));
     out.push(T.goto(toastR, toastC));
     out.push(A.bgOverlay + A.fgText + A.bold + "  " + toastMsg + "  " + A.reset);
+  }
+
+  // ── Confirmation Modal ──
+  if (pendingConfirmation) {
+    const boxW = Math.min(60, cols - 4);
+    const boxH = 5;
+    const startRow = Math.floor((rows - boxH) / 2);
+    const startCol = Math.floor((cols - boxW) / 2);
+    out.push(T.goto(startRow, startCol));
+    out.push(A.bgRed + A.fgText + A.bold + "┌" + "─".repeat(boxW - 2) + "┐" + A.reset);
+    out.push(T.goto(startRow + 1, startCol));
+    const titleText = " Security Warning ";
+    const titlePad = Math.max(0, boxW - 2 - titleText.length);
+    out.push(A.bgRed + A.fgText + A.bold + "│" + titleText + " ".repeat(titlePad) + "│" + A.reset);
+    out.push(T.goto(startRow + 2, startCol));
+    const descText = " " + truncate(pendingConfirmation.prompt, boxW - 4);
+    const descPad = Math.max(0, boxW - 2 - descText.length);
+    out.push(A.bgRed + A.fgText + "│" + descText + " ".repeat(descPad) + "│" + A.reset);
+    out.push(T.goto(startRow + 3, startCol));
+    const hintText = " Confirm (Y) / Deny (N) ";
+    const hintPad = Math.max(0, boxW - 2 - hintText.length);
+    out.push(A.bgRed + A.fgText + A.bold + "│" + hintText + " ".repeat(hintPad) + "│" + A.reset);
+    out.push(T.goto(startRow + 4, startCol));
+    out.push(A.bgRed + A.fgText + A.bold + "└" + "─".repeat(boxW - 2) + "┘" + A.reset);
   }
 
   // ── Input border (Micro-interaction: Lights up when typing) ──
@@ -567,6 +684,19 @@ async function sendMessage(text: string) {
           renderAll();
           let parsedArgs = {};
           try { parsedArgs = JSON.parse(tc.function.arguments); } catch {}
+          
+          if (isDangerousCommand(tc.function.name, parsedArgs, getCwdInfo().currentCwd)) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+              pendingConfirmation = { prompt: `Tool ${tc.function.name} is dangerous. Allow?`, resolve };
+              renderAll();
+            });
+            if (!confirmed) {
+              messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify({ error: "User denied permission." }) });
+              saveCurrentSession();
+              continue;
+            }
+          }
+
           const result = await executeTool(tc.function.name, parsedArgs);
           messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: result });
           saveCurrentSession();
@@ -695,7 +825,20 @@ async function handleCommand(cmd: string) {
       agentMode = "Plan";
       showToast("Switched to Plan Mode");
       setStatus("Mode: Plan");
-      break;
+      messages.push({ role: "system", content: "→ Switched to Plan Mode. Generating .toolnet/plan.md checklist..." });
+      renderAll();
+      setTimeout(() => sendMessage("Please create a detailed checklist for the task in .toolnet/plan.md and wait for my /approve command before executing anything."), 50);
+      return; // Skip renderAll below since sendMessage handles it
+    }
+
+    case "/approve": {
+      agentMode = "Build";
+      showToast("Plan Approved - Switched to Build Mode");
+      setStatus("Mode: Build");
+      messages.push({ role: "system", content: "→ Plan approved. Switched to execution mode." });
+      renderAll();
+      setTimeout(() => sendMessage("I approve the plan. You may now shift into execution mode and execute the checklist."), 50);
+      return;
     }
 
     case "/build": {
@@ -819,11 +962,13 @@ function renderModelPicker() {
       const selected = modelIdx === modelPickerIdx;
       const current = model === currentModel;
       const marker = selected ? "▸ " : current ? "✔ " : "  ";
-      const text = truncate(marker + model, boxW - 3);
-      const textPad = Math.max(0, boxW - 3 - text.replace(ANSI_REGEX, "").length);
+      const tags = getModelTags(model);
+      const text = truncate(marker + model, boxW - 3 - tags.length);
+      const textPad = Math.max(0, boxW - 3 - text.replace(ANSI_REGEX, "").length - tags.length);
       const fg = selected ? A.fgYellow + A.bold : current ? A.fgGreen : A.fgText;
       const bg = selected ? A.bgOverlay : A.bgSurface;
-      out.push(bg + A.fgBlue + "│" + fg + " " + text + " ".repeat(textPad) + A.reset + A.bgSurface + A.fgBlue + "│" + A.reset);
+      const tagsFmt = tags ? A.fgSubtext + A.dim + tags + A.reset : "";
+      out.push(bg + A.fgBlue + "│" + fg + " " + text + tagsFmt + " ".repeat(textPad) + A.reset + A.bgSurface + A.fgBlue + "│" + A.reset);
     }
   }
 
@@ -839,6 +984,23 @@ function renderModelPicker() {
 function handleKey(data: Buffer) {
   const s = data.toString("utf8");
   const hex = data.toString("hex");
+
+  if (pendingConfirmation) {
+    if (hex === "1b") { // esc
+      pendingConfirmation.resolve(false);
+      pendingConfirmation = null;
+      renderAll();
+    } else if (s.toLowerCase() === "y") {
+      pendingConfirmation.resolve(true);
+      pendingConfirmation = null;
+      renderAll();
+    } else if (s.toLowerCase() === "n") {
+      pendingConfirmation.resolve(false);
+      pendingConfirmation = null;
+      renderAll();
+    }
+    return;
+  }
 
   // Model picker navigation
   if (showModelPicker) {

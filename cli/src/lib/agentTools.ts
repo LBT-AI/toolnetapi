@@ -1,4 +1,5 @@
 import { toolBash, toolRead, toolWrite, toolEdit, toolReplaceAll, toolGrep, toolGlob } from "./codingAgent";
+import { resolve } from "node:path";
 
 export const agentTools = [
   {
@@ -108,6 +109,27 @@ export const agentTools = [
     }
   }
 ];
+
+export function isDangerousCommand(name: string, args: any, cwd: string): boolean {
+  if (name === "run_command") {
+    const cmd = args.command || "";
+    if (cmd.includes("rm -rf") || cmd.includes("mkfs") || cmd.includes("sudo")) return true;
+    return false;
+  }
+  if (name === "write_file" || name === "edit_file" || name === "replace_all") {
+    const targetPath = args.path || "";
+    try {
+      const resolved = resolve(cwd, targetPath);
+      const cwdResolved = resolve(cwd);
+      if (!resolved.startsWith(cwdResolved)) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
 
 export async function executeTool(name: string, args: any): Promise<string> {
   try {

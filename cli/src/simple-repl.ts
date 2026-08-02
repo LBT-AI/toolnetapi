@@ -2,6 +2,7 @@
 
 import { createGateway, GatewayClient } from "./lib/gateway";
 import { dispatchCommand, getAllCommands } from "./commands";
+import { AgentRuntime } from "./lib/agentRuntime";
 import * as readline from "node:readline";
 
 // ─── True color ANSI helpers (Catppuccin Mocha) ──────────────────────────
@@ -470,33 +471,30 @@ export async function main() {
 
       await dispatchCommand(v, ctx);
     } else {
-      // Non-command: send to model via gateway
+      // Non-command: send to model via AgentRuntime ReAct Loop
       addMessage("user", v);
       print("");
-
-      // Show model + start streaming
       print(renderSeparator("assistant", currentModel));
 
       try {
-        let responseText = "";
-        let firstToken = true;
-
-        await streamChat(
-          gw,
-          currentModel,
-          [...messages],
-          (token) => {
-            if (firstToken) {
-              firstToken = false;
-              process.stdout.write("\r");
+        const runtime = new AgentRuntime({
+          gatewayUrl: gw.baseUrl,
+          model: currentModel,
+          onEvent: (event, data) => {
+            if (event === "TOOL_START") {
+              print(color.yellow + `  ● Executing ${data.toolName}...` + C.reset);
+            } else if (event === "TOOL_END") {
+              print(color.dim + `    └ Result received.` + C.reset);
             }
-            process.stdout.write(token);
-            responseText += token;
-          },
-        );
+          }
+        });
 
-        print("");
-        messages.push({ role: "assistant", content: responseText });
+        const res = await runtime.runLoop(messages, { model: currentModel });
+        if (!res.success && res.error) {
+          printError("\nError: " + res.error);
+        } else {
+          print("\n" + renderMarkdown(res.output, termWidth()));
+        }
       } catch (err) {
         printError("\nError: " + (err instanceof Error ? err.message : String(err)));
       }

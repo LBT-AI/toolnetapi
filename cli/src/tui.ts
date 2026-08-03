@@ -26,6 +26,7 @@ import { activeSchedulers } from "./teamwork/dynamicScheduler";
 import { backgroundTasks } from "./lib/backgroundTasks";
 
 import { A, T, write, getSize } from "./term";
+import { playSplashAnimation } from "./splash";
 
 setupTerminalLifecycle();
 backgroundTasks.onUpdate(() => {
@@ -1277,6 +1278,8 @@ async function main() {
   } catch {
     setStatus("✖ Cannot reach gateway at " + gatewayUrl + " — start with ./start-all.sh");
   }
+
+  await playSplashAnimation();
 
   // Load config
   try {

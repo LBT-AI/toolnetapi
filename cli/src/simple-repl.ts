@@ -4,6 +4,7 @@ import { createGateway, GatewayClient } from "./lib/gateway";
 import { dispatchCommand, getAllCommands } from "./commands";
 import { AgentRuntime } from "./lib/agentRuntime";
 import * as readline from "node:readline";
+import { playSplashAnimation } from "./splash";
 
 // ─── True color ANSI helpers (Catppuccin Mocha) ──────────────────────────
 
@@ -404,6 +405,8 @@ export async function main() {
   }
   const versionResult = await gw.getVersion();
   const version = versionResult.success ? versionResult.data?.currentVersion || "" : "";
+
+  await playSplashAnimation();
 
   print("");
   print(C.bold + color.cyan + "  ╭━━━╮╭╮╭━╮╭━╮╭━┳╮╭━┳━╮" + C.reset);

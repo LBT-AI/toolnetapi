@@ -30,6 +30,7 @@ export interface CommandContext {
   setStatusMsg: (msg: string) => void;
   exit: () => void;
   currentModel: () => string;
+  setBypassMode?: (enabled: boolean) => void;
 }
 
 export interface Command {

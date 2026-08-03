@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS = {
   pxpipeTimeoutMs: 15000,
   jailbreakEnabled: false,
   jailbreakLevel: "full",
+  jailbreakCustomPrompt: "",
 };
 
 async function readRaw() {

@@ -250,6 +250,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       ponytailLevel: chatSettings.ponytailLevel || "full",
       jailbreakEnabled: !!chatSettings.jailbreakEnabled,
       jailbreakLevel: chatSettings.jailbreakLevel || "full",
+      jailbreakCustomPrompt: chatSettings.jailbreakCustomPrompt,
       pxpipeEnabled: !!chatSettings.pxpipeEnabled,
       pxpipeMinChars: chatSettings.pxpipeMinChars,
       pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,

@@ -109,6 +109,7 @@ export interface GatewaySettings {
   hasPassword?: boolean;
   jailbreakEnabled?: boolean;
   jailbreakLevel?: string;
+  jailbreakCustomPrompt?: string;
 }
 
 export interface VersionInfo {

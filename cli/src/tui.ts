@@ -16,7 +16,8 @@ import { providerPicker } from "./components/ProviderPicker";
 import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
 import { agentTools, executeTool, isDangerousCommand } from "./lib/agentTools";
 import { getCwdInfo } from "./lib/codingAgent";
-import { getAllCommands } from "./commands/index";
+import { getAllCommands, dispatchCommand } from "./commands/index";
+import { GatewayClient } from "./lib/gateway";
 import { setupTerminalLifecycle, restoreTerminal, wrapErrorBoundary } from "./lib/terminalLifecycle";
 import { saveSession, loadSession, getLastSessionId, parseSessionArgs } from "./lib/sessionPersistence";
 import { BracketedPasteParser, ENABLE_BRACKETED_PASTE } from "./lib/bracketedPaste";
@@ -141,7 +142,7 @@ function renderAll() {
   }
 
   // ── Header ──
-  const bypassLabel = bypassMode ? A.fgRed + "[Bypass] " + A.reset : "";
+  const bypassLabel = bypassMode ? A.fgRed + "[Jailbreak] " + A.reset : "";
   const modeLabel = A.fgSubtext + "[" + A.fgText + agentMode + A.fgSubtext + "] " + bypassLabel + A.reset;
   const modelLabel = A.fgSubtext + "Model: " + A.fgText + truncate(currentModel, 30) + A.reset;
   const gwLabel = A.fgSubtext + " │ GW: " + A.fgGreen + "●" + A.reset + " ";
@@ -816,8 +817,8 @@ async function handleCommand(cmd: string) {
 
     case "/bypass": {
       bypassMode = !bypassMode;
-      showToast(bypassMode ? "Bypass Mode ENABLED" : "Bypass Mode DISABLED");
-      setStatus("Bypass Mode: " + (bypassMode ? "ON" : "OFF"));
+      showToast(bypassMode ? "Jailbreak Mode ENABLED" : "Jailbreak Mode DISABLED");
+      setStatus("Jailbreak Mode: " + (bypassMode ? "ON" : "OFF"));
       break;
     }
 
@@ -852,8 +853,32 @@ async function handleCommand(cmd: string) {
       showToast("Checking gateway status...");
       break;
 
-    default:
-      messages.push({ role: "system", content: "Unknown command: " + name + "  (type /help)" });
+    default: {
+      const gw = new GatewayClient(gatewayUrl);
+      const ctx = {
+        gateway: gw,
+        addMessage: (role: "user" | "assistant", content: string) => {
+          messages.push({ role, content });
+        },
+        setModel: (m: string) => {
+          currentModel = m;
+          setStatus("Model: " + m);
+        },
+        setStatusMsg: setStatus,
+        exit: exitApp,
+        currentModel: () => currentModel,
+        setBypassMode: (enabled: boolean) => {
+          bypassMode = enabled;
+          setStatus("Jailbreak Mode: " + (enabled ? "ON" : "OFF"));
+        },
+      };
+
+      const handled = await dispatchCommand(cmd, ctx);
+      if (!handled) {
+        messages.push({ role: "system", content: "Unknown command: " + name + "  (type /help)" });
+      }
+      break;
+    }
   }
   renderAll();
 }

@@ -3,6 +3,16 @@ const HIDE_CURSOR = `${ESC}[?25l`;
 const SHOW_CURSOR = `${ESC}[?25h`;
 const CLEAR_SCREEN = `${ESC}[2J${ESC}[H`;
 
+const COLOR = {
+  reset: `${ESC}[0m`,
+  bold: `${ESC}[1m`,
+  cyan: `${ESC}[38;2;148;226;213m`,
+  peach: `${ESC}[38;2;250;179;135m`,
+  green: `${ESC}[38;2;166;227;161m`,
+  subtext: `${ESC}[38;2;166;173;200m`,
+  blue: `${ESC}[38;2;137;180;250m`,
+};
+
 const TOOLNET_LOGO = [
   "  _______          _            _   ",
   " |__   __|        | |          | |  ",
@@ -59,7 +69,7 @@ export async function playSplashAnimation(): Promise<void> {
       logoRevealedLines++;
     }
     for (let i = 0; i < logoRevealedLines; i++) {
-      frameBuffer += moveCursor(logoStartRow + i, 5) + TOOLNET_LOGO[i];
+      frameBuffer += moveCursor(logoStartRow + i, 5) + COLOR.bold + COLOR.cyan + TOOLNET_LOGO[i] + COLOR.reset;
     }
 
     // Animate mascot
@@ -68,7 +78,7 @@ export async function playSplashAnimation(): Promise<void> {
       const mascotFrame = (f % 10 === 0) ? MASCOT_FRAMES[1] : MASCOT_FRAMES[0];
       const offset = Math.sin(f * 0.5); // Float up and down smoothly
       for (let j = 0; j < mascotFrame.length; j++) {
-        frameBuffer += moveCursor(mascotStartRow + j + offset, 15) + mascotFrame[j];
+        frameBuffer += moveCursor(mascotStartRow + j + offset, 15) + COLOR.peach + mascotFrame[j] + COLOR.reset;
       }
     }
 
@@ -77,7 +87,9 @@ export async function playSplashAnimation(): Promise<void> {
       bootRevealed++;
     }
     for (let k = 0; k < bootRevealed; k++) {
-      frameBuffer += moveCursor(bootStartRow + k, 5) + BOOT_MESSAGES[k];
+      const msg = BOOT_MESSAGES[k];
+      const coloredMsg = msg.replace("[OK]", COLOR.green + "[OK]" + COLOR.reset + COLOR.subtext) + COLOR.reset;
+      frameBuffer += moveCursor(bootStartRow + k, 5) + coloredMsg;
     }
 
     process.stdout.write(frameBuffer);

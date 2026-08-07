@@ -338,3 +338,65 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
   closeMcpClients().catch(() => {});
 });
+
+function editLocalMcpConfig(
+  baseDir: string,
+  editor: (configs: Record<string, McpServerConfig>) => void
+): void {
+  const candidatePaths = [
+    path.join(baseDir, "mcp.json"),
+    path.join(baseDir, ".gemini", "mcp.json"),
+    path.join(baseDir, ".toolnet", "mcp.json"),
+  ];
+  
+  let targetPath = candidatePaths[1];
+  let existingData: any = {};
+  
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      targetPath = p;
+      try {
+        existingData = JSON.parse(fs.readFileSync(p, "utf8"));
+      } catch {}
+      break;
+    }
+  }
+
+  const dir = path.dirname(targetPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  let targetField = "mcpServers";
+  let configs = existingData.mcpServers || existingData.servers;
+  if (!configs) {
+    if (Object.keys(existingData).length > 0) {
+      configs = existingData;
+      targetField = "";
+    } else {
+      configs = {};
+    }
+  }
+
+  editor(configs);
+
+  if (targetField) {
+    existingData[targetField] = configs;
+  } else {
+    existingData = configs;
+  }
+
+  fs.writeFileSync(targetPath, JSON.stringify(existingData, null, 2), "utf8");
+}
+
+export function addLocalMcpServer(name: string, config: McpServerConfig, baseDir: string = process.cwd()): void {
+  editLocalMcpConfig(baseDir, (configs) => {
+    configs[name] = config;
+  });
+}
+
+export function removeLocalMcpServer(name: string, baseDir: string = process.cwd()): void {
+  editLocalMcpConfig(baseDir, (configs) => {
+    delete configs[name];
+  });
+}

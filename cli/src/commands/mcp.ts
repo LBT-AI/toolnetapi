@@ -1,5 +1,5 @@
 import type { Command, CommandContext } from "./index";
-import { loadLocalMcpConfig } from "../lib/mcpRunner";
+import { loadLocalMcpConfig, addLocalMcpServer, removeLocalMcpServer } from "../lib/mcpRunner";
 
 async function showMcpStatus(ctx: CommandContext) {
   const { gateway, addMessage } = ctx;
@@ -57,6 +57,8 @@ async function showMcpStatus(ctx: CommandContext) {
   lines.push("Commands:");
   lines.push("  /mcp registry           Browse MCP registry");
   lines.push("  /mcp tools <url>        Probe MCP server tools");
+  lines.push("  /mcp add <name> <cmd>   Add a local MCP server");
+  lines.push("  /mcp remove <name>      Remove a local MCP server");
 
   addMessage("assistant", lines.join("\n"));
 }
@@ -119,11 +121,34 @@ async function probeTools(args: string[], ctx: CommandContext) {
   addMessage("assistant", lines.join("\n"));
 }
 
+
+async function addMcp(args: string[], ctx: CommandContext) {
+  const { addMessage } = ctx;
+  if (args.length < 2) {
+    addMessage("assistant", "Usage: /mcp add <name> <command> [args...]\ne.g. /mcp add fetch node index.js");
+    return;
+  }
+  const [name, command, ...cmdArgs] = args;
+  addLocalMcpServer(name, { command, args: cmdArgs });
+  addMessage("assistant", `\x1b[32m✓\x1b[0m Added local MCP server '${name}'`);
+}
+
+async function removeMcp(args: string[], ctx: CommandContext) {
+  const { addMessage } = ctx;
+  if (args.length < 1) {
+    addMessage("assistant", "Usage: /mcp remove <name>");
+    return;
+  }
+  const name = args[0];
+  removeLocalMcpServer(name);
+  addMessage("assistant", `\x1b[32m✓\x1b[0m Removed local MCP server '${name}'`);
+}
+
 export const mcpCommand: Command = {
   name: "mcp",
   aliases: [],
   description: "Manage MCP (Model Context Protocol) plugins and registry",
-  usage: "/mcp [registry|tools] ...",
+  usage: "/mcp [registry|tools|add|remove|status] ...",
   async handler(args: string[], ctx: CommandContext) {
     if (args.length === 0) {
       await showMcpStatus(ctx);
@@ -135,7 +160,9 @@ export const mcpCommand: Command = {
       case "registry":  await browseRegistry(ctx); break;
       case "tools":     await probeTools(subArgs, ctx); break;
       case "status":    await showMcpStatus(ctx); break;
-      default:          ctx.addMessage("assistant", `Unknown: ${sub}\nTry: /mcp, /mcp registry, /mcp tools <url>`); break;
+      case "add":       await addMcp(subArgs, ctx); break;
+      case "remove":    await removeMcp(subArgs, ctx); break;
+      default:          ctx.addMessage("assistant", `Unknown: ${sub}\nTry: /mcp, /mcp registry, /mcp tools <url>, /mcp add, /mcp remove`); break;
     }
   },
 };

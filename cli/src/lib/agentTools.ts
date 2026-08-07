@@ -207,6 +207,18 @@ export const agentTools = [
           url: { type: "string", description: "Absolute URL (http:// or https://)" }
         },
         required: ["url"]
+  {
+    type: "function",
+    function: {
+      name: "create_artifact",
+      description: "Create an artifact in the .artifacts directory.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Name of the artifact" },
+          content: { type: "string", description: "Content of the artifact" }
+        },
+        required: ["name", "content"]
       }
     }
   },
@@ -224,6 +236,18 @@ export const agentTools = [
       }
     }
   },
+      name: "update_artifact",
+      description: "Update an existing artifact in the .artifacts directory.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Name of the artifact" },
+          content: { type: "string", description: "New content of the artifact" }
+        },
+        required: ["name", "content"]
+      }
+    }
+  }
 ];
 
 export function getMcpAgentTools(): Array<any> {
@@ -259,8 +283,8 @@ export function isDangerousCommand(name: string, args: any, cwd: string): boolea
     if (/sudo\s+(rm|mkfs|dd|chmod|chown|shutdown|reboot)/.test(cmd)) return true;
     return false;
   }
-  if (name === "write_file" || name === "edit_file" || name === "replace_all") {
-    const targetPath = args.path || "";
+  if (name === "write_file" || name === "edit_file" || name === "replace_all" || name === "create_artifact" || name === "update_artifact") {
+    const targetPath = name.includes("artifact") ? `.artifacts/${args.name || ""}` : (args.path || "");
     try {
       const { resolve } = require("node:path");
       const resolved = resolve(cwd, targetPath);
@@ -384,6 +408,16 @@ export async function executeTool(name: string, args: any): Promise<string> {
       const res = await toolAuditUrl(url);
       return JSON.stringify({
         stdout: res.data || "",
+    } else if (name === "create_artifact" || name === "update_artifact") {
+      const artifactName = args.name || "";
+      const content = args.content || "";
+      if (!artifactName) {
+        return JSON.stringify({ stdout: "", stderr: "Missing artifact name", exitCode: 1 });
+      }
+      const targetPath = `.artifacts/${artifactName}`;
+      const res = toolWrite(targetPath, content);
+      return JSON.stringify({
+        stdout: res.success ? `Artifact ${name === "create_artifact" ? "created" : "updated"}: ${artifactName}` : "",
         stderr: res.error || "",
         exitCode: res.success ? 0 : 1
       });

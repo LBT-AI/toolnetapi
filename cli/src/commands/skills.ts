@@ -1,5 +1,6 @@
 import type { Command, CommandContext } from "./index";
 import { loadLocalSkills } from "../lib/skillsLoader";
+import { agentTools } from "../lib/agentTools";
 
 interface Skill {
   id: string;
@@ -9,16 +10,13 @@ interface Skill {
   icon: string;
 }
 
-const BUILTIN_SKILLS: Skill[] = [
-  { id: "toolnetapi",        name: "ToolNet API (Entry)",     description: "Starting point for using the ToolNet API", endpoint: null, icon: "\uD83C\uDF10" },
-  { id: "toolnetapi-chat",   name: "Chat",                    description: "Chat completions via OpenAI-compatible API", endpoint: "/v1/chat/completions", icon: "\uD83D\uDCAC" },
-  { id: "toolnetapi-image",  name: "Image Generation",        description: "Generate images via DALL-E compatible API", endpoint: "/v1/images/generations", icon: "\uD83C\uDFA8" },
-  { id: "toolnetapi-tts",    name: "Text-to-Speech",          description: "Convert text to speech audio", endpoint: "/v1/audio/speech", icon: "\uD83C\uDFA4" },
-  { id: "toolnetapi-stt",    name: "Speech-to-Text",          description: "Transcribe audio to text", endpoint: "/v1/audio/transcriptions", icon: "\uD83C\uDF99\uFE0F" },
-  { id: "toolnetapi-embeddings", name: "Embeddings",          description: "Generate text embeddings", endpoint: "/v1/embeddings", icon: "\uD83D\uDCD0" },
-  { id: "toolnetapi-web-search", name: "Web Search",          description: "Search the web via the gateway", endpoint: "/v1/search", icon: "\uD83D\uDD0D" },
-  { id: "toolnetapi-web-fetch",  name: "Web Fetch",           description: "Fetch and summarize web pages", endpoint: "/v1/web/fetch", icon: "\uD83C\uDF0D" },
-];
+const BUILTIN_SKILLS: Skill[] = agentTools.map(t => ({
+  id: t.function.name,
+  name: t.function.name,
+  description: t.function.description || "",
+  endpoint: "local tool",
+  icon: "🛠️"
+}));
 
 function showSkillsList(ctx: CommandContext) {
   const { addMessage } = ctx;
@@ -29,7 +27,7 @@ function showSkillsList(ctx: CommandContext) {
   lines.push(`Skills (${totalCount})`);
   lines.push("───".repeat(10));
 
-  lines.push("\u001b[1mBuilt-in API Skills:\u001b[0m");
+  lines.push("\u001b[1mBuilt-in Local Tools:\u001b[0m");
   for (const s of BUILTIN_SKILLS) {
     const ep = s.endpoint ? ` \u001b[90m${s.endpoint}\u001b[0m` : "";
     lines.push(`  ${s.icon} \u001b[1m${s.name}\u001b[0m${ep}`);
@@ -66,7 +64,7 @@ function showSkillDetail(name: string, ctx: CommandContext) {
     lines.push(`  Endpoint:    ${skill.endpoint || "(entry skill)"}`);
     lines.push("");
     lines.push("Add this skill to your AI's instructions to teach it how");
-    lines.push(`to use the ${skill.name} feature of ToolNet API.`);
+    lines.push(`to use the ${skill.name} feature of local tools.`);
     addMessage("assistant", lines.join("\n"));
     return;
   }

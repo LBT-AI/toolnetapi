@@ -17,7 +17,7 @@ export interface AgentRuntimeResult {
   error?: string;
 }
 
-const AGENT_SYSTEM_PROMPT = `You are ToolNet Agent, an advanced AI coding assistant.
+export const AGENT_SYSTEM_PROMPT = `You are ToolNet Agent, an advanced AI coding assistant.
 Your goal is to solve the user request accurately using available tools.
 
 Guidelines:

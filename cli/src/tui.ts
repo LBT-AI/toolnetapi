@@ -6,6 +6,12 @@
  */
 
 import { createInterface } from "node:readline";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { AGENT_SYSTEM_PROMPT } from "./lib/agentRuntime";
+
+const PLANNER_SYSTEM_PROMPT = `You are ToolNet Planner. Your goal is to analyze the user request, explore the codebase using read-only tools, and create a step-by-step plan. Do not execute the plan yourself. Use the save_plan tool to save the plan.`;
+
 
 // ─── ANSI Helpers ───────────────────────────────────────────────────────────
 const ESC = "\x1b";
@@ -579,18 +585,38 @@ async function sendMessage(text: string) {
 
       const bodyPayload: any = {
         model: currentModel,
-        messages: messages.filter((m, i) => i !== assistantIdx).map(m => {
-          const out: any = { role: m.role, content: m.content };
-          if (m.tool_calls) out.tool_calls = m.tool_calls;
-          if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
-          if (m.name) out.name = m.name;
-          return out;
-        }),
+        messages: (() => {
+          let apiMsgs = messages.filter((m, i) => i !== assistantIdx).map(m => {
+            const out: any = { role: m.role, content: m.content };
+            if (m.tool_calls) out.tool_calls = m.tool_calls;
+            if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
+            if (m.name) out.name = m.name;
+            return out;
+          });
+          if (!apiMsgs.some(m => m.role === "system")) {
+            apiMsgs.unshift({ role: "system", content: agentMode === "Plan" ? PLANNER_SYSTEM_PROMPT : AGENT_SYSTEM_PROMPT });
+          }
+          return apiMsgs;
+        })(),
         stream: true,
       };
-      // Only include tools if we are in Build mode or always (we'll include them always for now)
+      // Include tools dynamically based on agentMode
       if (agentMode === "Build") {
         bodyPayload.tools = agentTools;
+      } else if (agentMode === "Plan") {
+        bodyPayload.tools = agentTools.filter(t => ["read_file", "grep_search", "glob_search"].includes(t.function.name));
+        bodyPayload.tools.push({
+          type: "function",
+          function: {
+            name: "save_plan",
+            description: "Save the generated plan and request user approval to switch to Build mode.",
+            parameters: {
+              type: "object",
+              properties: { content: { type: "string", description: "The plan content" } },
+              required: ["content"]
+            }
+          }
+        });
       }
 
       const res = await fetch(gatewayUrl + "/v1/chat/completions", {
@@ -699,7 +725,27 @@ async function sendMessage(text: string) {
             }
           }
 
-          const result = await executeTool(tc.function.name, parsedArgs);
+          let result = "";
+          if (tc.function.name === "save_plan") {
+            const cwd = getCwdInfo().currentCwd;
+            const toolnetDir = path.join(cwd, ".toolnet");
+            if (!fs.existsSync(toolnetDir)) fs.mkdirSync(toolnetDir);
+            fs.writeFileSync(path.join(toolnetDir, "plan.md"), (parsedArgs as any).content || "");
+            
+            const confirmed = await new Promise<boolean>((resolve) => {
+              pendingConfirmation = { prompt: "Plan generated. Approve and switch to Build mode?", resolve };
+              renderAll();
+            });
+            if (confirmed) {
+              agentMode = "Build";
+              result = JSON.stringify({ stdout: "Plan saved to .toolnet/plan.md. Switched to Build mode.", exitCode: 0 });
+              messages.push({ role: "system", content: "→ Plan approved. Switched to execution mode." });
+            } else {
+              result = JSON.stringify({ error: "User denied the plan." });
+            }
+          } else {
+            result = await executeTool(tc.function.name, parsedArgs);
+          }
           messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: result });
           saveCurrentSession();
         }

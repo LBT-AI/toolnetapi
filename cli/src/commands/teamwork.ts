@@ -1,7 +1,8 @@
 import type { CommandContext, Command } from "./index";
 import { EventBus } from "../teamwork/eventBus";
 import { DynamicScheduler } from "../teamwork/dynamicScheduler";
-import { generateTaskGraph } from "../teamwork/smartPlanner";
+import { generateTaskGraph, getGraphNodeArray } from "../teamwork/smartPlanner";
+import { setIsDashboardActive, setDashboardNodes, setDashboardState } from "../teamwork/dashboardState";
 
 export const teamworkCommand: Command = {
   name: "teamwork",
@@ -51,6 +52,15 @@ export const teamworkCommand: Command = {
       
       const scheduler = new DynamicScheduler(taskGraph, {
         maxConcurrencyOverride: undefined
+      });
+      
+      setIsDashboardActive(true);
+      setDashboardNodes(getGraphNodeArray(taskGraph));
+      setDashboardState(scheduler.getState());
+
+      scheduler.onEvent((event) => {
+        setDashboardNodes([...(scheduler as any).nodesList]);
+        setDashboardState(scheduler.getState());
       });
       
       const result = await scheduler.start();

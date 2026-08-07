@@ -1,5 +1,9 @@
 #!/usr/bin/env bun
 
+import { initWorkspace } from "./lib/codingAgent";
+
+initWorkspace();
+
 const args = process.argv.slice(2);
 const SIMPLE = args.includes("--simple") || args.includes("-s");
 

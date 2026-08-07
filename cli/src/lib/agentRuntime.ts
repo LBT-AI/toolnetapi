@@ -1,5 +1,7 @@
 import { detectGatewayUrl } from "./gateway";
-import { agentTools, executeTool } from "./agentTools";
+import { agentTools, getMergedAgentTools, executeTool } from "./agentTools";
+import { workspaceRoot, currentCwd } from "./codingAgent";
+import { loadLocalSkills } from "./skillsLoader";
 
 export interface AgentRuntimeOptions {
   model?: string;
@@ -17,33 +19,46 @@ export interface AgentRuntimeResult {
   error?: string;
 }
 
-const AGENT_SYSTEM_PROMPT = `You are ToolNet Agent, an advanced AI coding assistant.
-Your goal is to solve the user request accurately using available tools.
+export function getAgentSystemPrompt(): string {
+  return `You are ToolNet Agent — a precise, tool-first AI coding assistant running in Toolnet CLI.
 
-Guidelines:
-1. Prefer dedicated tools over bash commands when possible:
-   - Use 'read_file' to view file content.
-   - Use 'edit_file' for precise string replacement in files.
-   - Use 'replace_all' for global string replacements in a file.
-   - Use 'grep_search' for searching code text across files.
-   - Use 'glob_search' for locating files by pattern.
-   - Use 'write_file' for creating new files.
-   - Use 'run_command' for shell execution (run 'pwd'/'ls' if unsure of directories).
-2. COMPLETE THE QA LOOP (Automatic Verification):
-   - Whenever you edit or create code files, you MUST detect the project framework first.
-   - Detect framework by running: 'run_command' with 'ls' + 'cat package.json' (or equivalent config file).
-   - Based on the detected framework, run the appropriate verification commands:
-     * Node.js  (package.json present): check scripts.typecheck/type-check → 'npm run typecheck' or 'bun run typecheck'; tests → 'npm test' / 'bun test'; lint → 'npm run lint'.
-     * Rust     (Cargo.toml present):   verify → 'cargo check'; tests → 'cargo test'; build → 'cargo build'.
-     * Python   (pyproject.toml / setup.py / requirements.txt): verify → 'ruff check .' or 'mypy .'; tests → 'pytest'.
-     * Go       (go.mod present):       verify → 'go vet ./...'; tests → 'go test ./...'; build → 'go build ./...'.
-     * Java     (build.gradle present): verify → './gradlew check'; tests → './gradlew test'. (pom.xml → 'mvn verify -q' / 'mvn test -q').
-     * Makefile (Makefile present):     verify/build → 'make'; tests → 'make test' (if target exists).
-   - If a test or command fails, read the stderr/stdout, identify the root cause, fix the code, and re-verify.
-   - Limit retry attempts to avoid infinite loops. Only report completion when verification passes.
-   - For sandboxed artifact testing, use 'mktemp -d' to create a clean temporary workspace if needed.
-3. Complete tasks efficiently in minimum iterations.
-4. ALWAYS provide a final textual response summarizing your work when tool iterations finish.`;
+Active Workspace Root: ${workspaceRoot}
+Current Working Directory: ${currentCwd}
+Access: Workspace (GRANTED — full read, write, execute permission in workspace and system)
+
+CORE RULES — follow strictly:
+1. ALWAYS execute tools first. Never answer from memory about files, projects, paths, or system state.
+2. When asked about a project → call get_cwd, list_dir (workspace root), read_file(package.json), read_file(README.md).
+3. When asked to find a file or directory → call find_path. Do NOT use glob for 'tìm X', 'find X', 'where is X' queries.
+4. When asked about an executable/install location → shell('command -v X'), then shell('readlink -f $(which X)').
+7. After all tools complete → give ONE short, direct final answer.
+8. NEVER say 'tôi không có quyền truy cập' — you have Workspace access and tools available.
+9. NEVER fabricate results. If a tool fails, report the real error message.
+10. Resolve all file paths relative to currentCwd unless an absolute path is given.
+
+FIND PATTERN:
+- 'tìm thư mục X', 'find dir X', 'where is X', 'locate X' → find_path(X, root, 6, 'dir')
+- 'tìm file X', 'find file X' → find_path(X, root, 6, 'file')
+- executable location → shell('command -v X && readlink -f $(which X)')
+
+FINAL ANSWER:
+- Short and direct. State found paths explicitly.
+- Provide copyable commands if relevant.
+- Do NOT repeat raw tool output verbatim.
+- Do NOT say 'hy vọng giúp bạn' or similar filler.
+- If not found: state exactly where you searched.
+
+<skills>
+You can use specialized 'skills' to help you with complex tasks. Each skill has a name and a description.
+When a skill is relevant to the user's request, you must read and follow its instructions carefully.
+Available skills:
+${
+  loadLocalSkills()
+    .map((s) => `- ${s.name} (${s.description}):\n${s.instructions}\n`)
+    .join("\n")
+}
+</skills>`;
+}
 
 
 export class AgentRuntime {
@@ -72,8 +87,35 @@ export class AgentRuntime {
 
     // Ensure system prompt is present
     if (!messages.some((m) => m.role === "system")) {
-      messages.unshift({ role: "system", content: AGENT_SYSTEM_PROMPT });
+      messages.unshift({ role: "system", content: getAgentSystemPrompt() });
     }
+
+    // Command Router: Check last user message intent
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
+    const lowerMsg = lastUserMsg.toLowerCase();
+
+    // Check Web Crawl / Audit Intent
+    const isWebIntent = lowerMsg.includes("http://") || lowerMsg.includes("https://") || lowerMsg.includes("crawl") || lowerMsg.includes("audit web");
+    if (isWebIntent) {
+      const urlMatch = lastUserMsg.match(/https?:\/\/[^\s]+/i);
+      if (!urlMatch && (lowerMsg.includes("crawl") || lowerMsg.includes("audit web"))) {
+        return {
+          success: false,
+          output: "Lỗi: Không tìm thấy URL hợp lệ để crawl/audit web. Vui lòng cung cấp URL dạng http:// hoặc https://. Toolnet CLI không hỗ trợ crawl tự do khi không có URL.",
+          toolCallsCount: 0,
+          turnsUsed: 1,
+          error: "Missing URL for web capability",
+        };
+      }
+    }
+
+    // Check Workspace / File / Audit Intent
+    const workspaceKeywords = [
+      "xem project", "project hiện tại", "project nay", "project này",
+      "audit code", "audit project", "kiểm tra source", "đọc file",
+      "xem thư mục", "kiểm tra thư mục", "audit"
+    ];
+    const isWorkspaceIntent = workspaceKeywords.some((kw) => lowerMsg.includes(kw));
 
     let turnCount = 0;
     let toolCallsCount = 0;
@@ -108,6 +150,16 @@ export class AgentRuntime {
         apiMessages = [sys, ...rest];
       }
 
+      // If workspace intent on turn 1, instruct model to call tools if it hasn't yet
+      if (isWorkspaceIntent && turnCount === 1) {
+        if (!apiMessages.some((m) => m.role === "system" && m.content.includes("MANDATORY TOOL EXECUTION"))) {
+          apiMessages.push({
+            role: "system",
+            content: `MANDATORY TOOL EXECUTION: User requested project view / code audit. You MUST call tools (e.g. get_cwd, list_dir, read_file, shell) first.`
+          });
+        }
+      }
+
       let response: Response;
       try {
         response = await fetch(`${this.gatewayUrl}/v1/chat/completions`, {
@@ -116,8 +168,8 @@ export class AgentRuntime {
           body: JSON.stringify({
             model,
             messages: apiMessages,
-            tools: agentTools,
-            tool_choice: "auto",
+            tools: getMergedAgentTools(),
+            tool_choice: isWorkspaceIntent && turnCount === 1 ? "required" : "auto",
             temperature: 0.1,
           }),
           signal: AbortSignal.timeout(this.timeoutMs),
@@ -161,6 +213,15 @@ export class AgentRuntime {
 
       const toolCalls = assistantMsg.tool_calls;
       if (!toolCalls || toolCalls.length === 0) {
+        // If workspace intent and turn 1 produced plain text claiming no access, enforce retry
+        if (isWorkspaceIntent && turnCount === 1 && assistantMsg.content?.includes("không có quyền")) {
+          messages.push({
+            role: "user",
+            content: "Lỗi: Bạn có toàn quyền Access: Workspace trong Toolnet CLI. Hãy thực thi get_cwd, list_dir, read_file hoặc shell ngay bây giờ.",
+          });
+          continue;
+        }
+
         // Loop finished, final textual answer obtained
         return {
           success: true,
@@ -205,7 +266,7 @@ export class AgentRuntime {
 
         const resultJson = await executeTool(toolName, toolArgs);
 
-        if (onEvent) onEvent("TOOL_END", { toolName, result: resultJson, id: call.id });
+        if (onEvent) onEvent("TOOL_END", { toolName, toolArgs, result: resultJson, id: call.id });
 
         messages.push({
           role: "tool",
@@ -221,7 +282,7 @@ export class AgentRuntime {
       output: "",
       toolCallsCount,
       turnsUsed: maxTurns,
-      error: `Agent reached maximum iteration limit (${maxTurns} turns)`,
+      error: `Exceeded maximum turn count (${maxTurns})`,
     };
   }
 }

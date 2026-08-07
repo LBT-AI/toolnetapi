@@ -1,10 +1,10 @@
 import type { Command, CommandContext } from "./index";
-import { setCwd, currentCwd } from "../lib/codingAgent";
+import { setWorkspaceRoot, getCwdInfo } from "../lib/codingAgent";
 
 export const cdCommand: Command = {
   name: "cd",
   aliases: [],
-  description: "Change current working directory",
+  description: "Change workspace root directory",
   usage: "/cd <path>",
   async handler(args: string[], ctx: CommandContext) {
     if (args.length === 0) {
@@ -12,11 +12,12 @@ export const cdCommand: Command = {
       return;
     }
     const newPath = args[0];
-    const success = setCwd(newPath);
+    const success = setWorkspaceRoot(newPath);
     if (success) {
-      ctx.addMessage("assistant", `Changed directory to: ${currentCwd}`);
+      const { workspaceRoot } = getCwdInfo();
+      ctx.addMessage("assistant", `Workspace root changed to: ${workspaceRoot}`);
     } else {
-      ctx.addMessage("assistant", `Failed to change directory to: ${newPath}`);
+      ctx.addMessage("assistant", `Failed to change workspace root to: ${newPath}`);
     }
   },
 };

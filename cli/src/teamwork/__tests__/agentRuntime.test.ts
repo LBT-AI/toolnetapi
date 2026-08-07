@@ -4,7 +4,7 @@ import { agentTools, executeTool } from "../../lib/agentTools";
 import { AgentRuntime } from "../../lib/agentRuntime";
 
 describe("Step 2 - P0-A Agent Execution Foundation", () => {
-  test("agentTools registry exposes all 7 tools with schemas", () => {
+  test("agentTools registry exposes all mandatory tools with schemas", () => {
     const toolNames = agentTools.map((t) => t.function.name);
     expect(toolNames).toContain("run_command");
     expect(toolNames).toContain("read_file");
@@ -13,7 +13,14 @@ describe("Step 2 - P0-A Agent Execution Foundation", () => {
     expect(toolNames).toContain("replace_all");
     expect(toolNames).toContain("grep_search");
     expect(toolNames).toContain("glob_search");
-    expect(toolNames.length).toBe(7);
+    expect(toolNames).toContain("get_cwd");
+    expect(toolNames).toContain("list_dir");
+    expect(toolNames).toContain("file_exists");
+    expect(toolNames).toContain("glob");
+    expect(toolNames).toContain("grep");
+    expect(toolNames).toContain("shell");
+    expect(toolNames).toContain("web_fetch");
+    expect(toolNames.length).toBeGreaterThanOrEqual(14);
 
     // Verify read_file has offset and limit parameters
     const readFileTool = agentTools.find((t) => t.function.name === "read_file");
@@ -22,7 +29,7 @@ describe("Step 2 - P0-A Agent Execution Foundation", () => {
   });
 
   test("executeTool handles tool execution and returns standardized JSON", async () => {
-    const pkgPath = path.resolve(process.cwd(), "package.json");
+    const pkgPath = path.resolve(__dirname, "../../../package.json");
     const res = await executeTool("read_file", { path: pkgPath, limit: 5 });
     const parsed = JSON.parse(res);
     expect(parsed).toHaveProperty("stdout");

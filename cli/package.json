@@ -13,11 +13,13 @@
     "dev": "bun src/index.tsx",
     "build": "bun build src/index.tsx --target=bun --outdir=dist",
     "start": "bun dist/index.js",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "pack:cli": "bun run build && npm pack --pack-destination ..",
     "publish:cli": "bun run build && npm publish"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@opentui/core": "0.4.5",
     "@opentui/keymap": "0.4.5",
     "@opentui/solid": "0.4.5",

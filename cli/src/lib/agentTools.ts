@@ -1,16 +1,56 @@
-import { toolBash, toolRead, toolWrite, toolEdit, toolReplaceAll, toolGrep, toolGlob } from "./codingAgent";
+import {
+  toolBash,
+  toolRead,
+  toolWrite,
+  toolEdit,
+  toolReplaceAll,
+  toolGrep,
+  toolGlob,
+  toolGetCwd,
+  toolListDir,
+  toolTree,
+  toolFileExists,
+  toolWebFetch,
+  toolAuditUrl,
+  toolFindPath,
+} from "./codingAgent";
 import { resolve } from "node:path";
+import { getMcpAgentTools as getMcpRunnerAgentTools, executeMcpTool } from "./mcpRunner";
 
 export const agentTools = [
+  // ── Workspace ──────────────────────────────────────────────────────────────
   {
     type: "function",
     function: {
-      name: "run_command",
-      description: "Run a bash shell command on the user's local machine. Use absolute paths or check CWD with pwd first.",
+      name: "get_cwd",
+      description: "Get active workspace root path and current working directory.",
+      parameters: { type: "object", properties: {}, required: [] }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_dir",
+      description: "List files and subdirectories in a directory.",
       parameters: {
         type: "object",
-        properties: { command: { type: "string", description: "The bash command to run" } },
-        required: ["command"]
+        properties: {
+          path: { type: "string", description: "Directory path to list (default: workspace root)" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "tree",
+      description: "Show directory structure as a tree. Excellent for understanding project layout.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Directory to view (default: workspace root)" },
+          depth: { type: "number", description: "Max depth (default 3)" }
+        }
       }
     }
   },
@@ -18,13 +58,13 @@ export const agentTools = [
     type: "function",
     function: {
       name: "read_file",
-      description: "Read a file from the user's filesystem with optional line offset and limit.",
+      description: "Read content of a file. Use offset/limit to paginate large files.",
       parameters: {
         type: "object",
         properties: {
           path: { type: "string", description: "File path to read" },
-          offset: { type: "number", description: "Line offset to start reading from (0-indexed)" },
-          limit: { type: "number", description: "Maximum number of lines to read" }
+          offset: { type: "number", description: "Line offset to start from (0-indexed)" },
+          limit: { type: "number", description: "Max lines to read (default 500)" }
         },
         required: ["path"]
       }
@@ -34,12 +74,12 @@ export const agentTools = [
     type: "function",
     function: {
       name: "write_file",
-      description: "Write content to a file on the user's filesystem.",
+      description: "Write or overwrite content to a file.",
       parameters: {
         type: "object",
         properties: {
-          path: { type: "string", description: "File path to write to" },
-          content: { type: "string", description: "File content to write" }
+          path: { type: "string", description: "File path to write" },
+          content: { type: "string", description: "Full file content to write" }
         },
         required: ["path", "content"]
       }
@@ -49,13 +89,13 @@ export const agentTools = [
     type: "function",
     function: {
       name: "edit_file",
-      description: "Replace exact string target in a file with new replacement string.",
+      description: "Replace an exact string in a file with a new string (first occurrence).",
       parameters: {
         type: "object",
         properties: {
           path: { type: "string", description: "File path to edit" },
-          old_string: { type: "string", description: "Exact target string to find and replace" },
-          new_string: { type: "string", description: "New replacement string" }
+          old_string: { type: "string", description: "Exact string to find and replace" },
+          new_string: { type: "string", description: "Replacement string" }
         },
         required: ["path", "old_string", "new_string"]
       }
@@ -65,7 +105,7 @@ export const agentTools = [
     type: "function",
     function: {
       name: "replace_all",
-      description: "Replace all occurrences of a string in a file with a new string.",
+      description: "Replace ALL occurrences of a string in a file.",
       parameters: {
         type: "object",
         properties: {
@@ -80,14 +120,46 @@ export const agentTools = [
   {
     type: "function",
     function: {
-      name: "grep_search",
-      description: "Search for text matching regex or substring pattern recursively in files.",
+      name: "file_exists",
+      description: "Check if a file or directory exists and get its type.",
       parameters: {
         type: "object",
         properties: {
-          pattern: { type: "string", description: "Regex or substring to search for" },
-          path: { type: "string", description: "Directory or file path to search in (default '.')" },
-          include: { type: "string", description: "File pattern filter e.g. '*.ts'" }
+          path: { type: "string", description: "Path to check" }
+        },
+        required: ["path"]
+      }
+    }
+  },
+  // ── Search ─────────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "find_path",
+      description: "Find files or directories by name using shell find. PREFERRED for: 'tìm thư mục X', 'tìm file X', 'find X', 'where is X', 'locate X'. More reliable than glob for directory searches.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Name to search for (partial match, case-insensitive)" },
+          root: { type: "string", description: "Root directory to search from (default: workspace root, use '/' for system-wide)" },
+          maxDepth: { type: "number", description: "Max depth (default: 6)" },
+          type: { type: "string", description: "'file', 'dir', or omit for any" }
+        },
+        required: ["query"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "grep",
+      description: "Search for text/regex pattern recursively across files.",
+      parameters: {
+        type: "object",
+        properties: {
+          pattern: { type: "string", description: "Regex or text to search for" },
+          path: { type: "string", description: "Directory or file to search in (default: workspace root)" },
+          include: { type: "string", description: "File filter e.g. '*.ts'" }
         },
         required: ["pattern"]
       }
@@ -96,29 +168,101 @@ export const agentTools = [
   {
     type: "function",
     function: {
-      name: "glob_search",
-      description: "Find files matching pattern recursively.",
+      name: "glob",
+      description: "Find files by glob pattern (e.g. '*.ts', 'src/**/*.js'). Use find_path for finding directories by name.",
       parameters: {
         type: "object",
         properties: {
-          pattern: { type: "string", description: "File glob pattern e.g. '*.ts'" },
-          path: { type: "string", description: "Directory to search from (default '.')" }
+          pattern: { type: "string", description: "Glob pattern" },
+          path: { type: "string", description: "Directory to search from (default: workspace root)" }
         },
         required: ["pattern"]
       }
     }
-  }
+  },
+  // ── Shell ──────────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "shell",
+      description: "Run a bash shell command. Use for: npm/bun commands, git, system info, installing packages, running tests, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          command: { type: "string", description: "Bash command to run" }
+        },
+        required: ["command"]
+      }
+    }
+  },
+  // ── Web ────────────────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "web_fetch",
+      description: "Fetch a URL and return readable text content: title, HTTP status, response time, and page text (first 3000 chars).",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Absolute URL (http:// or https://)" }
+        },
+        required: ["url"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "audit_url",
+      description: "Audit a URL for SEO/health: HTTP status, HTTPS, title, meta description, canonical, h1/h2 count, images, OpenGraph, Twitter Card, response time.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Absolute URL to audit" }
+        },
+        required: ["url"]
+      }
+    }
+  },
 ];
 
+export function getMcpAgentTools(): Array<any> {
+  return getMcpRunnerAgentTools();
+}
+
+export function getMergedAgentTools(): Array<any> {
+  return [...agentTools, ...getMcpAgentTools()];
+}
+
 export function isDangerousCommand(name: string, args: any, cwd: string): boolean {
-  if (name === "run_command") {
-    const cmd = args.command || "";
-    if (cmd.includes("rm -rf") || cmd.includes("mkfs") || cmd.includes("sudo")) return true;
+  if (name === "run_command" || name === "shell") {
+    const cmd: string = args.command || args.cmd || "";
+    const dangerous = [
+      "rm -rf /",
+      "rm -rf ~",
+      "mkfs",
+      "dd if=",
+      ":(){ :|:& };:",  // fork bomb
+      "chmod -R 777 /",
+      "chown -R root /",
+      "shutdown",
+      "reboot",
+      "curl | sh",
+      "curl | bash",
+      "wget | sh",
+      "wget | bash",
+      "| bash",
+      "| sh",
+    ];
+    if (dangerous.some((pattern) => cmd.includes(pattern))) return true;
+    // sudo with dangerous ops
+    if (/sudo\s+(rm|mkfs|dd|chmod|chown|shutdown|reboot)/.test(cmd)) return true;
     return false;
   }
   if (name === "write_file" || name === "edit_file" || name === "replace_all") {
     const targetPath = args.path || "";
     try {
+      const { resolve } = require("node:path");
       const resolved = resolve(cwd, targetPath);
       const cwdResolved = resolve(cwd);
       if (!resolved.startsWith(cwdResolved)) {
@@ -131,14 +275,53 @@ export function isDangerousCommand(name: string, args: any, cwd: string): boolea
   return false;
 }
 
+
 export async function executeTool(name: string, args: any): Promise<string> {
   try {
-    if (name === "run_command") {
-      const res = await toolBash(args.command, 30000);
+    if (name === "get_cwd") {
+      const res = toolGetCwd();
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
+    } else if (name === "list_dir") {
+      const dirPath = args.path || ".";
+      const res = toolListDir(dirPath);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
+    } else if (name === "file_exists") {
+      const filePath = args.path || ".";
+      const res = toolFileExists(filePath);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
+    } else if (name === "find_path") {
+      const res = toolFindPath(args.query, args.root, args.maxDepth, args.type);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
+    } else if (name === "run_command" || name === "shell") {
+      const cmd = args.command || args.cmd || "";
+      const res = await toolBash(cmd, 30000);
       return JSON.stringify({
         stdout: res.stdout || "",
         stderr: res.stderr || "",
         exitCode: res.exitCode
+      });
+    } else if (name === "tree") {
+      const res = toolTree(args.path, args.depth);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
       });
     } else if (name === "read_file") {
       const res = toolRead(args.path, args.offset || 0, args.limit || 500);
@@ -172,7 +355,7 @@ export async function executeTool(name: string, args: any): Promise<string> {
         stderr: res.error || "",
         exitCode: res.success ? 0 : 1
       });
-    } else if (name === "grep_search") {
+    } else if (name === "grep" || name === "grep_search") {
       const searchPath = args.path || ".";
       const res = toolGrep(args.pattern, searchPath, args.include);
       return JSON.stringify({
@@ -180,7 +363,7 @@ export async function executeTool(name: string, args: any): Promise<string> {
         stderr: res.error || "",
         exitCode: res.success ? 0 : 1
       });
-    } else if (name === "glob_search") {
+    } else if (name === "glob" || name === "glob_search") {
       const searchPath = args.path || ".";
       const res = toolGlob(args.pattern, searchPath);
       return JSON.stringify({
@@ -188,7 +371,27 @@ export async function executeTool(name: string, args: any): Promise<string> {
         stderr: res.error || "",
         exitCode: res.success ? 0 : 1
       });
+    } else if (name === "web_fetch" || name === "web_crawl" || name === "fetch") {
+      const url = args.url || args.link || "";
+      const res = await toolWebFetch(url);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
+    } else if (name === "audit_url" || name === "audit") {
+      const url = args.url || args.link || "";
+      const res = await toolAuditUrl(url);
+      return JSON.stringify({
+        stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
     } else {
+      const mcpResult = await executeMcpTool(name, args);
+      if (mcpResult !== null) {
+        return mcpResult;
+      }
       return JSON.stringify({ stdout: "", stderr: `Unknown tool: ${name}`, exitCode: 1 });
     }
   } catch (e: any) {

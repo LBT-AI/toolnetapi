@@ -1,4 +1,5 @@
 import { exec, ChildProcess } from "child_process";
+import { workspaceRoot } from "./codingAgent";
 
 export interface BackgroundTask {
   id: string;
@@ -32,7 +33,8 @@ export class BackgroundTaskScheduler {
     this.tasks.set(id, task);
     this.notifyUpdate();
 
-    const proc = exec(command, { cwd }, (error, stdout, stderr) => {
+    const effectiveCwd = cwd || workspaceRoot;
+    const proc = exec(command, { cwd: effectiveCwd }, (error, stdout, stderr) => {
       task.status = error ? "failed" : "completed";
       task.output = stdout + "\n" + stderr;
       this.notifyUpdate();

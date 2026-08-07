@@ -22,6 +22,13 @@ import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
+import {
+  isAlibabaProvider,
+  markModelError,
+  markModelSuccess,
+  selectModelFromPoolWithQuota,
+  getConnectionModelPools,
+} from "@/lib/alibaba/modelPool.js";
 
 /**
  * Handle chat completion request
@@ -185,6 +192,16 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
   const { provider, model } = modelInfo;
 
+  // ── Alibaba Model Pool ─────────────────────────────────────────────────────
+  // If provider is alims-intl and model matches a pool group name, use pool rotation.
+  // This is checked BEFORE account selection to find the right (connection, model) pair.
+  // We try accounts in standard order, and for each account we try pool models in
+  // round-robin order, rotating on quota/rate-limit/unavailable errors.
+  if (isAlibabaProvider(provider)) {
+    return handleAlibabaPoolChat(body, provider, model, clientRawRequest, request, apiKey);
+  }
+  // ── End Alibaba Model Pool ─────────────────────────────────────────────────
+
   // Routing shown in the unified "▶" line (client model → provider/model)
 
   // Extract userAgent from request
@@ -279,6 +296,255 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
 
     if (shouldFallback) {
       log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} UNAVAILABLE (${result.status}) → NEXT ACCOUNT`);
+      excludeConnectionIds.add(credentials.connectionId);
+      lastError = result.error;
+      lastStatus = result.status;
+      continue;
+    }
+
+    return result.response;
+  }
+}
+
+/**
+ * Alibaba-specific chat handler with model pool rotation.
+ *
+ * If `model` matches a pool group name (light/code/reasoning/vision/fallback),
+ * rotates through available models in that pool across accounts.
+ * Falls back to standard single-model flow if no pool is configured.
+ */
+async function handleAlibabaPoolChat(body, provider, model, clientRawRequest, request, apiKey) {
+  const ALIBABA_GROUP_NAMES_SET = new Set(["light", "code", "reasoning", "vision", "fallback"]);
+  const isPoolGroup = ALIBABA_GROUP_NAMES_SET.has(model);
+
+  // Not a pool group → standard single-model flow
+  if (!isPoolGroup) {
+    return handleAlibabaStandardChat(body, provider, model, clientRawRequest, request, apiKey);
+  }
+
+  const groupName = model;
+  log.info("ALIBABA_POOL", `Pool request: group="${groupName}"`);
+
+  const excludeConnectionIds = new Set();
+  let lastError = null;
+  let lastStatus = null;
+  const exhaustedModelsByConn = new Map(); // connectionId → Set of exhausted modelIds
+
+  // Outer loop: try different connections
+  while (true) {
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, null);
+
+    if (!credentials || credentials.allRateLimited) {
+      if (credentials?.allRateLimited) {
+        const errorMsg = lastError || credentials.lastError || "Unavailable";
+        const status = lastStatus || Number(credentials.lastErrorCode) || HTTP_STATUS.SERVICE_UNAVAILABLE;
+        log.warn("ALIBABA_POOL", `All accounts rate-limited: ${errorMsg}`);
+        return unavailableResponse(status, `[${provider}/${groupName}] ${errorMsg}`, credentials.retryAfter, credentials.retryAfterHuman);
+      }
+      if (excludeConnectionIds.size === 0) {
+        log.warn("ALIBABA_POOL", `No active credentials for ${provider}`);
+        return errorResponse(HTTP_STATUS.NOT_FOUND, `No active credentials for provider: ${provider}`);
+      }
+      log.warn("ALIBABA_POOL", "No more accounts available");
+      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts and models exhausted");
+    }
+
+    const connectionId = credentials.connectionId;
+
+    // Load pool for this connection + group
+    const pools = await getConnectionModelPools(connectionId, groupName);
+    if (!pools || pools.length === 0) {
+      // No pool configured for this connection - skip and try next
+      log.debug("ALIBABA_POOL", `No pool for conn=${connectionId.slice(0, 8)}, group=${groupName} -> skip`);
+      excludeConnectionIds.add(connectionId);
+      continue;
+    }
+
+    const poolModels = pools[0].models;
+    const quotaLimit = pools[0].quotaLimit;
+    const quotaPeriodDays = pools[0].quotaPeriodDays;
+    if (poolModels.length === 0) {
+      excludeConnectionIds.add(connectionId);
+      continue;
+    }
+
+    // Track exhausted models per connection for this request
+    if (!exhaustedModelsByConn.has(connectionId)) {
+      exhaustedModelsByConn.set(connectionId, new Set());
+    }
+    const exhaustedModels = exhaustedModelsByConn.get(connectionId);
+
+    // Inner loop: try different models within this connection's pool
+    let brokeToOuter = false;
+    while (true) {
+      // Get available models (exclude exhausted for this request)
+      const available = poolModels.filter(m => !exhaustedModels.has(m));
+      if (available.length === 0) {
+        log.warn("ALIBABA_POOL", `All pool models exhausted for conn=${connectionId.slice(0, 8)}, group=${groupName} -> try next account`);
+        excludeConnectionIds.add(connectionId);
+        lastError = lastError || "All models exhausted";
+        lastStatus = lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE;
+        brokeToOuter = true;
+        break;
+      }
+
+      const modelSelected = await selectModelFromPoolWithQuota({
+        provider,
+        models: available,
+        connectionId,
+        groupName,
+        quotaLimit,
+        quotaPeriodDays,
+      });
+      if (!modelSelected) {
+        log.warn("ALIBABA_POOL", `No model available (quota/cooldown/exhausted) for conn=${connectionId.slice(0, 8)}, group=${groupName} -> try next account`);
+        excludeConnectionIds.add(connectionId);
+        brokeToOuter = true;
+        break;
+      }
+
+      log.info("ALIBABA_POOL", `Selected model="${modelSelected}" from group="${groupName}" (conn=${connectionId.slice(0, 8)})`);
+
+      const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+      const chatSettings = await getSettings();
+      const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
+      const userAgent = request?.headers?.get("user-agent") || "";
+
+      const result = await handleChatCore({
+        body: { ...body, model: `${provider}/${modelSelected}` },
+        modelInfo: { provider, model: modelSelected },
+        credentials: refreshedCredentials,
+        log,
+        clientRawRequest,
+        connectionId,
+        userAgent,
+        apiKey,
+        ccFilterNaming: !!chatSettings.ccFilterNaming,
+        rtkEnabled: !!chatSettings.rtkEnabled,
+        headroomEnabled: !!chatSettings.headroomEnabled,
+        headroomUrl: chatSettings.headroomUrl || DEFAULT_HEADROOM_URL,
+        headroomCompressUserMessages: !!chatSettings.headroomCompressUserMessages,
+        cavemanEnabled: !!chatSettings.cavemanEnabled,
+        cavemanLevel: chatSettings.cavemanLevel || "full",
+        ponytailEnabled: !!chatSettings.ponytailEnabled,
+        ponytailLevel: chatSettings.ponytailLevel || "full",
+        jailbreakEnabled: !!chatSettings.jailbreakEnabled,
+        jailbreakLevel: chatSettings.jailbreakLevel || "full",
+        jailbreakCustomPrompt: chatSettings.jailbreakCustomPrompt,
+        pxpipeEnabled: !!chatSettings.pxpipeEnabled,
+        pxpipeMinChars: chatSettings.pxpipeMinChars,
+        pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,
+        pxpipeTransform: chatSettings.pxpipeEnabled ? await getPxpipeTransform() : null,
+        onPxpipeEvent: appendPxpipeEvent,
+        providerThinking,
+        sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
+        onCredentialsRefreshed: async (newCreds) => {
+          await updateProviderCredentials(credentials.connectionId, {
+            ...newCreds,
+            existingProviderSpecificData: credentials.providerSpecificData,
+            testStatus: "active"
+          });
+        },
+        onRequestSuccess: async () => {
+          markModelSuccess(connectionId, groupName, modelSelected);
+          await clearAccountError(credentials.connectionId, credentials, modelSelected);
+        }
+      });
+
+      if (result.success) return result.response;
+
+      // Handle model-level failure
+      const errorText = result.error || "";
+      const { shouldRotate } = markModelError(connectionId, groupName, modelSelected, result.status, errorText);
+
+      if (shouldRotate) {
+        exhaustedModels.add(modelSelected);
+        log.warn("ALIBABA_POOL", `Rotate MODEL:${modelSelected} FAILED (${result.status}) -> NEXT MODEL`);
+        lastError = result.error;
+        lastStatus = result.status;
+        continue; // try next model in inner loop
+      }
+
+      // Non-rotatable error (auth, bad request) -> propagate immediately
+      return result.response;
+    }
+    if (brokeToOuter) continue; // continue outer loop for next account
+  }
+}
+
+/**
+ * Standard Alibaba flow when no pool group is requested (direct model name).
+ * Identical to generic handleSingleModelChat but only for alims-intl.
+ */
+async function handleAlibabaStandardChat(body, provider, model, clientRawRequest, request, apiKey) {
+  const userAgent = request?.headers?.get("user-agent") || "";
+  const excludeConnectionIds = new Set();
+  let lastError = null;
+  let lastStatus = null;
+
+  while (true) {
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+
+    if (!credentials || credentials.allRateLimited) {
+      if (credentials?.allRateLimited) {
+        const errorMsg = lastError || credentials.lastError || "Unavailable";
+        const status = lastStatus || Number(credentials.lastErrorCode) || HTTP_STATUS.SERVICE_UNAVAILABLE;
+        return unavailableResponse(status, `[${provider}/${model}] ${errorMsg}`, credentials.retryAfter, credentials.retryAfterHuman);
+      }
+      if (excludeConnectionIds.size === 0) {
+        return errorResponse(HTTP_STATUS.NOT_FOUND, `No active credentials for provider: ${provider}`);
+      }
+      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable");
+    }
+
+    const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+    const chatSettings = await getSettings();
+    const providerThinking = (chatSettings.providerThinking || {})[provider] || null;
+
+    const result = await handleChatCore({
+      body: { ...body, model: `${provider}/${model}` },
+      modelInfo: { provider, model },
+      credentials: refreshedCredentials,
+      log,
+      clientRawRequest,
+      connectionId: credentials.connectionId,
+      userAgent,
+      apiKey,
+      ccFilterNaming: !!chatSettings.ccFilterNaming,
+      rtkEnabled: !!chatSettings.rtkEnabled,
+      headroomEnabled: !!chatSettings.headroomEnabled,
+      headroomUrl: chatSettings.headroomUrl || DEFAULT_HEADROOM_URL,
+      headroomCompressUserMessages: !!chatSettings.headroomCompressUserMessages,
+      cavemanEnabled: !!chatSettings.cavemanEnabled,
+      cavemanLevel: chatSettings.cavemanLevel || "full",
+      ponytailEnabled: !!chatSettings.ponytailEnabled,
+      ponytailLevel: chatSettings.ponytailLevel || "full",
+      jailbreakEnabled: !!chatSettings.jailbreakEnabled,
+      jailbreakLevel: chatSettings.jailbreakLevel || "full",
+      jailbreakCustomPrompt: chatSettings.jailbreakCustomPrompt,
+      pxpipeEnabled: !!chatSettings.pxpipeEnabled,
+      pxpipeMinChars: chatSettings.pxpipeMinChars,
+      pxpipeTimeoutMs: chatSettings.pxpipeTimeoutMs,
+      pxpipeTransform: chatSettings.pxpipeEnabled ? await getPxpipeTransform() : null,
+      onPxpipeEvent: appendPxpipeEvent,
+      providerThinking,
+      sourceFormatOverride: request?.url ? detectFormatByEndpoint(new URL(request.url).pathname, body) : null,
+      onCredentialsRefreshed: async (newCreds) => {
+        await updateProviderCredentials(credentials.connectionId, {
+          ...newCreds,
+          existingProviderSpecificData: credentials.providerSpecificData,
+          testStatus: "active"
+        });
+      },
+      onRequestSuccess: async () => {
+        await clearAccountError(credentials.connectionId, credentials, model);
+      }
+    });
+
+    if (result.success) return result.response;
+
+    const { shouldFallback } = await markAccountUnavailable(credentials.connectionId, result.status, result.error, provider, model, result.resetsAtMs);
+    if (shouldFallback) {
       excludeConnectionIds.add(credentials.connectionId);
       lastError = result.error;
       lastStatus = result.status;

@@ -5,10 +5,11 @@ import {
   toolBash,
   toolRead,
   toolWrite,
-  getCwdInfo
+  getCwdInfo,
+  setWorkspaceRoot,
 } from "../../lib/codingAgent";
 
-describe("codingAgent Cross-Workspace Filesystem & CWD Tracking", () => {
+describe("codingAgent Cross-Workspace Filesystem & Workspace Tracking", () => {
   const testRoot = path.resolve(process.cwd(), "test_sandbox");
   const extDir = path.resolve(testRoot, "external_project");
   
@@ -20,32 +21,29 @@ describe("codingAgent Cross-Workspace Filesystem & CWD Tracking", () => {
     fs.mkdirSync(testRoot, { recursive: true });
     fs.mkdirSync(extDir, { recursive: true });
     fs.writeFileSync(path.join(extDir, "hello.txt"), "external hello", "utf8");
+    setWorkspaceRoot(testRoot);
   });
 
-  test("toolBash tracks CWD changes across commands", async () => {
+  test("toolBash tracks shell CWD changes while starting in workspaceRoot", async () => {
     // Navigate to external dir
     const res1 = await toolBash(`cd ${extDir}`);
     expect(res1.success).toBe(true);
     
-    // Check if CWD state is correctly synchronized
-    const { currentCwd: newCwd } = getCwdInfo();
+    // Check if shell CWD state is updated in currentCwd
+    const { currentCwd: newCwd, workspaceRoot } = getCwdInfo();
     expect(newCwd).toBe(extDir);
+    expect(workspaceRoot).toBe(testRoot);
 
-    // Ensure subsequent shell commands use the updated CWD
+    // Shell tool execution starts with cwd = workspaceRoot
     const res2 = await toolBash(`pwd`);
     expect(res2.success).toBe(true);
-    expect(res2.stdout?.trim()).toBe(extDir);
-    
-    // Ensure ls lists the external directory
-    const res3 = await toolBash(`ls hello.txt`);
-    expect(res3.success).toBe(true);
-    expect(res3.stdout?.trim()).toBe("hello.txt");
+    expect(res2.stdout?.trim()).toBe(testRoot);
   });
 
-  test("Filesystem tools resolve absolute paths bypassing default CWD", () => {
+  test("Filesystem tools resolve absolute paths bypassing default workspaceRoot", () => {
     const absPath = path.join(extDir, "hello.txt");
     
-    // toolRead should access absolute path even if CWD is not there
+    // toolRead should access absolute path
     const readRes = toolRead(absPath);
     expect(readRes.success).toBe(true);
     expect(readRes.data).toBe("external hello");
@@ -57,11 +55,10 @@ describe("codingAgent Cross-Workspace Filesystem & CWD Tracking", () => {
     expect(fs.readFileSync(writePath, "utf8")).toBe("new external data");
   });
 
-  test("Filesystem tools resolve relative paths based on dynamic CWD", async () => {
-    // CD into external dir
-    await toolBash(`cd ${extDir}`);
+  test("Filesystem tools resolve relative paths based on workspaceRoot", () => {
+    setWorkspaceRoot(extDir);
     
-    // Read relative path
+    // Read relative path in workspaceRoot
     const readRes = toolRead("hello.txt");
     expect(readRes.success).toBe(true);
     expect(readRes.data).toBe("external hello");

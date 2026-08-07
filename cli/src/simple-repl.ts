@@ -3,6 +3,7 @@
 import { createGateway, GatewayClient } from "./lib/gateway";
 import { dispatchCommand, getAllCommands } from "./commands";
 import { AgentRuntime } from "./lib/agentRuntime";
+import { printToolStart, printToolEnd } from "./lib/tool-format";
 import * as readline from "node:readline";
 import { playSplashAnimation } from "./splash";
 
@@ -485,14 +486,29 @@ export async function main() {
           model: currentModel,
           onEvent: (event, data) => {
             if (event === "TOOL_START") {
-              print(color.yellow + `  ● Executing ${data.toolName}...` + C.reset);
+              if (process.stderr.isTTY) process.stderr.write("\r\x1b[K");
+              const str = printToolStart(data.toolName, data.toolArgs);
+              process.stdout.write("\x1b[2K\r" + str);
             } else if (event === "TOOL_END") {
-              print(color.subtext + `    └ Result received.` + C.reset);
+              let parsedResult = data.result;
+              if (typeof data.result === "string") {
+                try { parsedResult = JSON.parse(data.result); } catch {}
+              }
+              const isError = parsedResult && (parsedResult.error || (parsedResult.exitCode !== undefined && parsedResult.exitCode !== 0));
+              const str = printToolEnd(data.toolName, data.toolArgs, !isError);
+              process.stdout.write("\x1b[2K\r" + str + "\n");
+              
+              const verbose = process.env.TOOLNET_DEBUG === "1" || process.argv.includes("--verbose");
+              if (verbose && parsedResult) {
+                let debugOut = typeof parsedResult === "string" ? parsedResult : JSON.stringify(parsedResult);
+                if (debugOut.length > 200) debugOut = debugOut.substring(0, 200) + "...";
+                print(C.dim + "    " + debugOut + C.reset);
+              }
             }
           }
         });
 
-        const res = await runtime.runLoop(messages, { model: currentModel });
+        const res = await withSpinner("Thinking...", () => runtime.runLoop(messages, { model: currentModel }));
         if (!res.success && res.error) {
           printError("\nError: " + res.error);
         } else {

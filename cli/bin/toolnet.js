@@ -11,7 +11,7 @@ const bunBin = process.execPath;
 
 const child = spawn(bunBin, [srcPath, ...args], {
   stdio: "inherit",
-  cwd: join(__dirname, ".."),
+  cwd: process.cwd(),
   env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` },
 });
 

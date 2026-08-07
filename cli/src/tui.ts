@@ -15,14 +15,16 @@ const ANSI_REGEX = /\x1b\[[^m]*m/g;
 import { providerPicker } from "./components/ProviderPicker";
 import { saveCliKey, getCliKey, loadCliKeys } from "./lib/keys";
 import { agentTools, executeTool, isDangerousCommand } from "./lib/agentTools";
-import { getCwdInfo } from "./lib/codingAgent";
+import { getCwdInfo, initWorkspace } from "./lib/codingAgent";
 import { getAllCommands, dispatchCommand } from "./commands/index";
 import { GatewayClient } from "./lib/gateway";
 import { setupTerminalLifecycle, restoreTerminal, wrapErrorBoundary } from "./lib/terminalLifecycle";
 import { saveSession, loadSession, getLastSessionId, parseSessionArgs } from "./lib/sessionPersistence";
+import { getAgentSystemPrompt } from "./lib/agentRuntime";
 import { BracketedPasteParser, ENABLE_BRACKETED_PASTE } from "./lib/bracketedPaste";
 import { getModelTags } from "./lib/modelTags";
 import { activeSchedulers } from "./teamwork/dynamicScheduler";
+import { printToolStart, printToolEnd } from "./lib/tool-format";
 import { backgroundTasks } from "./lib/backgroundTasks";
 
 import { A, T, write, getSize } from "./term";
@@ -186,6 +188,7 @@ function renderAll() {
       let toolCmd = "";
       let toolName = msg.name || "Tool";
 
+      let argsObj: any = null;
       if (msg.tool_call_id) {
         for (const prev of messages) {
           if (prev.tool_calls) {
@@ -193,34 +196,32 @@ function renderAll() {
             if (tc) {
               toolName = tc.function?.name || toolName;
               try {
-                const args = JSON.parse(tc.function.arguments);
-                toolCmd = args.command || args.cmd || args.script || args.code || args.query || args.path || args.text || "";
-                if (typeof toolCmd !== "string") toolCmd = JSON.stringify(toolCmd);
+                argsObj = JSON.parse(tc.function.arguments);
               } catch {}
             }
           }
         }
       }
 
-      const isSuccess = parsedTool ? (parsedTool.exitCode === 0 || !("exitCode" in parsedTool)) : true;
-      const statusIcon = isSuccess ? A.fgGreen + "✓" : A.fgRed + "✗";
-      toolName = toolName.charAt(0).toUpperCase() + toolName.slice(1);
-      const exitSuffix = (!isSuccess && parsedTool && parsedTool.exitCode !== undefined) ? A.fgRed + "  exit " + parsedTool.exitCode : "";
-      
-      const headerText = `${statusIcon} ${A.fgBlue}${A.bold}${toolName}${A.reset}  ${A.fgSubtext}${truncate(toolCmd.replace(/[\r\n]+/g, " "), 50)}${exitSuffix}${A.reset}`;
+      const isSuccess = parsedTool ? (parsedTool.exitCode === 0 || !("exitCode" in parsedTool) || !parsedTool.error) : true;
+      const headerText = printToolEnd(toolName, argsObj, isSuccess);
       
       chatLines.push(" " + headerText);
       
+      const verbose = process.env.TOOLNET_DEBUG === "1" || process.argv.includes("--verbose");
+      
       let outStr = "";
-      if (parsedTool) {
-        let outText = parsedTool.stdout || parsedTool.output || parsedTool.result || "";
-        let errText = parsedTool.stderr || parsedTool.error || "";
-        if (typeof outText !== "string") outText = JSON.stringify(outText);
-        if (typeof errText !== "string") errText = JSON.stringify(errText);
-        outStr = outText;
-        if (errText) outStr += (outStr ? "\n" : "") + errText;
-      } else if (typeof msg.content === "string") {
-        outStr = msg.content;
+      if (verbose) {
+        if (parsedTool) {
+          let outText = parsedTool.stdout || parsedTool.output || parsedTool.result || "";
+          let errText = parsedTool.stderr || parsedTool.error || "";
+          if (typeof outText !== "string") outText = JSON.stringify(outText);
+          if (typeof errText !== "string") errText = JSON.stringify(errText);
+          outStr = outText;
+          if (errText) outStr += (outStr ? "\n" : "") + errText;
+        } else if (typeof msg.content === "string") {
+          outStr = msg.content;
+        }
       }
 
       if (outStr.trim()) {
@@ -252,9 +253,13 @@ function renderAll() {
 
     if (msg.tool_calls && msg.tool_calls.length > 0) {
       for (const tc of msg.tool_calls) {
-        chatLines.push(" " + A.fgSubtext + A.fgYellow + "● Running " + tc.function.name + "..." + A.reset);
+        let argsObj: any = null;
+        try {
+          argsObj = JSON.parse(tc.function.arguments || "{}");
+        } catch {}
+        chatLines.push(" " + printToolStart(tc.function.name, argsObj));
       }
-      if (!msg.content) { chatLines.push(""); continue; }
+      chatLines.push(""); continue;
     }
 
     const lines = wrapText(msg.content, wrapWidth);
@@ -474,10 +479,10 @@ function renderAll() {
     statusContent = A.fgGreen + A.bold + "● Ready" + A.reset + A.fgSubtext + "  │  Enter:send  Tab:mode  Ctrl+K:model" + A.reset;
   }
   
-  const { currentCwd, bypassPolicy } = getCwdInfo();
+  const { workspaceRoot, bypassPolicy } = getCwdInfo();
   const accessColor = bypassPolicy ? A.fgRed : A.fgCyan;
   const accessStr = bypassPolicy ? "System" : "Workspace";
-  const cwdDisplay = ` [CWD: ${currentCwd} | Access: ${accessColor}${accessStr}${A.fgSubtext}]`;
+  const cwdDisplay = ` [Workspace: ${workspaceRoot} | Access: ${accessColor}${accessStr}${A.fgSubtext}]`;
   
   const statusStripped = statusContent.replace(ANSI_REGEX, "");
   const rightStripped = cwdDisplay.replace(ANSI_REGEX, "");
@@ -577,21 +582,27 @@ async function sendMessage(text: string) {
         headers["Authorization"] = `Bearer ${localKey}`;
       }
 
+      const apiMessages = messages.filter((m, i) => i !== assistantIdx).map(m => {
+        const out: any = { role: m.role, content: m.content };
+        if (m.tool_calls) out.tool_calls = m.tool_calls;
+        if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
+        if (m.name) out.name = m.name;
+        return out;
+      });
+
+      // Inject system prompt at the beginning if not already present
+      if (!apiMessages.some(m => m.role === "system" && !m.content.startsWith("→") && !m.content.startsWith("Unknown"))) {
+        apiMessages.unshift({ role: "system", content: getAgentSystemPrompt() });
+      }
+
       const bodyPayload: any = {
         model: currentModel,
-        messages: messages.filter((m, i) => i !== assistantIdx).map(m => {
-          const out: any = { role: m.role, content: m.content };
-          if (m.tool_calls) out.tool_calls = m.tool_calls;
-          if (m.tool_call_id) out.tool_call_id = m.tool_call_id;
-          if (m.name) out.name = m.name;
-          return out;
-        }),
+        messages: apiMessages,
         stream: true,
       };
-      // Only include tools if we are in Build mode or always (we'll include them always for now)
-      if (agentMode === "Build") {
-        bodyPayload.tools = agentTools;
-      }
+      // Always include tools so agent can use workspace/file tools in all modes
+      bodyPayload.tools = agentTools;
+      bodyPayload.tool_choice = "auto";
 
       const res = await fetch(gatewayUrl + "/v1/chat/completions", {
         method: "POST",
@@ -672,10 +683,11 @@ async function sendMessage(text: string) {
       const toolCallsArr = Object.values(toolCallsMap);
       
       if (toolCallsArr.length > 0) {
-        // AI called a tool! Update assistant message with tool calls
+        // AI called a tool — do NOT render intermediate text content
+        // fullText here is intermediate reasoning, not a final answer
         messages[assistantIdx] = { 
           role: "assistant", 
-          content: fullText || "(running tools...)", 
+          content: "",  // suppress intermediate content
           tool_calls: toolCallsArr 
         };
         renderAll();
@@ -1270,6 +1282,7 @@ function handleResize() {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main() {
+  initWorkspace();
   // Check gateway
   try {
     const res = await fetch(gatewayUrl + "/api/health", { signal: AbortSignal.timeout(3000) });

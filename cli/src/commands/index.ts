@@ -22,6 +22,7 @@ import { cdCommand } from "./cd";
 import { pwdCommand } from "./pwd";
 import { artifactCommand } from "./artifact";
 import { qaCommand } from "./qa";
+import { workspaceCommand } from "./workspace";
 
 export interface CommandContext {
   gateway: GatewayClient;
@@ -65,6 +66,7 @@ const builtinCommands: Command[] = [
   pwdCommand,
   artifactCommand,
   qaCommand,
+  workspaceCommand,
 ];
 
 export function getAllCommands(): Command[] {

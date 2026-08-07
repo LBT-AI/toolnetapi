@@ -38,6 +38,13 @@ export {
   createCombo, updateCombo, deleteCombo,
 } from "./repos/combosRepo.js";
 
+// Alibaba Model Pool
+export {
+  getAlibabaModelPools, getAlibabaModelPoolById, getAlibabaModelPoolByGroup,
+  upsertAlibabaModelPool, deleteAlibabaModelPool, deleteAlibabaModelPoolsByConnection,
+  ALIBABA_GROUP_NAMES, DEFAULT_QUOTA_LIMIT, DEFAULT_QUOTA_PERIOD_DAYS,
+} from "./repos/alibabaModelPoolRepo.js";
+
 // Aliases (model + custom + mitm)
 export {
   getModelAliases, setModelAlias, deleteModelAlias,

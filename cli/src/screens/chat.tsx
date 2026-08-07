@@ -768,9 +768,7 @@ export function ChatScreen() {
           {/* Messages area */}
           <Show when={isFirstLaunch()} fallback={
             <box flexDirection="column" flexGrow={1}>
-              <Show when={isTeamworkActive()}>
-                <TeamworkDashboard />
-              </Show>
+              <TeamworkDashboard />
               <scrollbox flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1} paddingTop={1} stickyScroll={true} stickyStart="bottom">
                 <For each={parseMsgSegments()}>
                 {(entry) => (

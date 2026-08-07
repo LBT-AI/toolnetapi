@@ -207,6 +207,9 @@ export const agentTools = [
           url: { type: "string", description: "Absolute URL (http:// or https://)" }
         },
         required: ["url"]
+      }
+    }
+  },
   {
     type: "function",
     function: {
@@ -236,6 +239,9 @@ export const agentTools = [
       }
     }
   },
+  {
+    type: "function",
+    function: {
       name: "update_artifact",
       description: "Update an existing artifact in the .artifacts directory.",
       parameters: {
@@ -408,6 +414,9 @@ export async function executeTool(name: string, args: any): Promise<string> {
       const res = await toolAuditUrl(url);
       return JSON.stringify({
         stdout: res.data || "",
+        stderr: res.error || "",
+        exitCode: res.success ? 0 : 1
+      });
     } else if (name === "create_artifact" || name === "update_artifact") {
       const artifactName = args.name || "";
       const content = args.content || "";

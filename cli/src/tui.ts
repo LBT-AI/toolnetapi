@@ -6,6 +6,12 @@
  */
 
 import { createInterface } from "node:readline";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { AGENT_SYSTEM_PROMPT } from "./lib/agentRuntime";
+
+const PLANNER_SYSTEM_PROMPT = `You are ToolNet Planner. Your goal is to analyze the user request, explore the codebase using read-only tools, and create a step-by-step plan. Do not execute the plan yourself. Use the save_plan tool to save the plan.`;
+
 
 // ─── ANSI Helpers ───────────────────────────────────────────────────────────
 const ESC = "\x1b";
@@ -592,7 +598,7 @@ async function sendMessage(text: string) {
 
       // Inject system prompt at the beginning if not already present
       if (!apiMessages.some(m => m.role === "system" && !m.content.startsWith("→") && !m.content.startsWith("Unknown"))) {
-        apiMessages.unshift({ role: "system", content: getAgentSystemPrompt() });
+        apiMessages.unshift({ role: "system", content: agentMode === "Plan" ? PLANNER_SYSTEM_PROMPT : getAgentSystemPrompt() });
       }
 
       const bodyPayload: any = {
@@ -600,9 +606,26 @@ async function sendMessage(text: string) {
         messages: apiMessages,
         stream: true,
       };
-      // Always include tools so agent can use workspace/file tools in all modes
-      bodyPayload.tools = agentTools;
-      bodyPayload.tool_choice = "auto";
+
+      // Include tools dynamically based on agentMode
+      if (agentMode === "Build") {
+        bodyPayload.tools = getMergedAgentTools();
+        bodyPayload.tool_choice = "auto";
+      } else if (agentMode === "Plan") {
+        bodyPayload.tools = getMergedAgentTools().filter(t => ["read_file", "grep_search", "glob_search"].includes(t.function.name));
+        bodyPayload.tools.push({
+          type: "function",
+          function: {
+            name: "save_plan",
+            description: "Save the generated plan and request user approval to switch to Build mode.",
+            parameters: {
+              type: "object",
+              properties: { content: { type: "string", description: "The plan content" } },
+              required: ["content"]
+            }
+          }
+        });
+      }
 
       const res = await fetch(gatewayUrl + "/v1/chat/completions", {
         method: "POST",
@@ -711,7 +734,27 @@ async function sendMessage(text: string) {
             }
           }
 
-          const result = await executeTool(tc.function.name, parsedArgs);
+          let result = "";
+          if (tc.function.name === "save_plan") {
+            const cwd = getCwdInfo().currentCwd;
+            const toolnetDir = path.join(cwd, ".toolnet");
+            if (!fs.existsSync(toolnetDir)) fs.mkdirSync(toolnetDir);
+            fs.writeFileSync(path.join(toolnetDir, "plan.md"), (parsedArgs as any).content || "");
+            
+            const confirmed = await new Promise<boolean>((resolve) => {
+              pendingConfirmation = { prompt: "Plan generated. Approve and switch to Build mode?", resolve };
+              renderAll();
+            });
+            if (confirmed) {
+              agentMode = "Build";
+              result = JSON.stringify({ stdout: "Plan saved to .toolnet/plan.md. Switched to Build mode.", exitCode: 0 });
+              messages.push({ role: "system", content: "→ Plan approved. Switched to execution mode." });
+            } else {
+              result = JSON.stringify({ error: "User denied the plan." });
+            }
+          } else {
+            result = await executeTool(tc.function.name, parsedArgs);
+          }
           messages.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: result });
           saveCurrentSession();
         }

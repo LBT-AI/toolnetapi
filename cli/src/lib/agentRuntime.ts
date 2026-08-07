@@ -60,6 +60,8 @@ ${
 </skills>`;
 }
 
+export const AGENT_SYSTEM_PROMPT = getAgentSystemPrompt();
+
 
 export class AgentRuntime {
   private gatewayUrl: string;

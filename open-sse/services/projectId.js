@@ -84,7 +84,7 @@ startCacheCleanup();
  * @param {string} [provider]   - Provider id, selects the right loadCodeAssist/onboardUser endpoints
  * @returns {Promise<string|null>} Real project ID or null
  */
-export async function getProjectIdForConnection(connectionId, accessToken, provider) {
+export async function getProjectIdForConnection(connectionId, accessToken, provider = "gemini-cli") {
     if (!connectionId || !accessToken) return null;
 
     // Return cached value if still fresh

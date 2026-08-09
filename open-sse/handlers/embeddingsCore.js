@@ -38,13 +38,24 @@ export async function handleEmbeddingsCore({
   }
 
   const ctx = { input };
-  const url = adapter.buildUrl(model, credentials, ctx);
-  const headers = adapter.buildHeaders(credentials, ctx);
-  const requestBody = adapter.buildBody(model, {
-    input,
-    encoding_format: body.encoding_format || "float",
-    dimensions: body.dimensions,
-  });
+  // buildUrl/buildHeaders/buildBody were called bare. An adapter that rejects a
+  // misconfigured connection — selfhosted-embedding throws when no baseUrl is set
+  // rather than silently falling back to api.openai.com — would have escaped this
+  // function uncaught, surfacing as a 500 or a request that never settles. A
+  // configuration mistake is a 400 with the reason in it.
+  let url, headers, requestBody;
+  try {
+    url = adapter.buildUrl(model, credentials, ctx);
+    headers = adapter.buildHeaders(credentials, ctx);
+    requestBody = adapter.buildBody(model, {
+      input,
+      encoding_format: body.encoding_format || "float",
+      dimensions: body.dimensions,
+    });
+  } catch (error) {
+    log?.debug?.("EMBEDDINGS", `Request build failed: ${error.message}`);
+    return createErrorResult(HTTP_STATUS.BAD_REQUEST, `[${provider}/${model}] ${error.message}`);
+  }
 
   log?.debug?.("EMBEDDINGS", `${provider.toUpperCase()} | ${model} | input_type=${Array.isArray(input) ? `array[${input.length}]` : "string"}`);
 
@@ -116,6 +127,7 @@ export async function handleEmbeddingsCore({
 
   return {
     success: true,
+    usage: normalized.usage || null,
     response: new Response(JSON.stringify(normalized), {
       headers: {
         "Content-Type": "application/json",

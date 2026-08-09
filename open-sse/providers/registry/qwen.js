@@ -3,12 +3,14 @@ export default {
   hidden: true,
   priority: 130,
   alias: "qw",
+  deprecated: true,
   display: {
-    name: "Qwen Code",
+    name: "Qwen Code (Deprecated)",
     icon: "psychology",
     color: "#10B981",
     website: "https://chat.qwen.ai",
     notice: {
+      text: "Qwen OAuth flow is deprecated upstream. Please use Alibaba/DashScope API keys or OpenAI-compatible endpoint.",
       signupUrl: "https://chat.qwen.ai",
     },
   },

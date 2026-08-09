@@ -467,3 +467,25 @@ describe("wrapQoderSSE", () => {
     expect(wrapped).toBe(r);
   });
 });
+
+import { isQoderPat } from "../../open-sse/services/qoderModels.js";
+import { applyErrorState } from "../../open-sse/services/accountFallback.js";
+
+describe("isQoderPat and Copilot monthly quota exhausted lock", () => {
+  it("identifies pt- tokens as Qoder PAT", () => {
+    expect(isQoderPat("pt-1234567890abcdef")).toBe(true);
+    expect(isQoderPat("qt-1234567890abcdef")).toBe(false);
+    expect(isQoderPat("bearer-123456")).toBe(false);
+  });
+
+  it("locks GitHub Copilot until 1st of next month when monthly quota is exhausted", () => {
+    const acc = { id: "acc-1", provider: "github", status: "active" };
+    const res = applyErrorState(acc, 403, "You exceeded your current monthly quota");
+    expect(res.status).toBe("error");
+    expect(res.rateLimitedUntil).toBeDefined();
+
+    const date = new Date(res.rateLimitedUntil);
+    expect(date.getUTCDate()).toBe(1);
+    expect(date.getUTCHours()).toBe(0);
+  });
+});

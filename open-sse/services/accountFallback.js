@@ -199,15 +199,27 @@ export function resetAccountState(account) {
  * @param {string} errorText - Error message
  * @returns {object} Updated account with error state
  */
-export function applyErrorState(account, status, errorText) {
+export function applyErrorState(account, status, errorText, resetAt = null) {
   if (!account) return account;
 
   const backoffLevel = account.backoffLevel || 0;
   const { cooldownMs, newBackoffLevel } = checkFallbackError(status, errorText, backoffLevel);
 
+  let unavailableUntil;
+  if (resetAt) {
+    unavailableUntil = new Date(resetAt).toISOString();
+  } else if ((status === 403 || status === 429) && (account.provider === "github" || account.provider === "copilot") && (String(errorText).toLowerCase().includes("quota") || String(errorText).toLowerCase().includes("monthly"))) {
+    // If GitHub Copilot monthly quota is exhausted, lock until 1st of next month UTC
+    const now = new Date();
+    const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+    unavailableUntil = nextMonth.toISOString();
+  } else {
+    unavailableUntil = cooldownMs > 0 ? getUnavailableUntil(cooldownMs) : null;
+  }
+
   return {
     ...account,
-    rateLimitedUntil: cooldownMs > 0 ? getUnavailableUntil(cooldownMs) : null,
+    rateLimitedUntil: unavailableUntil,
     backoffLevel: newBackoffLevel ?? backoffLevel,
     lastError: { status, message: errorText, timestamp: new Date().toISOString() },
     status: "error"

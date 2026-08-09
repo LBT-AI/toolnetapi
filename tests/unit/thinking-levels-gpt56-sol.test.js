@@ -34,3 +34,37 @@ describe("getThinkingLevels", () => {
     expect(getThinkingLevels("kiro", "gpt-5.6-sol")).toBeTruthy();
   });
 });
+
+import { applyThinking } from "../../open-sse/translator/concerns/thinkingUnified.js";
+
+describe("applyThinking reasoning wire format mapping", () => {
+  it("preserves max and ultra for codex gpt-5.6-sol", () => {
+    const bodyMax = { reasoning_effort: "max" };
+    applyThinking("openai", "gpt-5.6-sol", bodyMax, "codex");
+    expect(bodyMax.reasoning_effort).toBe("max");
+
+    const bodyUltra = { reasoning_effort: "ultra" };
+    applyThinking("openai", "gpt-5.6-sol", bodyUltra, "codex");
+    expect(bodyUltra.reasoning_effort).toBe("ultra");
+  });
+
+  it("clamps max and ultra to xhigh for generic openai provider", () => {
+    const bodyMax = { reasoning_effort: "max" };
+    applyThinking("openai", "gpt-5.6-sol", bodyMax, "openai");
+    expect(bodyMax.reasoning_effort).toBe("xhigh");
+
+    const bodyUltra = { reasoning_effort: "ultra" };
+    applyThinking("openai", "gpt-5.6-sol", bodyUltra, "openai");
+    expect(bodyUltra.reasoning_effort).toBe("xhigh");
+  });
+
+  it("passes TokenRouter reasoning_effort levels through natively without clamping max", () => {
+    const bodyMax = { reasoning_effort: "max" };
+    applyThinking("tokenrouter", "anthropic/claude-opus-5", bodyMax, "tokenrouter");
+    expect(bodyMax.reasoning_effort).toBe("max");
+
+    const bodyHigh = { reasoning_effort: "high" };
+    applyThinking("tokenrouter", "anthropic/claude-opus-5", bodyHigh, "tokenrouter");
+    expect(bodyHigh.reasoning_effort).toBe("high");
+  });
+});

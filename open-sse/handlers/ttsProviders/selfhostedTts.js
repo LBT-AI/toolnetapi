@@ -15,7 +15,10 @@ export default {
     // Accept either providerSpecificData.baseUrl (how the custom embedding and
     // STT providers carry it) or a bare credentials.baseUrl (how the OpenAI TTS
     // adapter does), so a connection configured either way works.
-    const raw = credentials?.providerSpecificData?.baseUrl || credentials?.baseUrl || DEFAULT_BASE_URL;
+    const raw = credentials?.providerSpecificData?.baseUrl || credentials?.baseUrl;
+    if (!raw || !String(raw).trim()) {
+      throw new Error("Self-hosted TTS requires a baseUrl configuration (e.g. http://host:8880)");
+    }
     // Tolerate a baseUrl given as the full endpoint or with a trailing /v1 —
     // both are natural things to paste, and silently double-appending the path
     // would 404 with nothing pointing at the cause.

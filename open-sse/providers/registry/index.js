@@ -104,6 +104,9 @@ import p102 from "./agnes.js";
 import p103 from "./tokenrouter.js";
 import p104 from "./zed.js";
 import p105 from "./trae.js";
+import p106 from "./selfhosted-stt.js";
+import p107 from "./selfhosted-tts.js";
+import p108 from "./selfhosted-embedding.js";
 
 export default [
   p0,
@@ -211,4 +214,7 @@ export default [
   p103,
   p104,
   p105,
+  p106,
+  p107,
+  p108,
 ];

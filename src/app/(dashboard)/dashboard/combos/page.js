@@ -21,27 +21,28 @@ const CAPACITY_ADAPTER_CAPS = [
   // pdf, videoInput temporarily hidden — no translator support yet for those blocks.
   { key: "audioInput", label: "Audio", icon: "graphic_eq", desc: "Audio input" },
 ];
-const DEFAULT_FALLBACK_MODEL = "oc/mimo-v2.5-free";
-const EMPTY_CAP_ENTRY = { enabled: true, roundRobin: false, models: [] };
-const EMPTY_CAPACITY_ADAPTER = {
-  vision: { ...EMPTY_CAP_ENTRY },
-  pdf: { ...EMPTY_CAP_ENTRY },
-  audioInput: { ...EMPTY_CAP_ENTRY },
-  videoInput: { ...EMPTY_CAP_ENTRY },
+const DEFAULT_CAPACITY_ADAPTER = {
+  vision: { enabled: true, roundRobin: false, models: [] },
+  audioInput: { enabled: true, roundRobin: false, models: [] },
+  pdf: { enabled: false, roundRobin: false, models: [] },
+  videoInput: { enabled: false, roundRobin: false, models: [] },
 };
+const EMPTY_CAPACITY_ADAPTER = { ...DEFAULT_CAPACITY_ADAPTER };
+
 // Backward-compat: legacy stored form was an array of {model, enabled}.
-function normalizeCapEntry(entry) {
+function normalizeCapEntry(entry, capKey) {
+  const defaultEnabled = DEFAULT_CAPACITY_ADAPTER[capKey]?.enabled ?? false;
   if (Array.isArray(entry)) {
     return { enabled: true, roundRobin: false, models: entry.map((e) => e?.model || e).filter(Boolean) };
   }
   if (entry && typeof entry === "object") {
     return {
-      enabled: entry.enabled !== false,
+      enabled: entry.enabled !== undefined ? entry.enabled !== false : defaultEnabled,
       roundRobin: !!entry.roundRobin,
       models: Array.isArray(entry.models) ? entry.models.filter(Boolean) : [],
     };
   }
-  return { ...EMPTY_CAP_ENTRY };
+  return { enabled: defaultEnabled, roundRobin: false, models: [] };
 }
 
 export default function CombosPage() {
@@ -80,7 +81,7 @@ export default function CombosPage() {
       const rawAdapter = settingsData.capacityAdapter || {};
       const normalized = {};
       for (const cap of CAPACITY_ADAPTER_CAPS) {
-        normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key]);
+        normalized[cap.key] = normalizeCapEntry(rawAdapter[cap.key], cap.key);
       }
       setCapacityAdapter(normalized);
     } catch (error) {

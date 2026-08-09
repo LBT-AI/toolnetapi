@@ -179,10 +179,13 @@ export async function handleSttCore({ provider, model, formData, credentials, st
   // sets it, so cloud providers are untouched. Mirrors the custom embedding
   // providers, which already resolve baseUrl the same way.
   const overrideUrl = credentials?.providerSpecificData?.baseUrl;
+  if (provider === "selfhosted-stt" && (!overrideUrl || !String(overrideUrl).trim())) {
+    return createErrorResult(HTTP_STATUS.BAD_REQUEST, "Self-hosted STT requires a baseUrl configuration (e.g. http://host:8080/v1/audio/transcriptions)");
+  }
   if (overrideUrl) cfg = { ...cfg, baseUrl: String(overrideUrl).replace(/\/+$/, "") };
 
   const token = cfg.authType === "none" ? null : (credentials?.apiKey || credentials?.accessToken);
-  if (cfg.authType !== "none" && !token) {
+  if (provider !== "selfhosted-stt" && cfg.authType !== "none" && !token) {
     return createErrorResult(HTTP_STATUS.UNAUTHORIZED, `No credentials for STT provider: ${provider}`);
   }
 

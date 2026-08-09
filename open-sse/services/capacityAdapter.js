@@ -12,30 +12,45 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 
 const CAPABILITY_KEYS = ["vision", "pdf", "audioInput", "videoInput"];
 const HARD_CAPS = new Set(CAPABILITY_KEYS);
-const DEFAULT_FALLBACK_MODEL = "oc/mimo-v2.5-free";
+
+export const DEFAULT_CAPACITY_ADAPTER = {
+  vision: { enabled: true, roundRobin: false, models: [] },
+  audioInput: { enabled: true, roundRobin: false, models: [] },
+  pdf: { enabled: false, roundRobin: false, models: [] },
+  videoInput: { enabled: false, roundRobin: false, models: [] },
+};
+
+const DEFAULT_FALLBACK_MODELS = {
+  vision: ["oc/mimo-v2.5-free"],
+  audioInput: ["oc/mimo-v2.5-free"],
+  pdf: [],
+  videoInput: [],
+};
 
 // Normalize a capability entry to { enabled, roundRobin, models }. Backward-compat:
 // accept the legacy array form [{model, enabled}] (treated as enabled, fallback).
-function normalizeCapEntry(entry) {
+function normalizeCapEntry(entry, defaultEnabled = false) {
   if (Array.isArray(entry)) {
     return { enabled: true, roundRobin: false, models: entry.map((e) => e?.model || e).filter(Boolean) };
   }
   if (entry && typeof entry === "object") {
     return {
-      enabled: entry.enabled !== false,
+      enabled: entry.enabled !== undefined ? entry.enabled !== false : defaultEnabled,
       roundRobin: !!entry.roundRobin,
       models: Array.isArray(entry.models) ? entry.models.filter(Boolean) : [],
     };
   }
-  return { enabled: false, roundRobin: false, models: [] };
+  return { enabled: defaultEnabled, roundRobin: false, models: [] };
 }
 
 // Resolve one capability's full config. Enabled pools with no models fall back
-// to DEFAULT_FALLBACK_MODEL so the toggle is never a no-op.
+// to DEFAULT_FALLBACK_MODELS so the toggle is never a no-op.
 export function getCapacityAdapterConfig(cap, settings) {
-  const entry = normalizeCapEntry(settings?.capacityAdapter?.[cap]);
+  const defEntry = DEFAULT_CAPACITY_ADAPTER[cap] || { enabled: false, roundRobin: false, models: [] };
+  const entry = normalizeCapEntry(settings?.capacityAdapter?.[cap], defEntry.enabled);
   if (entry.enabled && entry.models.length === 0) {
-    return { ...entry, models: [DEFAULT_FALLBACK_MODEL] };
+    const fallback = DEFAULT_FALLBACK_MODELS[cap] || [];
+    return { ...entry, models: fallback };
   }
   return entry;
 }

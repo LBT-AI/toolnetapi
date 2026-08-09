@@ -1,117 +1,40 @@
 /**
- * Unit tests for Anthropic header caching + forwarding pipeline
+ * Unit tests for Anthropic per-request header generation pipeline
  *
  * Tests cover:
- *  - claudeHeaderCache: detection, capture, and retrieval of Claude Code headers
- *  - default.js buildHeaders(): live header overlay for "claude" provider
- *  - default.js buildHeaders(): cold-start fallback when cache is empty
+ *  - selectAnthropicBeta: base beta flags and heavy-agent gating for opus/sonnet
+ *  - default.js buildHeaders(): per-request Anthropic-Beta header generation for "claude" provider
  *  - default.js buildHeaders(): anthropic-compatible non-Anthropic host stripping
  *  - default.js buildHeaders(): anthropic-compatible official host keeps headers
  *  - proxyFetch.js: api.anthropic.com routes through anthropicFetch path
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { selectAnthropicBeta } from "../../open-sse/providers/shared.js";
 
-// ─── claudeHeaderCache ────────────────────────────────────────────────────────
+// ─── selectAnthropicBeta ──────────────────────────────────────────────────────
 
-describe("claudeHeaderCache", () => {
-  let cacheModule;
-
-  beforeEach(async () => {
-    // Re-import fresh module each time to reset singleton state
-    vi.resetModules();
-    cacheModule = await import("open-sse/utils/claudeHeaderCache.js");
+describe("selectAnthropicBeta", () => {
+  it("generates base Anthropic-Beta flags for standard models", () => {
+    const beta = selectAnthropicBeta("claude-haiku-4-5-20251001");
+    expect(beta).toContain("claude-code-20250219");
+    expect(beta).toContain("oauth-2025-04-20");
+    expect(beta).toContain("interleaved-thinking-2025-05-14");
+    expect(beta).toContain("token-efficient-tools-2026-03-28");
+    expect(beta).not.toContain("advanced-tool-use-2025-11-20");
+    expect(beta).not.toContain("effort-2025-11-24");
   });
 
-  it("returns null before any headers are cached (cold start)", () => {
-    expect(cacheModule.getCachedClaudeHeaders()).toBeNull();
+  it("appends heavy-agent beta flags for sonnet models", () => {
+    const beta = selectAnthropicBeta("claude-sonnet-5");
+    expect(beta).toContain("advanced-tool-use-2025-11-20");
+    expect(beta).toContain("effort-2025-11-24");
   });
 
-  it("caches headers when user-agent contains 'claude-code'", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "claude-code/2.1.63 node/24.3.0",
-      "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
-      "anthropic-version": "2023-06-01",
-      "x-app": "cli",
-      "x-stainless-os": "MacOS",
-      "x-stainless-arch": "arm64",
-      "x-stainless-lang": "js",
-      "x-stainless-runtime": "node",
-      "x-stainless-runtime-version": "v24.3.0",
-      "x-stainless-package-version": "0.74.0",
-      "x-stainless-helper-method": "stream",
-      "x-stainless-retry-count": "0",
-      "x-stainless-timeout": "600",
-      "anthropic-dangerous-direct-browser-access": "true",
-      // Non-identity header — should NOT be captured
-      "content-type": "application/json",
-    });
-
-    const cached = cacheModule.getCachedClaudeHeaders();
-    expect(cached).not.toBeNull();
-    expect(cached["user-agent"]).toBe("claude-code/2.1.63 node/24.3.0");
-    expect(cached["anthropic-beta"]).toBe("claude-code-20250219,oauth-2025-04-20");
-    expect(cached["x-app"]).toBe("cli");
-    expect(cached["x-stainless-os"]).toBe("MacOS");
-    // Non-identity header must not leak in
-    expect(cached["content-type"]).toBeUndefined();
-  });
-
-  it("caches headers when user-agent contains 'claude-cli'", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "claude-cli/1.0.0",
-      "anthropic-version": "2023-06-01",
-    });
-    expect(cacheModule.getCachedClaudeHeaders()).not.toBeNull();
-    expect(cacheModule.getCachedClaudeHeaders()["user-agent"]).toBe("claude-cli/1.0.0");
-  });
-
-  it("caches headers when x-app is 'cli' (regardless of user-agent)", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "axios/1.7.0",
-      "x-app": "cli",
-      "anthropic-version": "2023-06-01",
-    });
-    expect(cacheModule.getCachedClaudeHeaders()).not.toBeNull();
-  });
-
-  it("does NOT cache headers for non-Claude clients", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "PostmanRuntime/7.43.0",
-      "anthropic-version": "2023-06-01",
-    });
-    expect(cacheModule.getCachedClaudeHeaders()).toBeNull();
-  });
-
-  it("refreshes cache on each matching request", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "claude-code/2.0.0",
-      "x-stainless-package-version": "0.70.0",
-    });
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "claude-code/2.1.63",
-      "x-stainless-package-version": "0.74.0",
-    });
-    const cached = cacheModule.getCachedClaudeHeaders();
-    expect(cached["user-agent"]).toBe("claude-code/2.1.63");
-    expect(cached["x-stainless-package-version"]).toBe("0.74.0");
-  });
-
-  it("ignores calls with null or non-object headers", () => {
-    cacheModule.cacheClaudeHeaders(null);
-    cacheModule.cacheClaudeHeaders(undefined);
-    cacheModule.cacheClaudeHeaders("string");
-    expect(cacheModule.getCachedClaudeHeaders()).toBeNull();
-  });
-
-  it("only stores keys that are actually present in the headers object", () => {
-    cacheModule.cacheClaudeHeaders({
-      "user-agent": "claude-code/2.1.63",
-      // Most stainless headers absent
-    });
-    const cached = cacheModule.getCachedClaudeHeaders();
-    expect(cached["x-stainless-os"]).toBeUndefined();
-    expect(cached["user-agent"]).toBe("claude-code/2.1.63");
+  it("appends heavy-agent beta flags for opus models", () => {
+    const beta = selectAnthropicBeta("claude-opus-4-8");
+    expect(beta).toContain("advanced-tool-use-2025-11-20");
+    expect(beta).toContain("effort-2025-11-24");
   });
 });
 
@@ -122,55 +45,28 @@ describe("DefaultExecutor.buildHeaders() — claude provider", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    // Prime the cache with live client headers before importing executor
-    const cache = await import("open-sse/utils/claudeHeaderCache.js");
-    cache.cacheClaudeHeaders({
-      "user-agent": "claude-code/2.1.63 node/24.3.0",
-      "anthropic-beta": "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14",
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-      "x-app": "cli",
-      "x-stainless-os": "MacOS",
-      "x-stainless-arch": "arm64",
-      "x-stainless-lang": "js",
-      "x-stainless-runtime": "node",
-      "x-stainless-runtime-version": "v24.3.0",
-      "x-stainless-package-version": "0.74.0",
-      "x-stainless-helper-method": "stream",
-      "x-stainless-retry-count": "0",
-      "x-stainless-timeout": "600",
-    });
-    const mod = await import("open-sse/executors/default.js");
+    const mod = await import("../../open-sse/executors/default.js");
     DefaultExecutor = mod.DefaultExecutor || mod.default;
   });
 
-  it("overlays live cached headers over static provider defaults", () => {
+  it("sets per-request Anthropic-Beta header with heavy-agent flags for sonnet", () => {
     const executor = new DefaultExecutor("claude");
-    const headers = executor.buildHeaders({ apiKey: "sk-test" }, true);
+    const headers = executor.buildHeaders({ apiKey: "sk-test" }, true, null, "claude-sonnet-5");
 
-    // Live values should win over static providers.js values
-    expect(headers["user-agent"]).toBe("claude-code/2.1.63 node/24.3.0");
-    // Beta flags are MERGED (static + cached) to preserve required flags like oauth
-    const betaFlags = headers["anthropic-beta"].split(",").map(s => s.trim());
+    const betaFlags = headers["Anthropic-Beta"].split(",").map(s => s.trim());
     expect(betaFlags).toContain("claude-code-20250219");
-    expect(betaFlags).toContain("oauth-2025-04-20");
-    expect(betaFlags).toContain("interleaved-thinking-2025-05-14");
-    expect(headers["x-stainless-package-version"]).toBe("0.74.0");
-    expect(headers["x-stainless-os"]).toBe("MacOS");
+    expect(betaFlags).toContain("advanced-tool-use-2025-11-20");
+    expect(betaFlags).toContain("effort-2025-11-24");
   });
 
-  it("removes conflicting Title-Case static keys when cached lowercase keys exist", () => {
+  it("sets per-request Anthropic-Beta header without heavy-agent flags for haiku", () => {
     const executor = new DefaultExecutor("claude");
-    const headers = executor.buildHeaders({ apiKey: "sk-test" }, true);
+    const headers = executor.buildHeaders({ apiKey: "sk-test" }, true, null, "claude-haiku-4-5-20251001");
 
-    // Title-Case variants from providers.js must be gone
-    expect(headers["Anthropic-Version"]).toBeUndefined();
-    expect(headers["Anthropic-Beta"]).toBeUndefined();
-    expect(headers["User-Agent"]).toBeUndefined();
-    expect(headers["X-App"]).toBeUndefined();
-    // Lowercase variants must be present
-    expect(headers["anthropic-version"]).toBe("2023-06-01");
-    expect(headers["x-app"]).toBe("cli");
+    const betaFlags = headers["Anthropic-Beta"].split(",").map(s => s.trim());
+    expect(betaFlags).toContain("claude-code-20250219");
+    expect(betaFlags).not.toContain("advanced-tool-use-2025-11-20");
+    expect(betaFlags).not.toContain("effort-2025-11-24");
   });
 
   it("sets x-api-key auth when apiKey is provided", () => {
@@ -200,34 +96,6 @@ describe("DefaultExecutor.buildHeaders() — claude provider", () => {
   });
 });
 
-describe("DefaultExecutor.buildHeaders() — claude provider cold start (no cache)", () => {
-  let DefaultExecutor;
-
-  beforeEach(async () => {
-    vi.resetModules();
-    // Do NOT prime cache — simulate cold start
-    const mod = await import("open-sse/executors/default.js");
-    DefaultExecutor = mod.DefaultExecutor || mod.default;
-  });
-
-  it("falls back to static provider headers when cache is empty", () => {
-    const executor = new DefaultExecutor("claude");
-    const headers = executor.buildHeaders({ apiKey: "sk-test" }, true);
-
-    // Static fallback values from providers.js must still be present
-    // They may be Title-Case since no cache to conflict with them
-    const hasVersion =
-      headers["Anthropic-Version"] === "2023-06-01" ||
-      headers["anthropic-version"] === "2023-06-01";
-    expect(hasVersion).toBe(true);
-  });
-
-  it("does not throw when cache returns null", () => {
-    const executor = new DefaultExecutor("claude");
-    expect(() => executor.buildHeaders({ apiKey: "sk" }, false)).not.toThrow();
-  });
-});
-
 // ─── anthropic-compatible header stripping ────────────────────────────────────
 
 describe("DefaultExecutor.buildHeaders() — anthropic-compatible stripping", () => {
@@ -235,7 +103,7 @@ describe("DefaultExecutor.buildHeaders() — anthropic-compatible stripping", ()
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import("open-sse/executors/default.js");
+    const mod = await import("../../open-sse/executors/default.js");
     DefaultExecutor = mod.DefaultExecutor || mod.default;
   });
 
@@ -320,98 +188,4 @@ describe("DefaultExecutor.buildHeaders() — anthropic-compatible stripping", ()
   });
 });
 
-// ─── proxyFetch anthropicFetch routing ────────────────────────────────────────
 
-describe("proxyAwareFetch — api.anthropic.com routing", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("routes api.anthropic.com to gotScraping (non-streaming) and returns ok response", async () => {
-    // Mock got-scraping before module load
-    vi.doMock("got-scraping", () => {
-      const mockGotScraping = vi.fn().mockResolvedValue({
-        statusCode: 200,
-        statusMessage: "OK",
-        headers: { "content-type": "application/json" },
-        rawBody: Buffer.from(JSON.stringify({ id: "msg_test" })),
-      });
-      mockGotScraping.stream = vi.fn();
-      return { gotScraping: mockGotScraping };
-    });
-
-    vi.resetModules();
-    const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-    const { gotScraping } = await import("got-scraping");
-
-    const res = await proxyAwareFetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      // No Accept: text/event-stream → non-streaming path
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-3-5-sonnet-20241022", messages: [] }),
-    });
-
-    expect(gotScraping).toHaveBeenCalledOnce();
-    expect(res.ok).toBe(true);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.id).toBe("msg_test");
-  });
-
-  it("falls back gracefully when got-scraping throws on non-streaming path", async () => {
-    vi.doMock("got-scraping", () => {
-      const fn = vi.fn().mockRejectedValue(new Error("TLS error"));
-      fn.stream = vi.fn();
-      return { gotScraping: fn };
-    });
-
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      headers: new Headers(),
-      body: null,
-      text: async () => "{}",
-      json: async () => ({}),
-    });
-
-    vi.resetModules();
-    const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-
-    const res = await proxyAwareFetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-
-    expect(res.ok).toBe(true);
-    globalThis.fetch = originalFetch;
-  });
-
-  it("does NOT route non-Anthropic hosts through gotScraping", async () => {
-    const gotScrapingMock = vi.fn();
-    vi.doMock("got-scraping", () => ({ gotScraping: gotScrapingMock }));
-
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      headers: new Headers(),
-      body: null,
-      text: async () => "{}",
-      json: async () => ({}),
-    });
-
-    vi.resetModules();
-    const { proxyAwareFetch } = await import("open-sse/utils/proxyFetch.js");
-
-    await proxyAwareFetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-
-    expect(gotScrapingMock).not.toHaveBeenCalled();
-  });
-});

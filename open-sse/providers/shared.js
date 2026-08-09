@@ -23,6 +23,25 @@ export function mapStainlessArch() {
 // Anthropic API version (single source — reused across claude-format providers/executors)
 export const ANTHROPIC_API_VERSION = "2023-06-01";
 
+const ANTHROPIC_BETA_BASE = [
+  "claude-code-20250219",
+  "oauth-2025-04-20",
+  "interleaved-thinking-2025-05-14",
+  "context-management-2025-06-27",
+  "prompt-caching-scope-2026-01-05",
+  "structured-outputs-2025-12-15",
+  "fast-mode-2026-02-01",
+  "redact-thinking-2026-02-12",
+  "token-efficient-tools-2026-03-28",
+];
+const ANTHROPIC_BETA_HEAVY_AGENT = ["advanced-tool-use-2025-11-20", "effort-2025-11-24"];
+
+export function selectAnthropicBeta(model = "") {
+  const flags = [...ANTHROPIC_BETA_BASE];
+  if (/^claude-(opus|sonnet)/.test(model)) flags.push(...ANTHROPIC_BETA_HEAVY_AGENT);
+  return flags.join(",");
+}
+
 // Shared Claude-compatible API headers (reused across claude-format providers)
 export const CLAUDE_API_HEADERS = {
   "Anthropic-Version": ANTHROPIC_API_VERSION,

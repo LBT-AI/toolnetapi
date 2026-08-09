@@ -7,7 +7,8 @@ import { OPENAI_BLOCK } from "../schema/index.js";
 export const UNSUPPORTED_SCHEMA_CONSTRAINTS = [
   // Basic constraints (not supported by Gemini API)
   "minLength", "maxLength", "exclusiveMinimum", "exclusiveMaximum",
-  "minItems", "maxItems", "format",
+  "minItems", "maxItems", "format", "multipleOf", "uniqueItems", "contains",
+  "unevaluatedProperties", "unevaluatedItems", "contentSchema",
   // Claude rejects these in VALIDATED mode
   "default", "examples",
   // JSON Schema meta keywords

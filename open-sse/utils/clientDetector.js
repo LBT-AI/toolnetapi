@@ -22,6 +22,7 @@ export function detectClientTool(headers = {}, body = {}) {
   const xApp = (headers["x-app"] || "").toLowerCase();
   const openaiIntent = (headers["openai-intent"] || "").toLowerCase();
   const initiator = (headers["x-initiator"] || headers["X-Initiator"] || "").toLowerCase();
+  const originator = (headers["originator"] || headers["Originator"] || "").toLowerCase();
 
   // Antigravity: detected via body field (not header)
   if (body.userAgent === "antigravity") return "antigravity";
@@ -37,8 +38,8 @@ export function detectClientTool(headers = {}, body = {}) {
   // Gemini CLI
   if (ua.includes("gemini-cli")) return "gemini-cli";
 
-  // Codex CLI
-  if (ua.includes("codex-cli")) return "codex";
+  // Codex CLI / TUI / Desktop
+  if (ua.includes("codex-tui") || ua.includes("codex-cli") || ua.includes("codex_cli_rs") || ua.includes("codex desktop") || originator.startsWith("codex_")) return "codex";
 
   // DeepSeek TUI
   if (ua.includes("deepseek-tui")) return "deepseek-tui";

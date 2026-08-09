@@ -25,7 +25,9 @@ const DEFAULT_SETTINGS = {
   oidcClientSecret: "",
   oidcScopes: "openid profile email",
   oidcLoginLabel: "Sign in with OIDC",
-  enableObservability: true,
+  // Request-log observability is opt-in. Enable from the dashboard (profile page)
+  // or force with ENABLE_REQUEST_LOGS=true.
+  enableObservability: false,
   observabilityMaxRecords: 1000,
   observabilityBatchSize: 20,
   observabilityFlushIntervalMs: 5000,

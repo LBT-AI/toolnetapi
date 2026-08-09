@@ -1057,6 +1057,25 @@ exports[`GOLDEN buildHeaders (default executor providers) > together → headers
 }
 `;
 
+exports[`GOLDEN buildHeaders (default executor providers) > tokenrouter → headers (apiKey / oauth) 1`] = `
+{
+  "apiKey": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+  "nonStream": {
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+  "oauth": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+}
+`;
+
 exports[`GOLDEN buildHeaders (default executor providers) > toolnet → headers (apiKey / oauth) 1`] = `
 {
   "apiKey": {
@@ -1072,6 +1091,34 @@ exports[`GOLDEN buildHeaders (default executor providers) > toolnet → headers 
     "Accept": "text/event-stream",
     "Authorization": "Bearer <TOK>",
     "Content-Type": "application/json",
+  },
+}
+`;
+
+exports[`GOLDEN buildHeaders (default executor providers) > trae → headers (apiKey / oauth) 1`] = `
+{
+  "apiKey": {
+    "Accept": "text/event-stream",
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "Referer": "https://solo.trae.ai/",
+    "X-Preferenced-Language": "en",
+    "X-Trae-Client-Type": "web",
+  },
+  "nonStream": {
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "Referer": "https://solo.trae.ai/",
+    "X-Preferenced-Language": "en",
+    "X-Trae-Client-Type": "web",
+  },
+  "oauth": {
+    "Accept": "text/event-stream",
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "Referer": "https://solo.trae.ai/",
+    "X-Preferenced-Language": "en",
+    "X-Trae-Client-Type": "web",
   },
 }
 `;
@@ -1167,6 +1214,28 @@ exports[`GOLDEN buildHeaders (default executor providers) > xiaomi-mimo → head
     "Accept": "text/event-stream",
     "Authorization": "Bearer <TOK>",
     "Content-Type": "application/json",
+  },
+}
+`;
+
+exports[`GOLDEN buildHeaders (default executor providers) > zed → headers (apiKey / oauth) 1`] = `
+{
+  "apiKey": {
+    "Accept": "text/event-stream",
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "content-type": "application/json",
+  },
+  "nonStream": {
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "content-type": "application/json",
+  },
+  "oauth": {
+    "Accept": "text/event-stream",
+    "Authorization": "<CRED>",
+    "Content-Type": "application/json",
+    "content-type": "application/json",
   },
 }
 `;
@@ -1493,10 +1562,24 @@ exports[`GOLDEN buildUrl (default executor providers) > together → url (stream
 }
 `;
 
+exports[`GOLDEN buildUrl (default executor providers) > tokenrouter → url (stream + non-stream) 1`] = `
+{
+  "nonStream": "https://api.tokenrouter.com/v1/chat/completions",
+  "stream": "https://api.tokenrouter.com/v1/chat/completions",
+}
+`;
+
 exports[`GOLDEN buildUrl (default executor providers) > toolnet → url (stream + non-stream) 1`] = `
 {
   "nonStream": "https://api.toolnet.io/v1",
   "stream": "https://api.toolnet.io/v1",
+}
+`;
+
+exports[`GOLDEN buildUrl (default executor providers) > trae → url (stream + non-stream) 1`] = `
+{
+  "nonStream": "https://core-normal.trae.ai/api/remote/v1",
+  "stream": "https://core-normal.trae.ai/api/remote/v1",
 }
 `;
 
@@ -1532,5 +1615,12 @@ exports[`GOLDEN buildUrl (default executor providers) > xiaomi-mimo → url (str
 {
   "nonStream": "https://api.xiaomimimo.com/v1/chat/completions",
   "stream": "https://api.xiaomimimo.com/v1/chat/completions",
+}
+`;
+
+exports[`GOLDEN buildUrl (default executor providers) > zed → url (stream + non-stream) 1`] = `
+{
+  "nonStream": "https://cloud.zed.dev/completions",
+  "stream": "https://cloud.zed.dev/completions",
 }
 `;

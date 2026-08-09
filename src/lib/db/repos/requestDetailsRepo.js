@@ -16,8 +16,8 @@ async function getObservabilityConfig() {
     const { getSettings } = await import("./settingsRepo.js");
     const settings = await getSettings();
     const envRequestLogs = process.env.ENABLE_REQUEST_LOGS;
-    if (envRequestLogs !== undefined) {
-      const enabled = envRequestLogs.toLowerCase() === "true";
+    if (envRequestLogs !== undefined && envRequestLogs !== "") {
+      const enabled = envRequestLogs.toLowerCase() === "true" || envRequestLogs === "1";
       cachedConfig = {
         enabled,
         maxRecords: settings.observabilityMaxRecords || parseInt(process.env.OBSERVABILITY_MAX_RECORDS || String(DEFAULT_MAX_RECORDS), 10),
@@ -28,11 +28,10 @@ async function getObservabilityConfig() {
       cachedConfigTs = Date.now();
       return cachedConfig;
     }
-    const envFallback = process.env.OBSERVABILITY_ENABLED !== "false";
     const uiFlag = typeof settings.enableObservability === "boolean";
     const enabled = uiFlag
       ? settings.enableObservability
-      : envFallback;
+      : false;
     cachedConfig = {
       enabled,
       maxRecords: settings.observabilityMaxRecords || parseInt(process.env.OBSERVABILITY_MAX_RECORDS || String(DEFAULT_MAX_RECORDS), 10),

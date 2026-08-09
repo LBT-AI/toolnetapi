@@ -16,6 +16,8 @@ export default {
     },
   },
   category: "freeTier",
+  authType: "apikey",
+  authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.bob-ide.ibm.com/v1/chat/completions",
     thinkingFormat: "openai",

@@ -1,5 +1,5 @@
 // Priority chain for request-log observability:
-//   ENABLE_REQUEST_LOGS (force) > dashboard UI setting > OBSERVABILITY_ENABLED fallback
+//   ENABLE_REQUEST_LOGS (force) > dashboard UI setting > Default (OFF)
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

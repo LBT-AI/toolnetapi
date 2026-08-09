@@ -15,6 +15,8 @@ export default {
     },
   },
   category: "freeTier",
+  authType: "apikey",
+  authModes: ["apikey"],
   transport: {
     baseUrl: "https://apihub.agnes-ai.com/v1/chat/completions",
     thinkingFormat: "openai",

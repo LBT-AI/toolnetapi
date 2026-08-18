@@ -81,8 +81,24 @@ export default function ProxyPoolsPage() {
   }, []);
 
   useEffect(() => {
-    fetchProxyPools();
-  }, [fetchProxyPools]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/proxy-pools?includeUsage=true", { cache: "no-store" });
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          setProxyPools(data.proxyPools || []);
+        }
+      } catch (error) {
+        console.log("Error fetching proxy pools:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const resetForm = () => {
     setEditingProxyPool(null);
@@ -326,11 +342,6 @@ export default function ProxyPoolsPage() {
       notify.success(`Health check done. Alive: ${alive}, Dead: ${deadIds.length}`);
     }
   };
-
-  // Cleanup selectedIds when pools change
-  useEffect(() => {
-    setSelectedIds((prev) => prev.filter((id) => proxyPools.some((p) => p.id === id)));
-  }, [proxyPools]);
 
   const openBatchImportModal = () => {
     setBatchImportText("");
@@ -895,7 +906,7 @@ export default function ProxyPoolsPage() {
             value={cloudflareForm.apiToken}
             onChange={(e) => setCloudflareForm((prev) => ({ ...prev, apiToken: e.target.value }))}
             placeholder="your-cloudflare-api-token"
-            hint={<>Requires "Workers Scripts: Edit" permission. <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Get token →</a></>}
+            hint={<>Requires &quot;Workers Scripts: Edit&quot; permission. <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Get token →</a></>}
             type="password"
           />
           <Input

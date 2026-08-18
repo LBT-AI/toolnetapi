@@ -19,8 +19,6 @@ export default {
     validateUrl: "https://api.groq.com/openai/v1/models",
   },
   models: [
-    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", supportsTools: true, supportsVision: false, supportsReasoning: false, supportsStreaming: true },
-    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B", supportsTools: true, supportsVision: false, supportsReasoning: false, supportsStreaming: true },
     { id: "qwen/qwen3.6-27b", name: "Qwen 3.6 27B", supportsTools: true, supportsVision: true, supportsReasoning: true, supportsStreaming: true },
     { id: "openai/gpt-oss-120b", name: "GPT OSS 120B", supportsTools: true, supportsVision: false, supportsReasoning: true, supportsStreaming: true },
     { id: "openai/gpt-oss-20b", name: "GPT OSS 20B", supportsTools: true, supportsVision: false, supportsReasoning: true, supportsStreaming: true },

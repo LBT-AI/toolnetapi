@@ -28,11 +28,18 @@ const DEFAULT_SETTINGS = {
   requireLogin: true,
   tunnelDashboardAccess: true,
   authMode: "password",
+  ssoType: "oidc",
   oidcIssuerUrl: "",
   oidcClientId: "",
   oidcClientSecret: "",
   oidcScopes: "openid profile email",
   oidcLoginLabel: "Sign in with OIDC",
+  samlEntryPoint: "",
+  samlIssuer: "urn:toolnetapi:sp",
+  samlCert: "",
+  samlLoginLabel: "Sign in with SAML SSO",
+  samlAttributeEmail: "email",
+  samlAttributeName: "name",
   // Request-log observability is opt-in. Enable from the dashboard (profile page)
   // or force with ENABLE_REQUEST_LOGS=true.
   enableObservability: false,

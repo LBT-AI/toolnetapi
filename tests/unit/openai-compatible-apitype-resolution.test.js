@@ -6,9 +6,9 @@
 // runtime derived chat/responses from the immutable node ID string
 // (`openai-compatible-<chat|responses>-<uuid>`) instead of the stored value.
 import { describe, it, expect } from "vitest";
-import { resolveOpenAICompatibleApiType, getTargetFormat } from "../../open-sse/services/provider.js";
-import { DefaultExecutor } from "../../open-sse/executors/default.js";
-import { BaseExecutor } from "../../open-sse/executors/base.js";
+import { resolveOpenAICompatibleApiType, getTargetFormat } from "open-sse/services/provider.js";
+import { DefaultExecutor } from "open-sse/executors/default.js";
+import { BaseExecutor } from "open-sse/executors/base.js";
 
 const CHAT_ID = "openai-compatible-chat-3d8d3de8-1206-47ee-a42f-22113a5f2387";
 const RESPONSES_ID = "openai-compatible-responses-11111111-2222-3333-4444-555555555555";

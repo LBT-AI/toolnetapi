@@ -6,18 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ToolNet API (`toolnetapi-app`) — a local AI routing gateway + Next.js dashboard. It exposes one OpenAI-compatible endpoint (`/v1/*`) and routes traffic across 40+ upstream providers with format translation, model-combo fallback, multi-account fallback, OAuth/API-key credential management, token refresh, quota/usage tracking, and optional cloud sync.
 
-Two published artifacts live in this one repo:
-- The **dashboard + gateway** (root `package.json`, `toolnetapi-app`) — the Next.js server that does the actual routing.
-- The **CLI launcher** (`cli/`, published to npm as `toolnetapi`) — a TUI coding agent with 24 slash commands. SolidJS + OpenTUI, runs on Bun. Has its own `package.json`, version, and build.
-
-The code lives in `src/` (Next.js app + dashboard/compat APIs), `open-sse/` (the provider-agnostic routing/translation engine), `cli/` (SolidJS TUI app), and `tests/`.
+The code lives in `src/` (Next.js app + dashboard/compat APIs), `open-sse/` (the provider-agnostic routing/translation engine), and `tests/`. (Note: The CLI launcher has been separated into the independent `toolnet-cli` repository).
 
 ## Quick start (1 command)
 
 ```bash
-npm run setup        # copies .env, generates secrets, installs ALL deps (root + CLI)
-npm run dev          # terminal 1: start gateway
-./toolnetapi         # terminal 2: start CLI
+npm run setup        # copies .env, generates secrets, installs deps
+npm run dev          # start gateway
 ```
 
 ## Commands
@@ -29,15 +24,7 @@ npm run build && npm run start       # production
 ```
 - Bun variants: `npm run dev:bun` / `build:bun` / `start:bun`.
 - Default runtime port is **20128** (from `.env`, dashboard at `/dashboard`, API at `/v1`).
-- Lint: `npx eslint .` (config `eslint.config.mjs`, extends `eslint-config-next`).
-
-CLI package (`cli/`):
-```bash
-./toolnetapi             # run (auto-detects gateway URL from ~/.toolnetapi/gateway-url)
-TOOLNET_API_URL=http://localhost:20128 ./toolnetapi  # override URL
-cd cli && bun src/index.tsx  # or run directly from cli/
-npm run cli:pack        # build + npm pack from root
-```
+- Lint: `npm run lint` (or `npx eslint .`).
 
 Tests (vitest, in `tests/`, an **independent** ESM package — not wired into root `npm test`):
 ```bash
@@ -92,9 +79,9 @@ Pre-translate hooks that compress `tool_result` content in-place to cut tokens. 
 
 ## Conventions & gotchas
 
-- Plain JavaScript (ESM), no TypeScript in backend. `@/*` path alias → `src/*` (`jsconfig.json`). The `cli/` package uses TypeScript (SolidJS + OpenTUI).
+- Plain JavaScript (ESM), no TypeScript in backend. `@/*` path alias → `src/*` (`jsconfig.json`).
 - `custom-server.js` wraps the Next standalone server to derive client IP from the TCP socket and strip attacker-controlled `X-Forwarded-For` — trusting forwarding headers only from a loopback reverse proxy. Preserve this when touching request/IP/rate-limit code.
 - Security-sensitive env: `JWT_SECRET` (session cookie), `INITIAL_PASSWORD` (default `123456` — must override), `API_KEY_SECRET`, `MACHINE_ID_SALT`. Full env contract in `.env.example` and ARCHITECTURE.md's env matrix.
 - Binary/protobuf upstreams (kiro EventStream, cursor protobuf, commandcode NDJSON) don't round-trip through OpenAI — they're handled inside their own executor, not the translator.
-- Versioning: root and `cli/` are versioned independently; changes are logged in `CHANGELOG.md`. Commit style is Conventional Commits (`fix(translator): …`, `feat(...)`).
-- Setup: `npm run setup` is the one-command entry point for new contributors. It copies `.env`, generates secrets, installs all deps, and creates the root launcher `./toolnetapi`. The CLI auto-detects gateway URL from `~/.toolnetapi/gateway-url`, then `TOOLNET_API_URL` env, then default `http://127.0.0.1:20128`.
+- Versioning: changes are logged in `CHANGELOG.md`. Commit style is Conventional Commits (`fix(translator): …`, `feat(...)`).
+- Setup: `npm run setup` is the one-command entry point for new contributors. It copies `.env`, generates secrets, and installs deps.

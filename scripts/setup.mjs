@@ -9,8 +9,6 @@ import os from "node:os";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const ENV_FILE = path.join(ROOT, ".env");
 const ENV_EXAMPLE = path.join(ROOT, ".env.example");
-const CLI_DIR = path.join(ROOT, "cli");
-const CLI_BIN = path.join(CLI_DIR, "bin", "toolnet.js");
 const TOOLNET_DIR = path.join(os.homedir(), ".toolnetapi");
 const GATEWAY_URL_FILE = path.join(TOOLNET_DIR, "gateway-url");
 
@@ -133,30 +131,8 @@ async function main() {
   step("2. Root dependencies");
   run("npm install", { cwd: ROOT });
 
-  // ── Step 3: CLI dependencies ──
-  step("3. CLI dependencies");
-  if (fs.existsSync(CLI_DIR)) {
-    let installed = false;
-    try {
-      execSync("bun --version", { stdio: "ignore" });
-      installed = run("bun install", { cwd: CLI_DIR });
-    } catch {
-      warn("bun not found. Try: curl -fsSL https://bun.sh/install | bash");
-      warn("Falling back to npm install for CLI (limited support)");
-      installed = run("npm install", { cwd: CLI_DIR });
-    }
-
-    if (installed) {
-      print("CLI dependencies installed");
-    } else {
-      error("CLI dependency install failed. Run: cd cli && bun install");
-    }
-  } else {
-    warn("cli/ directory not found, skipping");
-  }
-
-  // ── Step 4: Auth directory ──
-  step("4. Auth & gateway URL");
+  // ── Step 3: Auth directory & gateway URL ──
+  step("3. Auth & gateway URL");
   fs.mkdirSync(TOOLNET_DIR, { recursive: true });
   print(`Directory: ${TOOLNET_DIR}`);
 
@@ -166,36 +142,9 @@ async function main() {
   fs.chmodSync(GATEWAY_URL_FILE, 0o644);
   print(`Gateway URL: ${host} (${GATEWAY_URL_FILE})`);
 
-  if (fs.existsSync(CLI_BIN)) {
-    fs.chmodSync(CLI_BIN, 0o755);
-    print(`CLI bin: ${CLI_BIN}`);
-  }
-
-  // ── Step 5: CLI symlinks ──
-  step("5. CLI symlinks");
-  const symlinks = [
-    { name: "toolnet", target: "cli/bin/toolnet.js" },
-    { name: "toolnetapi", target: "toolnet" },
-  ];
-  for (const { name, target } of symlinks) {
-    const linkPath = path.join(ROOT, name);
-    if (!fs.existsSync(linkPath)) {
-      try {
-        fs.symlinkSync(target, linkPath, "file");
-        fs.chmodSync(linkPath, 0o755);
-        print(`Created: ${name}`);
-      } catch (err) {
-        warn(`Could not create ${name}: ${err.message}`);
-      }
-    } else {
-      warn(`${name} already exists`);
-    }
-  }
-
   // ── Done ──
   console.log("\n" + "\x1b[1m\x1b[32mSetup complete!\x1b[0m\n");
   console.log("  \x1b[36mStart gateway:\x1b[0m  npm run dev");
-  console.log("  \x1b[36mStart CLI:\x1b[0m     ./toolnetapi");
   console.log("  \x1b[36mDashboard:\x1b[0m     http://localhost:" + port + "/dashboard");
   console.log("  \x1b[36mAPI:\x1b[0m           http://localhost:" + port + "/v1");
   console.log("  \x1b[36mLogin password:\x1b[0m " + (env.INITIAL_PASSWORD || "(check .env)"));

@@ -107,6 +107,8 @@ import p105 from "./trae.js";
 import p106 from "./selfhosted-stt.js";
 import p107 from "./selfhosted-tts.js";
 import p108 from "./selfhosted-embedding.js";
+import p109 from "./fish-audio.js";
+import p110 from "./alitp-intl.js";
 
 export default [
   p0,
@@ -217,4 +219,6 @@ export default [
   p106,
   p107,
   p108,
+  p109,
+  p110,
 ];

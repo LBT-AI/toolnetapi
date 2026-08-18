@@ -6,6 +6,7 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "react/no-unescaped-entities": "off",
+      "react/display-name": "off",
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/immutability": "off",
       "react-hooks/purity": "off",
@@ -18,6 +19,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-cli-build/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

@@ -168,14 +168,14 @@ export default function LoginPage() {
         <Card>
           {mustChange ? (
             <form onSubmit={handleSetNewPassword} className="flex flex-col gap-4">
-              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
-                Set a new password before accessing the dashboard remotely.
+              <p className="text-sm text-amber-600 dark:text-amber-400 text-center font-medium">
+                Mật khẩu mặc định 123456 đang được dùng. Vui lòng thiết lập mật khẩu mới để bảo mật tài khoản.
               </p>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">New password</label>
+                <label className="text-sm font-medium">Mật khẩu mới (New Password)</label>
                 <Input
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Nhập mật khẩu mới của bạn"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
@@ -184,7 +184,7 @@ export default function LoginPage() {
                 {error && <p className="text-xs text-red-500">{error}</p>}
               </div>
               <Button type="submit" variant="primary" className="w-full" loading={loading} disabled={!newPassword}>
-                Set password
+                Đổi mật khẩu & Đăng nhập
               </Button>
             </form>
           ) : (

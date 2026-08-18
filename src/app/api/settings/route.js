@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getSettings, updateSettings } from "@/lib/localDb";
 import { applyOutboundProxyEnv } from "@/lib/network/outboundProxy";
 import { resetComboRotation } from "open-sse/services/combo.js";
+import { setDashboardAuthCookie } from "@/lib/auth/dashboardSession";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,7 @@ export async function PATCH(request) {
     // Strip protected secrets before any internal handling sets them
     for (const key of PROTECTED_SETTING_KEYS) delete body[key];
 
+    let passwordUpdated = false;
     // If updating password, hash it
     if (body.newPassword) {
       const settings = await getSettings();
@@ -68,6 +71,7 @@ export async function PATCH(request) {
       body.password = await bcrypt.hash(body.newPassword, salt);
       delete body.newPassword;
       delete body.currentPassword;
+      passwordUpdated = true;
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "oidcClientSecret")) {
@@ -77,6 +81,11 @@ export async function PATCH(request) {
     }
 
     const settings = await updateSettings(body);
+
+    if (passwordUpdated) {
+      const cookieStore = await cookies();
+      await setDashboardAuthCookie(cookieStore, request);
+    }
 
     // Apply outbound proxy settings immediately (no restart required)
     if (

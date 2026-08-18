@@ -129,6 +129,13 @@ export const PROVIDER_CAPABILITIES = {
     "deepseek-ai/deepseek-v4-pro": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
     "deepseek-ai/deepseek-v4-flash": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
   },
+  "sambanova": {
+    "DeepSeek-V3.1": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },
+    "DeepSeek-V3.2": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },
+    "Meta-Llama-3.3-70B-Instruct": { reasoning: false, contextWindow: 131072, maxOutput: 16384 },
+    "gpt-oss-120b": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },
+    "gemma-4-31B-it": { reasoning: false, contextWindow: 131072, maxOutput: 16384 },
+  },
   "codex": {
     "gpt-5.6-sol":               CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-sol-review":        CODEX_GPT_56_SOL_CAPS,

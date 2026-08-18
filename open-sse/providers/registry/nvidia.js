@@ -23,10 +23,8 @@ export default {
     thinkingFormat: "openai",
   },
   models: [
-    { id: "meta/llama-3.1-8b-instruct", name: "Meta Llama 3.1 8B Instruct", kind: "llm" },
-    { id: "minimaxai/minimax-m2.7", name: "MiniMax M2.7" },
-    { id: "minimaxai/minimax-m3", name: "MiniMax M3" },
-    { id: "z-ai/glm-5.2", name: "GLM 5.2" },
+    { id: "minimaxai/minimax-m3", name: "MiniMax M3", contextLength: 1048576 },
+    { id: "z-ai/glm-5.2", name: "GLM 5.2", contextLength: 1000000 },
     { id: "deepseek-ai/deepseek-v4-pro", name: "DeepSeek V4 Pro" },
     { id: "deepseek-ai/deepseek-v4-flash", name: "DeepSeek V4 Flash" },
     { id: "moonshotai/kimi-k2.6", name: "Kimi K2.6" },

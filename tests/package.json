@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Unit tests for ToolNet API",
   "scripts": {
-    "test": "vitest run --reporter=verbose",
-    "test:watch": "vitest --reporter=verbose"
+    "test": "vitest run --config ./vitest.config.js --reporter=verbose",
+    "test:watch": "vitest --config ./vitest.config.js --reporter=verbose"
   },
   "devDependencies": {
     "vitest": "^4.0.0"

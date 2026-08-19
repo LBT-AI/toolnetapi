@@ -68,6 +68,9 @@ function applyDeepSeekV4ProAlias({ provider, model, body }) {
 }
 
 export function injectReasoningContent({ provider, model, body }) {
+  // Providers that opt out via transport quirk `skipReasoningContentInject` (e.g.
+  // kira) forward assistant messages untouched — no placeholder is needed/desired.
+  if (PROVIDERS[provider]?.quirks?.skipReasoningContentInject) return body;
   const providerRule = providerRuleFor(provider);
   const modelRule = MODEL_RULES.find(r => r.match(model));
   const rule = providerRule || modelRule;

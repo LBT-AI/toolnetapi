@@ -290,7 +290,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   }
 
   // Jailbreak: inject unrestricted-mode system prompt (bypass content filters)
-  if (jailbreakEnabled) {
+  // Providers that opt out via transport quirk `skipJailbreakInject` (e.g. kira)
+  // forward messages untouched — the fake-history/prefill/obfuscation mutations
+  // corrupt their reasoning-model output and violate "forward messages intact".
+  if (jailbreakEnabled && !PROVIDERS[provider]?.quirks?.skipJailbreakInject) {
     injectJailbreak(translatedBody, finalFormat, jailbreakLevel, jailbreakCustomPrompt, provider, model);
     injectFakeHistory(translatedBody, finalFormat, jailbreakLevel);
     injectPrefill(translatedBody, finalFormat);

@@ -106,6 +106,12 @@ export function createSSEStream(options = {}) {
           let output;
           let injectedUsage = false;
 
+          // Upstream already sent the terminal sentinel — don't let flush() append a
+          // duplicate `data: [DONE]`. Forward the upstream sentinel untouched below.
+          if (trimmed.startsWith("data:") && trimmed.slice(5).trim() === "[DONE]") {
+            streamDoneSent = true;
+          }
+
           if (trimmed.startsWith("data:") && trimmed.slice(5).trim() !== "[DONE]") {
             try {
               const parsed = JSON.parse(trimmed.slice(5).trim());
@@ -370,7 +376,10 @@ export function createSSEStream(options = {}) {
           //   data: [DONE]\n\n
           // Without it they can hang until timeout and trigger failover.
           // Gemini-family clients (Antigravity, Vertex, Gemini) reject this sentinel with 400 syntax errors.
+          // If the buffered tail already carried the upstream `[DONE]`, it was forwarded
+          // verbatim above — never append a second sentinel.
           const isGeminiFamily = provider === "antigravity" || provider === "gemini" || provider === "vertex";
+          if (buffer.trim().endsWith("[DONE]")) streamDoneSent = true;
           if (!streamDoneSent && !isGeminiFamily) {
             const doneOutput = "data: [DONE]\n\n";
             reqLogger?.appendConvertedChunk?.(doneOutput);

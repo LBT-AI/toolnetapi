@@ -276,6 +276,27 @@ const PROVIDER_MODELS_CONFIG = {
   chutes: createOpenAIModelsConfig("https://llm.chutes.ai/v1/models"),
   nvidia: createOpenAIModelsConfig("https://integrate.api.nvidia.com/v1/models"),
   sambanova: createOpenAIModelsConfig("https://api.sambanova.ai/v1/models"),
+  kira: {
+    url: "https://kiraai.vn/api/v1/models",
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    parseResponse: (data) => {
+      const list = Array.isArray(data) ? data : (data?.data || data?.models || []);
+      return list
+        .filter((m) => m.status !== "hidden")
+        .map((m) => ({
+          id: m.id,
+          name: m.name || m.id,
+          isFree: m.is_free === true,
+          contextLength: m.input_limit || 128000,
+          maxOutputTokens: m.output_limit || 16384,
+          description: m.description,
+          tags: m.tags || [],
+        }));
+    },
+  },
   assemblyai: createOpenAIModelsConfig("https://api.assemblyai.com/v1/models"),
   "vercel-ai-gateway": createOpenAIModelsConfig("https://ai-gateway.vercel.sh/v1/models"),
   kimchi: {

@@ -136,6 +136,15 @@ export const PROVIDER_CAPABILITIES = {
     "gpt-oss-120b": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },
     "gemma-4-31B-it": { reasoning: false, contextWindow: 131072, maxOutput: 16384 },
   },
+  "kira": {
+    "kira-mini-1.0": { reasoning: false, contextWindow: 128000, maxOutput: 16384 },
+    "deepseek-v4-pro-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+    "deepseek-v4-flash-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+    "deepseek-v4-pro-1b-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+    "deepseek-v4-flash-1b-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+    "qwen3.8-27b-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+    "qwen3.8-max-free": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
+  },
   "codex": {
     "gpt-5.6-sol":               CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-sol-review":        CODEX_GPT_56_SOL_CAPS,

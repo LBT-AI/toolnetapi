@@ -812,6 +812,34 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         }, effectiveProxy);
         return { valid: res.ok, error: res.ok ? null : "Invalid API key or base URL" };
       }
+      case "agnes":
+      case "poolside":
+      case "toolnet": {
+        const validateUrl = PROVIDERS[connection.provider]?.validateUrl || "https://apihub.agnes-ai.com/v1/models";
+        const res = await fetchWithConnectionProxy(validateUrl, {
+          headers: { Authorization: `Bearer ${connection.apiKey}` },
+        }, effectiveProxy);
+        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+      }
+      case "opencode": {
+        const res = await fetchWithConnectionProxy("https://opencode.ai/zen/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer public",
+            "x-opencode-client": "desktop",
+            "User-Agent": "opencode",
+          },
+          body: JSON.stringify({
+            model: "big-pickle",
+            messages: [{ role: "user", content: "ping" }],
+            max_tokens: 1,
+            stream: false,
+          }),
+        }, effectiveProxy);
+        const valid = res.ok || res.status === 200;
+        return { valid, error: valid ? null : `OpenCode upstream error: ${res.status}` };
+      }
       default:
         return { valid: false, error: "Provider test not supported" };
     }

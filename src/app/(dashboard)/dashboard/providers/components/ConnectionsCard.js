@@ -197,12 +197,17 @@ ConnectionRow.propTypes = {
 // ── AddApiKeyModal ─────────────────────────────────────────────
 function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, onClose }) {
   const NONE = "__none__";
+  const isNoAuth = !!AI_PROVIDERS?.[provider]?.noAuth;
   const [formData, setFormData] = useState({ name: "", apiKey: "", priority: 1, weight: 1, proxyPoolId: NONE });
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const handleValidate = async () => {
+    if (isNoAuth) {
+      setValidationResult("success");
+      return;
+    }
     setValidating(true);
     try {
       const res = await fetch("/api/providers/validate", {
@@ -217,25 +222,28 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
   };
 
   const handleSubmit = async () => {
-    if (!provider || !formData.apiKey) return;
+    if (!provider) return;
+    if (!isNoAuth && !formData.apiKey) return;
     setSaving(true);
     try {
-      let isValid = false;
-      try {
-        setValidating(true); setValidationResult(null);
-        const res = await fetch("/api/providers/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider, apiKey: formData.apiKey }),
-        });
-        const data = await res.json();
-        isValid = !!data.valid;
-        setValidationResult(isValid ? "success" : "failed");
-      } catch { setValidationResult("failed"); }
-      finally { setValidating(false); }
+      let isValid = isNoAuth;
+      if (!isNoAuth) {
+        try {
+          setValidating(true); setValidationResult(null);
+          const res = await fetch("/api/providers/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey: formData.apiKey }),
+          });
+          const data = await res.json();
+          isValid = !!data.valid;
+          setValidationResult(isValid ? "success" : "failed");
+        } catch { setValidationResult("failed"); }
+        finally { setValidating(false); }
+      }
       await onSave({
-        name: formData.name,
-        apiKey: formData.apiKey,
+        name: formData.name || "Connection",
+        apiKey: isNoAuth ? "public" : formData.apiKey,
         priority: formData.priority,
         weight: formData.weight,
         proxyPoolId: formData.proxyPoolId === NONE ? null : formData.proxyPoolId,
@@ -247,23 +255,33 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
   if (!provider) return null;
 
   return (
-    <Modal isOpen={isOpen} title={`Add ${providerName || provider} API Key`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={isNoAuth ? `Add ${providerName || provider} Connection` : `Add ${providerName || provider} API Key`} onClose={onClose}>
       <div className="flex flex-col gap-4">
         <div>
           <label className="text-xs text-text-muted mb-1 block">Name</label>
-          <input className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Production Key" />
+          <input className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder={isNoAuth ? "e.g. Connection #1 - US Proxy" : "Production Key"} />
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-text-muted mb-1 block">API Key</label>
-            <input type="password" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
+        {isNoAuth ? (
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-green-500/10 text-green-700 dark:text-green-300 text-xs border border-green-500/20">
+            <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">verified_user</span>
+            <div>
+              <p className="font-medium">No upstream API key required</p>
+              <p className="text-text-muted mt-0.5">This connection routes requests via the selected Proxy Pool with automatic rate-limit failover.</p>
+            </div>
           </div>
-          <div className="pt-6">
-            <Button onClick={handleValidate} disabled={!formData.apiKey || validating || saving} variant="secondary">
-              {validating ? "Checking..." : "Check"}
-            </Button>
+        ) : (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-text-muted mb-1 block">API Key</label>
+              <input type="password" className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
+            </div>
+            <div className="pt-6">
+              <Button onClick={handleValidate} disabled={!formData.apiKey || validating || saving} variant="secondary">
+                {validating ? "Checking..." : "Check"}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
         {validationResult && (
           <Badge variant={validationResult === "success" ? "success" : "error"}>
             {validationResult === "success" ? "Valid" : "Invalid"}
@@ -282,7 +300,7 @@ function AddApiKeyModal({ isOpen, provider, providerName, proxyPools, onSave, on
         <Select label="Proxy Pool" value={formData.proxyPoolId} onChange={(e) => setFormData({ ...formData, proxyPoolId: e.target.value })}
           options={[{ value: NONE, label: "None" }, ...(proxyPools || []).map((p) => ({ value: p.id, label: p.name }))]} />
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={!formData.name || !formData.apiKey || saving}>
+          <Button onClick={handleSubmit} fullWidth disabled={!formData.name || (!isNoAuth && !formData.apiKey) || saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>

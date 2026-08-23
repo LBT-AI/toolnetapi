@@ -19,11 +19,14 @@ export default {
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://apihub.agnes-ai.com/v1/chat/completions",
+    validateUrl: "https://apihub.agnes-ai.com/v1/models",
     thinkingFormat: "openai",
   },
   serviceKinds: ["llm", "image", "video"],
   models: [
+    { id: "agnes-2.5-flash", name: "Agnes 2.5 Flash", kind: "llm" },
     { id: "agnes-2.0-flash", name: "Agnes 2.0 Flash", kind: "llm" },
+    { id: "agnes-1.5-flash", name: "Agnes 1.5 Flash", kind: "llm" },
     { id: "agnes-image-2.1-flash", name: "Agnes Image 2.1 Flash", kind: "image" },
     { id: "agnes-video-v2.0", name: "Agnes Video v2.0", kind: "video" },
   ],

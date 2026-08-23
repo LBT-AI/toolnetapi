@@ -7,7 +7,7 @@ import {
   getProxyPoolById,
 } from "@/models";
 import { APIKEY_PROVIDERS } from "@/shared/constants/config";
-import { AI_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
+import { AI_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
 import { normalizeProviderId, normalizeProviderSpecificData } from "@/lib/providerNormalization";
 
 export const dynamic = "force-dynamic";
@@ -101,12 +101,14 @@ export async function POST(request) {
     const proxyPoolId = proxyPoolResult.proxyPoolId;
 
     // Validation
+    const isFreeNoAuth = !!FREE_PROVIDERS[provider]?.noAuth;
     const isWebCookieProvider = !!WEB_COOKIE_PROVIDERS[provider];
     // Dual-auth providers (e.g. codebuddy-cn, xai) live under category "oauth" but also
     // accept an API key via authModes — they aren't in APIKEY_PROVIDERS, so allow them here.
     const supportsApiKeyMode = !!AI_PROVIDERS[provider]?.authModes?.includes("apikey");
     const isValidProvider = APIKEY_PROVIDERS[provider] ||
       FREE_TIER_PROVIDERS[provider] ||
+      FREE_PROVIDERS[provider] ||
       supportsApiKeyMode ||
       isWebCookieProvider ||
       isOpenAICompatibleProvider(provider) ||
@@ -116,7 +118,7 @@ export async function POST(request) {
     if (!provider || !isValidProvider) {
       return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
     }
-    if (!apiKey && provider !== "ollama-local") {
+    if (!apiKey && provider !== "ollama-local" && !isFreeNoAuth) {
       return NextResponse.json({ error: `${isWebCookieProvider ? "Cookie value" : "API Key"} is required` }, { status: 400 });
     }
     const connectionName = name || displayName || AI_PROVIDERS[provider]?.name;
@@ -174,15 +176,16 @@ export async function POST(request) {
 
     const newConnection = await createProviderConnection({
       provider,
-      authType: isWebCookieProvider ? "cookie" : "apikey",
+      authType: isFreeNoAuth ? "none" : (isWebCookieProvider ? "cookie" : "apikey"),
       name: connectionName,
-      apiKey: apiKey || "",
+      apiKey: apiKey || (isFreeNoAuth ? "public" : ""),
+      accessToken: isFreeNoAuth ? "public" : null,
       priority: priority || 1,
       globalPriority: globalPriority || null,
       defaultModel: defaultModel || null,
       providerSpecificData: mergedProviderSpecificData,
       isActive: true,
-      testStatus: testStatus || "unknown",
+      testStatus: testStatus || (isFreeNoAuth ? "active" : "unknown"),
     });
 
     // Hide sensitive fields

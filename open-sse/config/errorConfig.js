@@ -64,10 +64,15 @@ export const ERROR_RULES = [
   { text: "rate limit",               backoff: true },
   { text: "too many requests",        backoff: true },
   { text: "quota exceeded",           backoff: true },
+  { text: "usage limit",              backoff: true },
+  { text: "free limit",               backoff: true },
+  { text: "free usage",               backoff: true },
+  { text: "ip limit",                 backoff: true },
   { text: "capacity",                 backoff: true },
   { text: "overloaded",               backoff: true },
 
   // --- Status-based rules (fallback when text doesn't match) ---
+  { status: 400, shouldFallback: false }, // Client request errors do not failover
   { status: 401, cooldownMs: COOLDOWN.long },
   { status: 402, cooldownMs: COOLDOWN.long },
   { status: 403, cooldownMs: COOLDOWN.long },

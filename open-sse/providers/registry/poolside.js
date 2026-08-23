@@ -24,7 +24,8 @@ export default {
     validateUrl: "https://inference.poolside.ai/v1/models",
   },
   models: [
-    { id: "poolside/laguna-s-2.1", name: "Laguna S 2.1" },
-    { id: "poolside/laguna-xs-2.1", name: "Laguna XS 2.1" },
+    { id: "laguna-s-2.1", name: "Laguna S 2.1", upstreamModelId: "poolside/laguna-s-2.1" },
+    { id: "laguna-xs-2.1", name: "Laguna XS 2.1", upstreamModelId: "poolside/laguna-xs-2.1" },
   ],
+  passthroughModels: true,
 };

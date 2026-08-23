@@ -28,6 +28,9 @@ export function checkFallbackError(status, errorText, backoffLevel = 0) {
   for (const rule of ERROR_RULES) {
     // Text-based rule: match substring in error message
     if (rule.text && lowerError && lowerError.includes(rule.text)) {
+      if (rule.shouldFallback === false) {
+        return { shouldFallback: false, cooldownMs: 0 };
+      }
       if (rule.backoff) {
         const newLevel = Math.min(backoffLevel + 1, BACKOFF_CONFIG.maxLevel);
         return { shouldFallback: true, cooldownMs: getQuotaCooldown(newLevel), newBackoffLevel: newLevel };
@@ -37,6 +40,9 @@ export function checkFallbackError(status, errorText, backoffLevel = 0) {
 
     // Status-based rule: match HTTP status code
     if (rule.status && rule.status === status) {
+      if (rule.shouldFallback === false) {
+        return { shouldFallback: false, cooldownMs: 0 };
+      }
       if (rule.backoff) {
         const newLevel = Math.min(backoffLevel + 1, BACKOFF_CONFIG.maxLevel);
         return { shouldFallback: true, cooldownMs: getQuotaCooldown(newLevel), newBackoffLevel: newLevel };
@@ -45,7 +51,12 @@ export function checkFallbackError(status, errorText, backoffLevel = 0) {
     }
   }
 
-  // Default: transient cooldown for any unmatched error
+  // 4xx client errors (400, 422, etc.) should not lock accounts/proxies
+  if (status >= 400 && status < 500 && status !== 429 && status !== 401 && status !== 402 && status !== 403 && status !== 404) {
+    return { shouldFallback: false, cooldownMs: 0 };
+  }
+
+  // Default: transient cooldown for any unmatched 5xx/network error
   return { shouldFallback: true, cooldownMs: TRANSIENT_COOLDOWN_MS };
 }
 

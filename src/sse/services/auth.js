@@ -41,37 +41,38 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     // Resolve alias to provider ID (e.g., "kc" -> "kilocode")
     const providerId = resolveProviderId(provider);
 
-    // Inject a virtual connection for no-auth free providers (with optional proxy pool from settings)
-    if (FREE_PROVIDERS[providerId]?.noAuth) {
-      const settings = await getSettings();
-      const override = (settings.providerStrategies || {})[providerId] || {};
-      const strategy = override.rotateStrategy || "none";
-      let pickedId = override.proxyPoolId || null;
-      if (strategy !== "none") {
-        const allPools = await getProxyPools({ isActive: true });
-        const poolIds = allPools.filter(p => p.proxyUrl).map(p => p.id);
-        pickedId = pickProxyPoolId(poolIds, strategy, providerId);
-      }
-      const resolvedProxy = await resolveConnectionProxyConfig({ proxyPoolId: pickedId || "" });
-      return {
-        id: "noauth",
-        connectionName: "Public",
-        isActive: true,
-        accessToken: "public",
-        providerSpecificData: {
-          connectionProxyEnabled: resolvedProxy.connectionProxyEnabled,
-          connectionProxyUrl: resolvedProxy.connectionProxyUrl,
-          connectionNoProxy: resolvedProxy.connectionNoProxy,
-          connectionProxyPoolId: resolvedProxy.proxyPoolId || null,
-          vercelRelayUrl: resolvedProxy.vercelRelayUrl || "",
-        },
-      };
-    }
-
+    const isFreeNoAuth = !!FREE_PROVIDERS[providerId]?.noAuth;
     const connections = await getProviderConnections({ provider: providerId, isActive: true });
     log.debug("AUTH", `${provider} | total connections: ${connections.length}, excludeIds: ${excludeSet.size > 0 ? [...excludeSet].join(",") : "none"}, model: ${model || "any"}`);
 
     if (connections.length === 0) {
+      if (isFreeNoAuth) {
+        // Fallback for when no explicit connections are defined in DB
+        const settings = await getSettings();
+        const override = (settings.providerStrategies || {})[providerId] || {};
+        const strategy = override.rotateStrategy || "none";
+        let pickedId = override.proxyPoolId || null;
+        if (strategy !== "none") {
+          const allPools = await getProxyPools({ isActive: true });
+          const poolIds = allPools.filter(p => p.proxyUrl).map(p => p.id);
+          pickedId = pickProxyPoolId(poolIds, strategy, providerId);
+        }
+        const resolvedProxy = await resolveConnectionProxyConfig({ proxyPoolId: pickedId || "" });
+        return {
+          id: "noauth",
+          connectionName: "Public",
+          isActive: true,
+          accessToken: "public",
+          apiKey: "public",
+          providerSpecificData: {
+            connectionProxyEnabled: resolvedProxy.connectionProxyEnabled,
+            connectionProxyUrl: resolvedProxy.connectionProxyUrl,
+            connectionNoProxy: resolvedProxy.connectionNoProxy,
+            connectionProxyPoolId: resolvedProxy.proxyPoolId || null,
+            vercelRelayUrl: resolvedProxy.vercelRelayUrl || "",
+          },
+        };
+      }
       log.warn("AUTH", `No credentials for ${provider}`);
       return null;
     }
@@ -206,9 +207,9 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const resolvedProxy = await resolveConnectionProxyConfig(connection.providerSpecificData || {});
 
     return {
-      authType: connection.authType,
-      apiKey: connection.apiKey,
-      accessToken: connection.accessToken,
+      authType: connection.authType || (isFreeNoAuth ? "none" : "apikey"),
+      apiKey: connection.apiKey || (isFreeNoAuth ? "public" : ""),
+      accessToken: connection.accessToken || (isFreeNoAuth ? "public" : ""),
       refreshToken: connection.refreshToken,
       idToken: connection.idToken,
       expiresAt: connection.expiresAt,

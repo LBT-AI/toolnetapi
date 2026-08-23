@@ -10,6 +10,7 @@ const BULK_PLACEHOLDER = `name1|sk-key1\nname2|sk-key2\nsk-key-only-auto-named`;
 
 export default function AddApiKeyModal({ isOpen, provider, providerName, isCompatible, isAnthropic, authType, authHint, website, proxyPools, error, existingNames, onSave, onBulkDone, onClose }) {
   const NONE_PROXY_POOL_VALUE = "__none__";
+  const isNoAuth = !!AI_PROVIDERS?.[provider]?.noAuth;
   const isOllamaLocal = provider === "ollama-local";
   const isCookie = authType === "cookie";
   const isXaiApiKey = provider === "xai" && !isCookie;
@@ -90,40 +91,41 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
 
   const handleSubmit = async () => {
     if (!provider) return;
-    if (!isOllamaLocal && !formData.apiKey) return;
-    if (!isOllamaLocal) {
-      // Non-ollama providers require a name
-      if (!formData.name) return;
-    }
+    if (!isOllamaLocal && !isNoAuth && !formData.apiKey) return;
+    if (!isOllamaLocal && !formData.name) return;
     if (isCompatible && !formData.defaultModel.trim()) return;
 
     setSaving(true);
     try {
       let isValid = false;
-      try {
-        setValidating(true);
-        setValidationResult(null);
-        const res = await fetch("/api/providers/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider, apiKey: formData.apiKey, providerSpecificData: buildProviderSpecificData() }),
-        });
-        const data = await res.json();
-        isValid = !!data.valid;
-        setValidationResult(isValid ? "success" : "failed");
-      } catch {
-        setValidationResult("failed");
-      } finally {
-        setValidating(false);
+      if (!isNoAuth) {
+        try {
+          setValidating(true);
+          setValidationResult(null);
+          const res = await fetch("/api/providers/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider, apiKey: formData.apiKey, providerSpecificData: buildProviderSpecificData() }),
+          });
+          const data = await res.json();
+          isValid = !!data.valid;
+          setValidationResult(isValid ? "success" : "failed");
+        } catch {
+          setValidationResult("failed");
+        } finally {
+          setValidating(false);
+        }
+      } else {
+        isValid = true;
       }
 
       await onSave({
-        name: formData.name || (isOllamaLocal ? "Ollama Local" : ""),
-        apiKey: formData.apiKey,
+        name: formData.name || (isOllamaLocal ? "Ollama Local" : "Connection"),
+        apiKey: isNoAuth ? "public" : formData.apiKey,
         defaultModel: isCompatible ? formData.defaultModel.trim() : undefined,
         priority: formData.priority,
         proxyPoolId: formData.proxyPoolId === NONE_PROXY_POOL_VALUE ? null : formData.proxyPoolId,
-        testStatus: isValid ? "active" : "unknown",
+        testStatus: isNoAuth ? "active" : (isValid ? "active" : "unknown"),
         providerSpecificData: buildProviderSpecificData()
       });
     } finally {
@@ -171,15 +173,17 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   if (!provider) return null;
 
   return (
-    <Modal isOpen={isOpen} title={`Add ${providerName || provider} ${credentialLabel}`} onClose={onClose}>
+    <Modal isOpen={isOpen} title={isNoAuth ? `Add ${providerName || provider} Connection` : `Add ${providerName || provider} ${credentialLabel}`} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {/* Mode switcher */}
-        <div className="flex gap-2">
-          <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
-          <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
-        </div>
+        {!isNoAuth && (
+          <div className="flex gap-2">
+            <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
+            <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
+          </div>
+        )}
 
-        {mode === "bulk" && (
+        {mode === "bulk" && !isNoAuth && (
           <div className="flex flex-col gap-3">
             <p className="text-xs text-text-muted">
               {isCloudflareAi
@@ -194,7 +198,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
               onChange={(e) => setBulkText(e.target.value)}
             />
             {bulkResult && (
-              <div className={`text-sm font-medium ${bulkResult.failed > 0 ? "text-yellow-400" : "text-green-400"}`}>
+              <div className="text-xs text-text-muted">
                 ✓ {bulkResult.success} added{bulkResult.failed > 0 ? `, ✗ ${bulkResult.failed} failed` : ""}
               </div>
             )}
@@ -207,14 +211,22 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </div>
         )}
 
-        {mode === "single" && (<>
+        {(mode === "single" || isNoAuth) && (<>
         <Input
           label="Name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={isOllamaLocal ? "Ollama Local" : "Production Key"}
+          placeholder={isOllamaLocal ? "Ollama Local" : (isNoAuth ? "e.g. Connection #1 - Proxy US" : "Production Key")}
         />
-        {isOllamaLocal && (
+        {isNoAuth ? (
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-green-500/10 text-green-700 dark:text-green-300 text-xs border border-green-500/20">
+            <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">verified_user</span>
+            <div>
+              <p className="font-medium">No upstream API key required (OpenCode Free)</p>
+              <p className="text-text-muted mt-0.5">This connection routes requests via the selected Proxy Pool with automatic rate-limit failover.</p>
+            </div>
+          </div>
+        ) : isOllamaLocal ? (
           <div className="flex gap-2">
             <Input
               label="Ollama Host URL"
@@ -229,8 +241,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
               </Button>
             </div>
           </div>
-        )}
-        {!isOllamaLocal && (
+        ) : (
           <div className="flex gap-2">
             <Input
               label={credentialLabel}
@@ -374,7 +385,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         </p>
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && !isNoAuth && !formData.apiKey) || (!isOllamaLocal && !formData.name) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

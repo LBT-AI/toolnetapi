@@ -19,6 +19,14 @@ for (const entry of REGISTRY) {
 
 const BUILTIN_MODEL_ALIASES = {
   "grok-build": "gcli/grok-build",
+  "big-pickle": "opencode/big-pickle",
+  "x-preview-f-free": "opencode/x-preview-f-free",
+  "hy3-free": "opencode/hy3-free",
+  "nemotron-3-ultra-free": "opencode/nemotron-3-ultra-free",
+  "nemotron-3.5-lightning-free": "opencode/nemotron-3.5-lightning-free",
+  "laguna-s-2.1-free": "opencode/laguna-s-2.1-free",
+  "mimo-v2.5-free": "opencode/mimo-v2.5-free",
+  "muse-spark-1.2-contributor-free": "opencode/muse-spark-1.2-contributor-free",
 };
 
 /**

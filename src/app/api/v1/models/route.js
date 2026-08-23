@@ -1,6 +1,7 @@
 import { PROVIDER_MODELS, PROVIDER_ID_TO_ALIAS, getModelKind } from "@/shared/constants/models";
 import {
   AI_PROVIDERS,
+  FREE_PROVIDERS,
   getProviderAlias,
   isAnthropicCompatibleProvider,
   isOpenAICompatibleProvider,
@@ -270,6 +271,11 @@ export async function buildModelsList(kindFilter, options = {}) {
   for (const conn of connections) {
     if (!activeConnectionByProvider.has(conn.provider)) {
       activeConnectionByProvider.set(conn.provider, conn);
+    }
+  }
+  for (const [pId, pInfo] of Object.entries(FREE_PROVIDERS || {})) {
+    if (pInfo.noAuth && !pInfo.hidden && !activeConnectionByProvider.has(pId)) {
+      activeConnectionByProvider.set(pId, { id: "noauth", provider: pId, isActive: true });
     }
   }
 

@@ -88,7 +88,10 @@ export async function POST(request) {
     const { apiKey, providerSpecificData } = body;
 
     const isNoAuth = AI_PROVIDERS[provider]?.noAuth === true;
-    if (!provider || (!apiKey && provider !== "ollama-local" && !isNoAuth)) {
+    if (isNoAuth) {
+      return NextResponse.json({ valid: true });
+    }
+    if (!provider || (!apiKey && provider !== "ollama-local")) {
       return NextResponse.json({ error: "Provider and API key required" }, { status: 400 });
     }
 
@@ -371,7 +374,10 @@ export async function POST(request) {
         case "chutes":
         case "xiaomi-mimo":
         case "xiaomi-tokenplan":
-        case "nvidia": {
+        case "nvidia":
+        case "agnes":
+        case "poolside":
+        case "toolnet": {
           const endpoints = {
             ...Object.fromEntries(
               Object.entries(PROVIDERS).filter(([, t]) => t.validateUrl).map(([id, t]) => [id, t.validateUrl])

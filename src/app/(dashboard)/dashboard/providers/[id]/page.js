@@ -430,6 +430,31 @@ export default function ProviderDetailPage() {
     saveThinkingConfig(mode);
   };
 
+  const handleImportProxiesAsConnections = async () => {
+    if (!proxyPools || proxyPools.length === 0) return;
+    try {
+      const activePools = proxyPools.filter(p => p.isActive !== false);
+      for (let i = 0; i < activePools.length; i++) {
+        const pool = activePools[i];
+        await fetch("/api/providers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: providerId,
+            name: `Connection #${i + 1} (${pool.name})`,
+            priority: i + 1,
+            proxyPoolId: pool.id,
+            apiKey: "public",
+            testStatus: "active",
+          }),
+        });
+      }
+      await fetchConnections();
+    } catch (e) {
+      console.error("Failed to import proxy pools as connections", e);
+    }
+  };
+
   const saveAutoPing = async (next) => {
     const autoPingSettingsKey = AUTO_PING_SETTINGS_KEYS[providerId];
     if (!autoPingSettingsKey) return;
@@ -1416,226 +1441,240 @@ export default function ProviderDetailPage() {
       )}
 
       {/* Connections */}
-      {isFreeNoAuth ? (
-        <NoAuthProxyCard providerId={providerId} />
-      ) : (
-        <Card>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold">Connections</h2>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              {connections.length > 0 && proxyPools.length > 0 && (
+      <Card>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold">Connections</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            {connections.length > 0 && proxyPools.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="lan"
+                onClick={() => setShowBulkProxyModal(true)}
+              >
+                Apply Proxy
+              </Button>
+            )}
+            {connections.length > 0 && (
+              <>
+                {selectedConnectionIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    icon="delete"
+                    onClick={handleBulkDelete}
+                  >
+                    Delete Selected ({selectedConnectionIds.length})
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
-                  icon="lan"
-                  onClick={() => setShowBulkProxyModal(true)}
+                  icon="sync"
+                  onClick={handleRunOneByOneTest}
+                  disabled={oneByOneRunning}
                 >
-                  Apply Proxy
+                  {oneByOneRunning ? "Testing Connection One-by-One..." : "Test Connection One-by-One"}
                 </Button>
-              )}
-              {connections.length > 0 && (
-                <>
-                  {selectedConnectionIds.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      icon="delete"
-                      onClick={handleBulkDelete}
-                    >
-                      Delete Selected ({selectedConnectionIds.length})
-                    </Button>
-                  )}
+                {oneByOneRunning && (
                   <Button
                     size="sm"
-                    variant="secondary"
-                    icon="sync"
-                    onClick={handleRunOneByOneTest}
-                    disabled={oneByOneRunning}
+                    variant="ghost"
+                    icon="stop"
+                    onClick={handleStopOneByOneTest}
+                    disabled={oneByOneStopping}
                   >
-                    {oneByOneRunning ? "Testing Connection One-by-One..." : "Test Connection One-by-One"}
+                    {oneByOneStopping ? "Stopping..." : "Stop"}
                   </Button>
-                  {oneByOneRunning && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon="stop"
-                      onClick={handleStopOneByOneTest}
-                      disabled={oneByOneStopping}
-                    >
-                      {oneByOneStopping ? "Stopping..." : "Stop"}
-                    </Button>
-                  )}
-                </>
-              )}
-              {/* Strategy Select */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={providerStrategy || "fill-first"}
-                  onChange={handleStrategyChange}
-                  options={[
-                    { value: "fill-first", label: "Fill-First" },
-                    { value: "round-robin", label: "Round Robin" },
-                    { value: "weighted", label: "Weighted" },
-                  ]}
-                />
-                {(providerStrategy === "round-robin" || providerStrategy === "weighted") && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-text-muted">Sticky:</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={providerStickyLimit}
-                      onChange={(e) => handleStickyLimitChange(e.target.value)}
-                      placeholder="1"
-                      className="w-14 px-2 py-1 text-xs border border-border rounded-md bg-background focus:outline-none focus:border-primary"
-                    />
-                  </div>
                 )}
-              </div>
+              </>
+            )}
+            {/* Strategy Select */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={providerStrategy || "fill-first"}
+                onChange={handleStrategyChange}
+                options={[
+                  { value: "fill-first", label: "Fill-First" },
+                  { value: "round-robin", label: "Round Robin" },
+                  { value: "weighted", label: "Weighted" },
+                ]}
+              />
+              {(providerStrategy === "round-robin" || providerStrategy === "weighted") && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-text-muted">Sticky:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={providerStickyLimit}
+                    onChange={(e) => handleStickyLimitChange(e.target.value)}
+                    placeholder="1"
+                    className="w-14 px-2 py-1 text-xs border border-border rounded-md bg-background focus:outline-none focus:border-primary"
+                  />
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          {connections.length === 0 ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">{isOAuth ? "lock" : "key"}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-text-muted">No connections yet</p>
-                  {hasDualAuthModes && (
-                    <p className="text-xs text-text-muted">
-                      Choose {oauthConnectionLabel} or {apiKeyConnectionLabel}.
-                    </p>
-                  )}
-                </div>
+        {connections.length === 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary shrink-0">
+                <span className="material-symbols-outlined text-[18px]">{isFreeNoAuth ? "hub" : (isOAuth ? "lock" : "key")}</span>
               </div>
-              <div className="flex gap-2">
-                {hasDualAuthModes ? (
-                  <>
-                    <Button size="sm" icon="lock" variant="secondary" onClick={triggerOAuthConnection}>
-                      {oauthConnectionLabel}
-                    </Button>
-                    <Button size="sm" icon="key" onClick={triggerApiKeyConnection}>
-                      {apiKeyConnectionLabel}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {!isCompatible && providerId === "iflow" && (
-                      <Button size="sm" icon="cookie" variant="secondary" onClick={() => setShowIFlowCookieModal(true)}>
-                        Cookie
-                      </Button>
-                    )}
-                    {providerId === "codex" && (
-                      <Button size="sm" icon="playlist_add" variant="secondary" onClick={() => setShowBulkImportCodex(true)}>
-                        {translate("Bulk Add")}
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      icon="add"
-                      onClick={triggerAddConnection}
-                    >
-                      {isCompatible ? "Add API Key" : (providerId === "iflow" ? "OAuth" : "Add Connection")}
-                    </Button>
-                  </>
-                )}
+              <div className="min-w-0">
+                <p className="text-sm text-text-muted">{isFreeNoAuth ? "No virtual connections configured" : "No connections yet"}</p>
+                {isFreeNoAuth ? (
+                  <p className="text-xs text-text-muted">
+                    Add multiple connections (each bound to a proxy pool) for Fill-First sticky failover.
+                  </p>
+                ) : hasDualAuthModes ? (
+                  <p className="text-xs text-text-muted">
+                    Choose {oauthConnectionLabel} or {apiKeyConnectionLabel}.
+                  </p>
+                ) : null}
               </div>
             </div>
-          ) : (
-            <>
-              {oneByOneSummary && (
-                <div className="mb-4 rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs text-text-muted dark:border-white/10 dark:bg-white/[0.03]">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span>Total: {oneByOneSummary.total}</span>
-                    <span>Completed: {oneByOneSummary.completed}</span>
-                    <span>Passed: {oneByOneSummary.passed}</span>
-                    <span>Failed: {oneByOneSummary.failed}</span>
-                    {oneByOneSummary.stopped && (
-                      <span className="text-amber-600 dark:text-amber-400">Stopped</span>
-                    )}
-                    {oneByOneRunning && oneByOneCurrentConnectionId && (
-                      <span>Running: {connections.find((conn) => conn.id === oneByOneCurrentConnectionId)?.name || oneByOneCurrentConnectionId}</span>
-                    )}
-                  </div>
-                </div>
+            <div className="flex flex-wrap gap-2">
+              {isFreeNoAuth && proxyPools.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon="playlist_add"
+                  onClick={handleImportProxiesAsConnections}
+                  title="Create a Fill-First virtual connection for each active proxy pool"
+                >
+                  Import All Active Proxies ({proxyPools.length})
+                </Button>
               )}
-              {connections.length > 0 && (
-                <div className="mb-3 flex items-center gap-2 border-b border-black/[0.03] pb-2 dark:border-white/[0.03]">
-                  <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-muted hover:text-primary">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleSelectAllConnections}
-                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    Select All
-                  </label>
-                </div>
-              )}
-              {connectionsList}
-              {!isCompatible && (
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:flex">
-                  {providerId === "iflow" && (
-                    <Button
-                      size="sm"
-                      icon="cookie"
-                      variant="secondary"
-                      onClick={() => setShowIFlowCookieModal(true)}
-                      title="Add connection using browser cookie"
-                      className="w-full sm:w-auto"
-                    >
+              {hasDualAuthModes ? (
+                <>
+                  <Button size="sm" icon="lock" variant="secondary" onClick={triggerOAuthConnection}>
+                    {oauthConnectionLabel}
+                  </Button>
+                  <Button size="sm" icon="key" onClick={triggerApiKeyConnection}>
+                    {apiKeyConnectionLabel}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {!isCompatible && providerId === "iflow" && (
+                    <Button size="sm" icon="cookie" variant="secondary" onClick={() => setShowIFlowCookieModal(true)}>
                       Cookie
                     </Button>
                   )}
                   {providerId === "codex" && (
-                    <Button
-                      size="sm"
-                      icon="playlist_add"
-                      variant="secondary"
-                      onClick={() => setShowBulkImportCodex(true)}
-                      title={translate("Bulk import codex accounts from JSON")}
-                      className="w-full sm:w-auto"
-                    >
+                    <Button size="sm" icon="playlist_add" variant="secondary" onClick={() => setShowBulkImportCodex(true)}>
                       {translate("Bulk Add")}
                     </Button>
                   )}
-                  {hasDualAuthModes ? (
-                    <>
-                      <Button
-                        size="sm"
-                        icon="lock"
-                        variant="secondary"
-                        onClick={triggerOAuthConnection}
-                        className="w-full sm:w-auto"
-                      >
-                        {oauthConnectionLabel}
-                      </Button>
-                      <Button
-                        size="sm"
-                        icon="key"
-                        onClick={triggerApiKeyConnection}
-                        className="w-full sm:w-auto"
-                      >
-                        {apiKeyConnectionLabel}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      icon="add"
-                      onClick={triggerAddConnection}
-                      className="w-full sm:w-auto"
-                    >
-                      Add
-                    </Button>
+                  <Button
+                    size="sm"
+                    icon="add"
+                    onClick={triggerAddConnection}
+                  >
+                    {isFreeNoAuth ? "Add Connection" : (isCompatible ? "Add API Key" : (providerId === "iflow" ? "OAuth" : "Add Connection"))}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {oneByOneSummary && (
+              <div className="mb-4 rounded-lg border border-black/10 bg-black/[0.02] px-3 py-2 text-xs text-text-muted dark:border-white/10 dark:bg-white/[0.03]">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span>Total: {oneByOneSummary.total}</span>
+                  <span>Completed: {oneByOneSummary.completed}</span>
+                  <span>Passed: {oneByOneSummary.passed}</span>
+                  <span>Failed: {oneByOneSummary.failed}</span>
+                  {oneByOneSummary.stopped && (
+                    <span className="text-amber-600 dark:text-amber-400">Stopped</span>
+                  )}
+                  {oneByOneRunning && oneByOneCurrentConnectionId && (
+                    <span>Running: {connections.find((conn) => conn.id === oneByOneCurrentConnectionId)?.name || oneByOneCurrentConnectionId}</span>
                   )}
                 </div>
-              )}
-            </>
-          )}
-        </Card>
+              </div>
+            )}
+            {connections.length > 0 && (
+              <div className="mb-3 flex items-center gap-2 border-b border-black/[0.03] pb-2 dark:border-white/[0.03]">
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-muted hover:text-primary">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAllConnections}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  Select All
+                </label>
+              </div>
+            )}
+            {connectionsList}
+            {!isCompatible && (
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:flex">
+                {providerId === "iflow" && (
+                  <Button
+                    size="sm"
+                    icon="cookie"
+                    variant="secondary"
+                    onClick={() => setShowIFlowCookieModal(true)}
+                    title="Add connection using browser cookie"
+                    className="w-full sm:w-auto"
+                  >
+                    Cookie
+                  </Button>
+                )}
+                {providerId === "codex" && (
+                  <Button
+                    size="sm"
+                    icon="playlist_add"
+                    variant="secondary"
+                    onClick={() => setShowBulkImportCodex(true)}
+                    title={translate("Bulk import codex accounts from JSON")}
+                    className="w-full sm:w-auto"
+                  >
+                    {translate("Bulk Add")}
+                  </Button>
+                )}
+                {hasDualAuthModes ? (
+                  <>
+                    <Button
+                      size="sm"
+                      icon="lock"
+                      variant="secondary"
+                      onClick={triggerOAuthConnection}
+                      className="w-full sm:w-auto"
+                    >
+                      {oauthConnectionLabel}
+                    </Button>
+                    <Button
+                      size="sm"
+                      icon="key"
+                      onClick={triggerApiKeyConnection}
+                      className="w-full sm:w-auto"
+                    >
+                      {apiKeyConnectionLabel}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    icon="add"
+                    onClick={triggerAddConnection}
+                    className="w-full sm:w-auto"
+                  >
+                    {isFreeNoAuth ? "Add Connection" : "Add"}
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+      {isFreeNoAuth && connections.length === 0 && (
+        <NoAuthProxyCard providerId={providerId} />
       )}
 
       {/* Models */}

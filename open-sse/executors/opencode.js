@@ -67,4 +67,50 @@ export class OpenCodeExecutor extends BaseExecutor {
       "Accept": stream ? "text/event-stream" : "*/*",
     };
   }
+
+  parseError(response, bodyText) {
+    const status = response.status;
+    let message = "";
+    let resetsAtMs = null;
+
+    try {
+      const json = JSON.parse(bodyText);
+      message = json.error?.message || json.message || json.error || bodyText;
+    } catch {
+      message = bodyText;
+    }
+
+    const lower = String(message || "").toLowerCase();
+    const retryAfter = response.headers.get("retry-after");
+    if (retryAfter) {
+      const seconds = Number.parseInt(retryAfter, 10);
+      if (!Number.isNaN(seconds) && seconds > 0) {
+        resetsAtMs = Date.now() + seconds * 1000;
+      }
+    }
+
+    // Cloudflare IP block / challenge detection
+    if ((status === 403 || status === 503) && (lower.includes("cloudflare") || lower.includes("ray id") || lower.includes("just a moment"))) {
+      return {
+        status: 429,
+        message: "Proxy IP blocked by Cloudflare (429 rate limit)",
+        resetsAtMs: resetsAtMs || Date.now() + 5 * 60 * 1000,
+      };
+    }
+
+    // Free limit exhausted / rate limit detection
+    if (status === 429 || status === 403 || lower.includes("rate limit") || lower.includes("quota") || lower.includes("free limit") || lower.includes("usage limit") || lower.includes("too many requests")) {
+      return {
+        status: 429,
+        message: typeof message === "string" ? message : "OpenCode free limit reached",
+        resetsAtMs: resetsAtMs || Date.now() + 3 * 60 * 1000,
+      };
+    }
+
+    return {
+      status,
+      message: typeof message === "string" ? message : JSON.stringify(message),
+      resetsAtMs,
+    };
+  }
 }

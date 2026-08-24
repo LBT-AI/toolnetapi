@@ -338,6 +338,23 @@ export async function POST(request) {
         }
         case "volcengine-ark":
         case "byteplus":
+        case "bobide": {
+          const psd = body.providerSpecificData || {};
+          if (psd.baseUrl) {
+            try {
+              const res = await fetch(`${psd.baseUrl.replace(/\/$/, "")}/models`, {
+                headers: { Authorization: `Bearer ${apiKey}` },
+                signal: AbortSignal.timeout(8000),
+              });
+              isValid = res.status !== 401 && res.status !== 403;
+            } catch {
+              isValid = false;
+            }
+          } else {
+            isValid = !!apiKey && apiKey.trim().length > 0;
+          }
+          break;
+        }
         case "kira": {
           const res = await fetch(PROVIDERS[provider]?.baseUrl, {
             method: "POST",

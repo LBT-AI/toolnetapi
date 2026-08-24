@@ -21,7 +21,6 @@ export default {
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.bob-ide.ibm.com/v1/chat/completions",
-    validateUrl: "https://api.bob-ide.ibm.com/v1/models",
     thinkingFormat: "openai",
     quirks: {
       skipJailbreakInject: true,

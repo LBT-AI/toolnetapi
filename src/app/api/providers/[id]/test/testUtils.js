@@ -670,6 +670,22 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         const res = await fetchWithConnectionProxy("https://api.sambanova.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
         return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
       }
+      case "bobide": {
+        const psd = connection.providerSpecificData || {};
+        if (psd.baseUrl) {
+          try {
+            const res = await fetchWithConnectionProxy(`${psd.baseUrl.replace(/\/$/, "")}/models`, {
+              headers: { Authorization: `Bearer ${connection.apiKey}` },
+            }, effectiveProxy);
+            const valid = res.status !== 401 && res.status !== 403;
+            return { valid, error: valid ? null : "Invalid API key or base URL" };
+          } catch (err) {
+            return { valid: false, error: err.message };
+          }
+        }
+        const valid = !!(connection.apiKey && connection.apiKey.trim().length > 0);
+        return { valid, error: valid ? null : "API key is required" };
+      }
       case "kira": {
         const res = await fetchWithConnectionProxy("https://kiraai.vn/api/v1/chat/completions", {
           method: "POST",

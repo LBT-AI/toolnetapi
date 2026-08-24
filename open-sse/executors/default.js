@@ -19,7 +19,7 @@ const AUTH_DESCRIPTORS = Object.fromEntries(
 
 // Apply a token to a header per scheme (matches legacy: combined always sets, even when undefined).
 function setAuth(headers, spec, token) {
-  headers[spec.header] = spec.scheme === "bearer" ? `Bearer ${token}` : token;
+  headers[spec.header] = spec.scheme === "bearer" ? `Bearer ${token}` : spec.scheme === "apikey" ? `Apikey ${token}` : token;
 }
 
 // Resolve auth onto headers from a descriptor.

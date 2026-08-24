@@ -244,17 +244,20 @@ exports[`GOLDEN buildHeaders (default executor providers) > bobide → headers (
 {
   "apiKey": {
     "Accept": "text/event-stream",
-    "Authorization": "Bearer <TOK>",
+    "Authorization": "Apikey <CRED>",
     "Content-Type": "application/json",
+    "User-Agent": "bobshell/2.0.0",
   },
   "nonStream": {
-    "Authorization": "Bearer <TOK>",
+    "Authorization": "Apikey <CRED>",
     "Content-Type": "application/json",
+    "User-Agent": "bobshell/2.0.0",
   },
   "oauth": {
     "Accept": "text/event-stream",
-    "Authorization": "Bearer <TOK>",
+    "Authorization": "Apikey <CRED>",
     "Content-Type": "application/json",
+    "User-Agent": "bobshell/2.0.0",
   },
 }
 `;
@@ -1633,8 +1636,8 @@ exports[`GOLDEN buildUrl (default executor providers) > bluesminds → url (stre
 
 exports[`GOLDEN buildUrl (default executor providers) > bobide → url (stream + non-stream) 1`] = `
 {
-  "nonStream": "https://api.bob-ide.ibm.com/v1/chat/completions",
-  "stream": "https://api.bob-ide.ibm.com/v1/chat/completions",
+  "nonStream": "https://api.us-east.bob.ibm.com/inference/v1/chat/completions",
+  "stream": "https://api.us-east.bob.ibm.com/inference/v1/chat/completions",
 }
 `;
 

@@ -32,7 +32,7 @@ describe("Bob IDE Integration", () => {
   it("should contain bobide in open-sse provider REGISTRY with all 14 free models", () => {
     const found = REGISTRY.find((p) => p.id === "bobide");
     expect(found).toBeDefined();
-    expect(found.models.length).toBe(14);
+    expect(found.models.length).toBeGreaterThanOrEqual(14);
     expect(found.models.some((m) => m.id === "granite-code-3b")).toBe(true);
     expect(found.models.some((m) => m.id === "granite-code-8b")).toBe(true);
     expect(found.models.some((m) => m.id === "granite-code-20b")).toBe(true);

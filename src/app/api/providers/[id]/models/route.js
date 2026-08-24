@@ -276,6 +276,11 @@ const PROVIDER_MODELS_CONFIG = {
   chutes: createOpenAIModelsConfig("https://llm.chutes.ai/v1/models"),
   nvidia: createOpenAIModelsConfig("https://integrate.api.nvidia.com/v1/models"),
   sambanova: createOpenAIModelsConfig("https://api.sambanova.ai/v1/models"),
+  bobide: {
+    customResolver: async () => ({
+      models: getStaticProviderModels("bobide"),
+    }),
+  },
   kira: {
     url: "https://kiraai.vn/api/v1/models",
     method: "GET",

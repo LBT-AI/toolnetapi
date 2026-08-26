@@ -6,6 +6,7 @@ import { resolveSessionId } from "../utils/sessionManager.js";
 
 const OPENCODE_UA = "opencode";
 const MESSAGES_MODELS = new Set();
+const RESPONSES_MODELS = new Set(["muse-spark-1.2-contributor-free"]);
 
 function generateRequestId() {
   return `msg_${crypto.randomUUID().replace(/-/g, "")}`;
@@ -43,6 +44,7 @@ export class OpenCodeExecutor extends BaseExecutor {
 
   buildUrl(model) {
     const base = this.config.baseUrl;
+    if (RESPONSES_MODELS.has(model)) return `${base}/zen/v1/responses`;
     return MESSAGES_MODELS.has(model)
       ? `${base}/zen/v1/messages`
       : `${base}/zen/v1/chat/completions`;

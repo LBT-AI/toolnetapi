@@ -27,7 +27,7 @@ export default {
     { id: "nemotron-3.5-lightning-free", name: "Nemotron 3.5 Lightning Free" },
     { id: "laguna-s-2.1-free", name: "Laguna S 2.1 Free" },
     { id: "mimo-v2.5-free", name: "MiMo v2.5 Free" },
-    { id: "muse-spark-1.2-contributor-free", name: "Muse Spark 1.2 Contributor Free" },
+    { id: "muse-spark-1.2-contributor-free", name: "Muse Spark 1.2 Contributor Free", targetFormat: "openai-responses" },
   ],
   modelsFetcher: { url: "https://opencode.ai/zen/v1/models", type: "opencode-free" },
   passthroughModels: true,

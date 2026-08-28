@@ -70,6 +70,7 @@ export default function ProviderDetailPage() {
   const [liveModels, setLiveModels] = useState([]);
   const [kiloFreeModels, setKiloFreeModels] = useState([]);
   const [disabledModelIds, setDisabledModelIds] = useState([]);
+  const [modelCategoryFilter, setModelCategoryFilter] = useState("all");
   const [confirmState, setConfirmState] = useState(null);
   const [showAgRiskModal, setShowAgRiskModal] = useState(false);
   const [oneByOneRunning, setOneByOneRunning] = useState(false);
@@ -1074,14 +1075,14 @@ export default function ProviderDetailPage() {
     </Modal>
   );
 
-  const handleTestModel = async (modelId) => {
+  const handleTestModel = async (modelId, kind) => {
     if (testingModelIds.has(modelId)) return;
     setTestingModelIds((prev) => new Set(prev).add(modelId));
     try {
       const res = await fetch("/api/models/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: `${providerStorageAlias}/${modelId}` }),
+        body: JSON.stringify({ model: `${providerStorageAlias}/${modelId}`, kind: kind || "llm" }),
       });
       const data = await res.json();
       setModelTestResults((prev) => ({ ...prev, [modelId]: data.ok ? "ok" : "error" }));
@@ -1113,154 +1114,223 @@ export default function ProviderDetailPage() {
         />
       );
     }
+
     // Combine hardcoded models with Kilo free models (deduplicated)
-    // Exclude non-llm models (embedding, tts, etc.) — they have dedicated pages under media-providers
     const allModels = [
       ...models,
       ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
-    ].filter((m) => { const k = getModelKind(m); return !k || k === "llm"; });
+    ];
+
+    const counts = {
+      all: allModels.length,
+      llm: allModels.filter((m) => { const k = getModelKind(m); return !k || k === "llm"; }).length,
+      image: allModels.filter((m) => getModelKind(m) === "image").length,
+      video: allModels.filter((m) => getModelKind(m) === "video").length,
+      audio: allModels.filter((m) => { const k = getModelKind(m); return k === "audio" || k === "tts" || k === "stt"; }).length,
+      embedding: allModels.filter((m) => getModelKind(m) === "embedding").length,
+    };
+
+    const hasMultipleCategories = (counts.image > 0 || counts.video > 0 || counts.audio > 0 || counts.embedding > 0);
+
+    const categoryTabs = [
+      { id: "all", label: "All", count: counts.all, icon: "apps" },
+      counts.llm > 0 && { id: "llm", label: "Chat / LLM", count: counts.llm, icon: "smart_toy" },
+      counts.image > 0 && { id: "image", label: "Image", count: counts.image, icon: "palette" },
+      counts.video > 0 && { id: "video", label: "Video", count: counts.video, icon: "videocam" },
+      counts.audio > 0 && { id: "audio", label: "Audio", count: counts.audio, icon: "mic" },
+      counts.embedding > 0 && { id: "embedding", label: "Embedding", count: counts.embedding, icon: "data_array" },
+    ].filter(Boolean);
+
+    const filteredModels = allModels.filter((m) => {
+      const k = getModelKind(m) || "llm";
+      if (modelCategoryFilter === "all") return true;
+      if (modelCategoryFilter === "llm") return k === "llm";
+      if (modelCategoryFilter === "image") return k === "image";
+      if (modelCategoryFilter === "video") return k === "video";
+      if (modelCategoryFilter === "audio") return k === "audio" || k === "tts" || k === "stt";
+      if (modelCategoryFilter === "embedding") return k === "embedding";
+      return true;
+    });
+
     const disabledSet = new Set(disabledModelIds);
-    const displayModels = allModels.filter((m) => !disabledSet.has(m.id));
-    const disabledDisplayModels = allModels.filter((m) => disabledSet.has(m.id));
+    const displayModels = filteredModels.filter((m) => !disabledSet.has(m.id));
+    const disabledDisplayModels = filteredModels.filter((m) => disabledSet.has(m.id));
     const customModelRows = getProviderCustomModelRows({
       customModels,
       modelAliases,
       providerAlias: providerStorageAlias,
       builtInModels: models,
-      type: "llm",
+      type: modelCategoryFilter === "all" ? undefined : modelCategoryFilter,
     });
 
     return (
-      <div className="flex flex-wrap gap-3">
-        {/* Custom models first */}
-        {customModelRows.map((model) => (
-          <ModelRow
-            key={`${model.source}-${model.fullModel}`}
-            model={{ id: model.id, name: model.name }}
-            fullModel={`${providerDisplayAlias}/${model.id}`}
-            alias={model.alias}
-            copied={copied}
-            onCopy={copy}
-            onSetAlias={() => {}}
-            onDeleteAlias={() => {
-              if (model.source === "custom") {
-                handleDeleteCustomModel(model.id, "llm", providerStorageAlias);
-              } else {
-                handleDeleteAlias(model.alias);
-              }
-            }}
-            testStatus={modelTestResults[model.id]}
-            onTest={connections.length > 0 || isFreeNoAuth ? () => handleTestModel(model.id) : undefined}
-            isTesting={testingModelIds.has(model.id)}
-            isCustom
-            isFree={false}
-            caps={getCaps(`${providerId}/${model.id}`)}
-            thinkingSuffix={resolveThinkingSuffix(model.id)}
-          />
-        ))}
-
-        {displayModels.map((model) => {
-          const fullModel = `${providerStorageAlias}/${model.id}`;
-          const oldFormatModel = `${providerId}/${model.id}`;
-          const existingAlias = Object.entries(modelAliases).find(
-            ([, m]) => m === fullModel || m === oldFormatModel
-          )?.[0];
-          return (
-            <ModelRow
-              key={model.id}
-              model={model}
-              fullModel={`${providerDisplayAlias}/${model.id}`}
-              alias={existingAlias}
-              copied={copied}
-              onCopy={copy}
-              onSetAlias={(alias) => handleSetAlias(model.id, alias, providerStorageAlias)}
-              onDeleteAlias={() => handleDeleteAlias(existingAlias)}
-              testStatus={modelTestResults[model.id]}
-              onTest={connections.length > 0 || isFreeNoAuth ? () => handleTestModel(model.id) : undefined}
-              isTesting={testingModelIds.has(model.id)}
-              isFree={model.isFree}
-              onDisable={() => handleDisableModel(model.id)}
-              caps={getCaps(`${providerId}/${model.id}`)}
-              thinkingSuffix={resolveThinkingSuffix(model.id)}
-            />
-          );
-        })}
-
-        {/* Add model button — inline, same style as model chips */}
-        <button
-          onClick={() => setShowAddCustomModel(true)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 px-3 py-2 text-xs text-primary transition-colors hover:border-primary hover:bg-primary/5 sm:w-auto"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          Add Model
-        </button>
-
-        {/* Import Qoder models button — only show for qoder provider */}
-        {providerId === "qoder" && connections.some((conn) => conn.isActive !== false) && (
-          <button
-            onClick={handleImportQoderModels}
-            disabled={importingQoderModels}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="material-symbols-outlined text-sm" style={importingQoderModels ? { animation: "spin 1s linear infinite" } : undefined}>
-              {importingQoderModels ? "progress_activity" : "download"}
-            </span>
-            {importingQoderModels ? translate("Fetching...") : translate("Fetch Qoder Models")}
-          </button>
+      <div className="flex flex-col gap-3">
+        {hasMultipleCategories && (
+          <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-border">
+            {categoryTabs.map((tab) => {
+              const isActive = modelCategoryFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setModelCategoryFilter(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    isActive
+                      ? "bg-primary text-white shadow-sm"
+                      : "bg-sidebar text-text-muted hover:text-text-main hover:bg-sidebar/80"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    isActive ? "bg-white/20 text-white" : "bg-border text-text-muted"
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {/* Suggested models from provider API — show only models not yet added */}
-        {suggestedModels.length > 0 && (() => {
-          const addedFullModels = new Set([
-            ...Object.values(modelAliases),
-            ...customModelRows.map((model) => model.fullModel),
-          ]);
-          const hardcodedIds = new Set(models.map((m) => m.id));
-          const notAdded = suggestedModels.filter(
-            (m) => !addedFullModels.has(`${providerStorageAlias}/${m.id}`) && !hardcodedIds.has(m.id)
-          );
-          if (notAdded.length === 0) return null;
-          return (
+        <div className="flex flex-wrap gap-3">
+          {/* Custom models first */}
+          {customModelRows.map((model) => {
+            const rowKind = model.type || "llm";
+            return (
+              <ModelRow
+                key={`${model.source}-${model.fullModel}`}
+                model={{ id: model.id, name: model.name, kind: rowKind }}
+                fullModel={`${providerDisplayAlias}/${model.id}`}
+                alias={model.alias}
+                copied={copied}
+                onCopy={copy}
+                onSetAlias={() => {}}
+                onDeleteAlias={() => {
+                  if (model.source === "custom") {
+                    handleDeleteCustomModel(model.id, rowKind, providerStorageAlias);
+                  } else {
+                    handleDeleteAlias(model.alias);
+                  }
+                }}
+                testStatus={modelTestResults[model.id]}
+                onTest={connections.length > 0 || isFreeNoAuth ? () => handleTestModel(model.id, rowKind) : undefined}
+                isTesting={testingModelIds.has(model.id)}
+                isCustom
+                isFree={false}
+                caps={getCaps(`${providerId}/${model.id}`)}
+                thinkingSuffix={resolveThinkingSuffix(model.id)}
+                kind={rowKind}
+                showKindTag={hasMultipleCategories}
+              />
+            );
+          })}
+
+          {displayModels.map((model) => {
+            const fullModel = `${providerStorageAlias}/${model.id}`;
+            const oldFormatModel = `${providerId}/${model.id}`;
+            const existingAlias = Object.entries(modelAliases).find(
+              ([, m]) => m === fullModel || m === oldFormatModel
+            )?.[0];
+            const rowKind = getModelKind(model) || "llm";
+            return (
+              <ModelRow
+                key={model.id}
+                model={model}
+                fullModel={`${providerDisplayAlias}/${model.id}`}
+                alias={existingAlias}
+                copied={copied}
+                onCopy={copy}
+                onSetAlias={(alias) => handleSetAlias(model.id, alias, providerStorageAlias)}
+                onDeleteAlias={() => handleDeleteAlias(existingAlias)}
+                testStatus={modelTestResults[model.id]}
+                onTest={connections.length > 0 || isFreeNoAuth ? () => handleTestModel(model.id, rowKind) : undefined}
+                isTesting={testingModelIds.has(model.id)}
+                isFree={model.isFree}
+                onDisable={() => handleDisableModel(model.id)}
+                caps={getCaps(`${providerId}/${model.id}`)}
+                thinkingSuffix={resolveThinkingSuffix(model.id)}
+                kind={rowKind}
+                showKindTag={hasMultipleCategories}
+              />
+            );
+          })}
+
+          {/* Add model button — inline, same style as model chips */}
+          <button
+            onClick={() => setShowAddCustomModel(true)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 px-3 py-2 text-xs text-primary transition-colors hover:border-primary hover:bg-primary/5 sm:w-auto"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Add Model
+          </button>
+
+          {/* Import Qoder models button — only show for qoder provider */}
+          {providerId === "qoder" && connections.some((conn) => conn.isActive !== false) && (
+            <button
+              onClick={handleImportQoderModels}
+              disabled={importingQoderModels}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-500/40 px-3 py-2 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:border-blue-500 hover:bg-blue-500/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-sm" style={importingQoderModels ? { animation: "spin 1s linear infinite" } : undefined}>
+                {importingQoderModels ? "progress_activity" : "download"}
+              </span>
+              {importingQoderModels ? translate("Fetching...") : translate("Fetch Qoder Models")}
+            </button>
+          )}
+
+          {/* Suggested models from provider API — show only models not yet added */}
+          {suggestedModels.length > 0 && (() => {
+            const addedFullModels = new Set([
+              ...Object.values(modelAliases),
+              ...customModelRows.map((model) => model.fullModel),
+            ]);
+            const hardcodedIds = new Set(models.map((m) => m.id));
+            const notAdded = suggestedModels.filter(
+              (m) => !addedFullModels.has(`${providerStorageAlias}/${m.id}`) && !hardcodedIds.has(m.id)
+            );
+            if (notAdded.length === 0) return null;
+            return (
+              <div className="w-full mt-2">
+                <p className="text-xs text-text-muted mb-2">Suggested free models (≥200k context):</p>
+                <div className="flex flex-wrap gap-2">
+                  {notAdded.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={async () => {
+                        await handleAddCustomModel(m.id, "llm", providerStorageAlias);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                      title={`${m.name} · ${(m.contextLength / 1000).toFixed(0)}k ctx`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">add</span>
+                      {m.id.split("/").pop()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Disabled models — restorable */}
+          {disabledDisplayModels.length > 0 && (
             <div className="w-full mt-2">
-              <p className="text-xs text-text-muted mb-2">Suggested free models (≥200k context):</p>
+              <p className="text-xs text-text-muted mb-2">Disabled models ({disabledDisplayModels.length}):</p>
               <div className="flex flex-wrap gap-2">
-                {notAdded.map((m) => (
+                {disabledDisplayModels.map((m) => (
                   <button
                     key={m.id}
-                    onClick={async () => {
-                      await handleAddCustomModel(m.id, "llm", providerStorageAlias);
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-black/10 dark:border-white/10 text-xs text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                    title={`${m.name} · ${(m.contextLength / 1000).toFixed(0)}k ctx`}
+                    onClick={() => handleEnableModel(m.id)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-black/10 dark:border-white/10 text-xs text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    title="Restore model"
                   >
                     <span className="material-symbols-outlined text-[13px]">add</span>
-                    {m.id.split("/").pop()}
+                    {m.id}
                   </button>
                 ))}
               </div>
             </div>
-          );
-        })()}
-
-        {/* Disabled models — restorable */}
-        {disabledDisplayModels.length > 0 && (
-          <div className="w-full mt-2">
-            <p className="text-xs text-text-muted mb-2">Disabled models ({disabledDisplayModels.length}):</p>
-            <div className="flex flex-wrap gap-2">
-              {disabledDisplayModels.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => handleEnableModel(m.id)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-black/10 dark:border-white/10 text-xs text-text-muted hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                  title="Restore model"
-                >
-                  <span className="material-symbols-outlined text-[13px]">add</span>
-                  {m.id}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
@@ -1701,7 +1771,7 @@ export default function ProviderDetailPage() {
             const allIds = [
               ...models,
               ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
-            ].filter((m) => { const k = getModelKind(m); return !k || k === "llm"; }).map((m) => m.id);
+            ].map((m) => m.id);
             const activeIds = allIds.filter((id) => !disabledModelIds.includes(id));
             return (
               <div className="flex gap-2">

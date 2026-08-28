@@ -1,8 +1,38 @@
 import PropTypes from "prop-types";
 import { CapacityBadges } from "@/shared/components";
 
-export default function ModelRow({ model, fullModel, alias, copied, onCopy, testStatus, isCustom, isFree, onDeleteAlias, onTest, isTesting, onDisable, caps, thinkingSuffix }) {
+const KIND_META = {
+  llm: { label: "Chat", color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: "smart_toy" },
+  image: { label: "Image", color: "bg-purple-500/10 text-purple-500 border-purple-500/20", icon: "palette" },
+  video: { label: "Video", color: "bg-amber-500/10 text-amber-500 border-amber-500/20", icon: "videocam" },
+  audio: { label: "Audio", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: "mic" },
+  tts: { label: "TTS", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: "volume_up" },
+  stt: { label: "STT", color: "bg-teal-500/10 text-teal-500 border-teal-500/20", icon: "graphic_eq" },
+  embedding: { label: "Embed", color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20", icon: "data_array" },
+};
+
+export default function ModelRow({
+  model,
+  fullModel,
+  alias,
+  copied,
+  onCopy,
+  testStatus,
+  isCustom,
+  isFree,
+  onDeleteAlias,
+  onTest,
+  isTesting,
+  onDisable,
+  caps,
+  thinkingSuffix,
+  kind,
+  showKindTag = true,
+}) {
   const displayModel = thinkingSuffix ? `${fullModel}(${thinkingSuffix})` : fullModel;
+  const effectiveKind = kind || model?.kind || model?.type || "llm";
+  const meta = KIND_META[effectiveKind] || KIND_META.llm;
+
   const borderColor = testStatus === "ok"
     ? "border-green-500/40"
     : testStatus === "error"
@@ -15,6 +45,8 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
     ? "#ef4444"
     : undefined;
 
+  const defaultIcon = meta.icon;
+
   return (
     <div className={`group min-w-0 max-w-full rounded-lg border px-3 py-2 ${borderColor} hover:bg-sidebar/50`}>
       <div className="flex min-w-0 items-start gap-2 sm:items-center">
@@ -22,10 +54,22 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
           className="material-symbols-outlined shrink-0 text-base"
           style={iconColor ? { color: iconColor } : undefined}
         >
-          {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : "smart_toy"}
+          {testStatus === "ok" ? "check_circle" : testStatus === "error" ? "cancel" : defaultIcon}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <code className="max-w-[72vw] truncate rounded bg-sidebar px-1.5 py-0.5 font-mono text-xs text-text-muted sm:max-w-[360px]">{displayModel}</code>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <code className="max-w-[72vw] truncate rounded bg-sidebar px-1.5 py-0.5 font-mono text-xs text-text-muted sm:max-w-[360px]">{displayModel}</code>
+            {showKindTag && (
+              <span className={`px-1.5 py-0.2 rounded border text-[9px] font-medium leading-none shrink-0 ${meta.color}`}>
+                {meta.label}
+              </span>
+            )}
+            {isFree && (
+              <span className="px-1.5 py-0.2 rounded border text-[9px] font-bold bg-green-500/10 text-green-500 border-green-500/20 leading-none shrink-0">
+                FREE
+              </span>
+            )}
+          </div>
           <span className="flex min-w-0 items-center text-[9px] gap-1 pl-1">
             {model.name && <span className="truncate text-[9px] italic text-text-muted/70">{model.name}</span>}
             <CapacityBadges caps={caps} colorOverride="text-text-muted/70" size={12} />
@@ -85,6 +129,9 @@ export default function ModelRow({ model, fullModel, alias, copied, onCopy, test
 ModelRow.propTypes = {
   model: PropTypes.shape({
     id: PropTypes.string.isRequired,
+    name: PropTypes.string,
+    kind: PropTypes.string,
+    type: PropTypes.string,
   }).isRequired,
   fullModel: PropTypes.string.isRequired,
   alias: PropTypes.string,
@@ -99,4 +146,6 @@ ModelRow.propTypes = {
   onDisable: PropTypes.func,
   caps: PropTypes.object,
   thinkingSuffix: PropTypes.string,
+  kind: PropTypes.string,
+  showKindTag: PropTypes.bool,
 };

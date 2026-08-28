@@ -101,6 +101,45 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
     return { ok: true, latencyMs, error: null, status: res.status };
   }
 
+  if (kind === "video") {
+    const res = await fetch(`${baseUrl}/api/v1/videos/generations`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model, prompt: "test" }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const latencyMs = Date.now() - start;
+    const rawText = await res.text().catch(() => "");
+    let parsed = null;
+    try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+
+    if (!res.ok) {
+      const detail = parsed?.error?.message || parsed?.msg || parsed?.message || parsed?.error || rawText;
+      return { ok: false, latencyMs, error: `HTTP ${res.status}${detail ? `: ${String(detail).slice(0, 240)}` : ""}`, status: res.status };
+    }
+
+    const hasVideo = parsed?.id || (Array.isArray(parsed?.data) && parsed.data.length > 0);
+    if (!hasVideo) {
+      return { ok: false, latencyMs, status: res.status, error: "Provider returned no video job data for this model" };
+    }
+    return { ok: true, latencyMs, error: null, status: res.status };
+  }
+
+  if (kind === "tts") {
+    const res = await fetch(`${baseUrl}/api/v1/audio/speech`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model, input: "test" }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) {
+      const rawText = await res.text().catch(() => "");
+      return { ok: false, latencyMs, error: `HTTP ${res.status}${rawText ? `: ${rawText.slice(0, 240)}` : ""}`, status: res.status };
+    }
+    return { ok: true, latencyMs, error: null, status: res.status };
+  }
+
   if (kind === "stt") {
     const form = new FormData();
     const sampleAudio = createSilentWavFile();

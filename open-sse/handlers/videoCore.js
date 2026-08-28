@@ -276,7 +276,6 @@ export async function handleDashScopeVideoCore({
   credentials,
   signal,
   log,
-  pollIntervalMs = DASHSCOPE_POLL_INTERVAL_MS,
 }) {
   const config = getVideoConfig("alims-intl");
   if (!config) return createErrorResult(HTTP_STATUS.BAD_REQUEST, "alims-intl videoConfig missing");
@@ -323,62 +322,24 @@ export async function handleDashScopeVideoCore({
   const taskId = submitData?.output?.task_id;
   if (!taskId) return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl video: no task_id — ${submitText.slice(0, 200)}`);
 
-  log?.info?.("VIDEO", `alims-intl | ${model} | task ${taskId} PENDING — polling...`);
+  log?.info?.("VIDEO", `alims-intl | ${model} | task ${taskId} PENDING — returning immediately (async)`);
 
-  // Poll until SUCCEEDED / FAILED / timeout
-  const pollUrl = `${base}/tasks/${taskId}`;
-  const pollHeaders = { "Authorization": `Bearer ${token}` };
-  const deadline = Date.now() + DASHSCOPE_POLL_TIMEOUT_MS;
+  // Return task_id immediately — client polls via GET /v1/videos/{task_id}
+  const normalized = {
+    id: taskId,
+    object: "video.generation",
+    status: "queued",
+    model,
+    data: [],
+  };
 
-  while (Date.now() < deadline) {
-    await sleep(pollIntervalMs);
-
-    let pollRes;
-    try {
-      pollRes = await fetch(pollUrl, { headers: pollHeaders, signal });
-    } catch (err) {
-      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl video poll failed: ${err.message}`);
-    }
-
-    const pollText = await pollRes.text().catch(() => "");
-    if (!pollRes.ok) return createErrorResult(pollRes.status, `alims-intl video poll error: ${pollText.slice(0, 500)}`);
-
-    let pollData;
-    try { pollData = JSON.parse(pollText); } catch {
-      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "alims-intl video: invalid poll response");
-    }
-
-    const status = pollData?.output?.task_status;
-    log?.debug?.("VIDEO", `alims-intl | ${model} | task ${taskId} ${status}`);
-
-    if (status === "FAILED") {
-      const msg = pollData?.output?.message || "alims-intl video generation failed";
-      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `[alims-intl/${model}] ${msg}`);
-    }
-
-    if (status !== "SUCCEEDED") continue;
-
-    // Normalize to OpenAI-compat video response shape
-    const videoUrl = pollData?.output?.video_url;
-    const normalized = {
-      id: taskId,
-      object: "video.generation",
-      status: "completed",
-      model,
-      data: videoUrl ? [{ url: videoUrl }] : [],
-      usage: pollData?.output?.usage || null,
-      _raw: pollData.output,
-    };
-
-    return {
-      success: true,
-      response: new Response(JSON.stringify(normalized), {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      }),
-    };
-  }
-
-  return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, `alims-intl video generation timeout after ${DASHSCOPE_POLL_TIMEOUT_MS / 60000} min`);
+  return {
+    success: true,
+    response: new Response(JSON.stringify(normalized), {
+      status: 202,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    }),
+  };
 }
 
 /**

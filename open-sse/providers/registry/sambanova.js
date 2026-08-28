@@ -27,6 +27,8 @@ export default {
     { id: "DeepSeek-V3.1", name: "DeepSeek V3.1", contextLength: 131072, supportsTools: true, supportsStreaming: true },
     { id: "DeepSeek-V3.2", name: "DeepSeek V3.2", contextLength: 131072, supportsTools: true, supportsStreaming: true },
     { id: "Meta-Llama-3.3-70B-Instruct", name: "Meta Llama 3.3 70B Instruct", contextLength: 131072, supportsTools: true, supportsStreaming: true },
+    { id: "MiniMax-M2.7", name: "MiniMax M2.7", contextLength: 196608, maxOutputTokens: 196608, supportsTools: true, supportsStreaming: true },
+    { id: "MiniMax-M3", name: "MiniMax M3", contextLength: 1048576, maxOutputTokens: 1048576, supportsTools: true, supportsStreaming: true },
     { id: "gpt-oss-120b", name: "GPT OSS 120B", contextLength: 131072, supportsTools: true, supportsStreaming: true },
     { id: "gemma-4-31B-it", name: "Gemma 4 31B IT", contextLength: 131072, supportsTools: true, supportsStreaming: true },
   ],

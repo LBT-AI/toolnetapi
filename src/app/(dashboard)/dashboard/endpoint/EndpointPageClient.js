@@ -681,7 +681,7 @@ export default function APIPageClient({ machineId }) {
     });
   };
 
-  const [baseUrl, setBaseUrl] = useState("/v1");
+  const [baseUrl, setBaseUrl] = useState("https://api.toolnet.tech/v1");
 
   // Hydration fix: Only access window on client side
   useEffect(() => {
@@ -689,6 +689,14 @@ export default function APIPageClient({ machineId }) {
       setBaseUrl(`${window.location.origin}/v1`);
     }
   }, []);
+
+  const standardEndpoints = [
+    { label: "Chat", path: "/chat/completions", copyId: "ep_chat" },
+    { label: "Images", path: "/images/generations", copyId: "ep_images" },
+    { label: "Videos", path: "/videos/generations", copyId: "ep_videos" },
+    { label: "Video Status", path: "/videos/{id}", copyId: "ep_video_status" },
+    { label: "Models", path: "/models", copyId: "ep_models" },
+  ];
 
   if (loading) {
     return (
@@ -711,83 +719,95 @@ export default function APIPageClient({ machineId }) {
         </h2>
 
         {/* Endpoint rows */}
-        <div className="flex flex-col gap-2">
-          {/* Local */}
+        <div className="flex flex-col gap-2.5">
+          {/* Base URL */}
           <EndpointRow
-            label="Local"
+            label="Base URL"
             url={currentEndpoint}
-            copyId="local_url"
+            copyId="base_url"
             copied={copied}
             onCopy={copy}
+            badge="BASE"
           />
           {/* Cloudflare Tunnel */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tunnelEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+          <div className="flex items-center gap-2 min-w-0 w-full">
+            <span className={`text-xs font-mono px-2 py-1.5 rounded shrink-0 min-w-[96px] sm:min-w-[108px] text-center font-medium ${
+              tunnelEnabled ? "bg-primary/10 text-primary font-semibold" : "bg-surface-2 text-text-muted font-medium"
             }`}>Tunnel</span>
             {tunnelEnabled && !tunnelLoading && tunnelReachable ? (
               <>
-                <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
+                <Input value={`${tunnelPublicUrl || tunnelUrl}/v1`} readOnly className="flex-1 min-w-0" inputClassName="py-1.5 px-2.5 font-mono text-xs sm:text-sm select-all" />
                 <button
+                  type="button"
                   onClick={() => copy(`${tunnelPublicUrl || tunnelUrl}/v1`, "tunnel_url")}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
+                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0 flex items-center justify-center"
+                  title="Copy Tunnel URL"
+                  aria-label="Copy Tunnel URL"
                 >
                   <span className="material-symbols-outlined text-[18px]">{copied === "tunnel_url" ? "check" : "content_copy"}</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowDisableTunnelModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Disable Tunnel"
+                  aria-label="Disable Tunnel"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : tunnelEnabled && !tunnelLoading && !tunnelReachable ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
                   <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                  {tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}
+                  <span className="truncate">{tunnelEverReachable ? "Tunnel reconnecting..." : "Tunnel checking..."}</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowDisableTunnelModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Disable Tunnel"
+                  aria-label="Disable Tunnel"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : tunnelLoading ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
                   <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                  {tunnelProgress || "Creating tunnel..."}
+                  <span className="truncate">{tunnelProgress || "Creating tunnel..."}</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => { setTunnelLoading(false); setTunnelProgress(""); }}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Stop"
+                  aria-label="Stop"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : tunnelStatus?.type === "error" ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {tunnelStatus.message}
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400 truncate">
+                  <span className="material-symbols-outlined text-sm shrink-0">error</span>
+                  <span className="truncate">{tunnelStatus.message}</span>
                 </div>
                 <Button size="sm" icon="cloud_upload" onClick={() => setShowEnableTunnelModal(true)}>Enable</Button>
               </>
             ) : tunnelChecking ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
                   <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
                   Checking...
                 </div>
                 <button
+                  type="button"
                   onClick={() => setTunnelChecking(false)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Stop"
+                  aria-label="Stop"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
@@ -813,46 +833,53 @@ export default function APIPageClient({ machineId }) {
             )}
           </div>
           {/* Tailscale */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 min-w-[88px] text-center ${
-              tsEnabled ? "bg-primary/10 text-primary" : "bg-surface-2 text-text-muted"
+          <div className="flex items-center gap-2 min-w-0 w-full">
+            <span className={`text-xs font-mono px-2 py-1.5 rounded shrink-0 min-w-[96px] sm:min-w-[108px] text-center font-medium ${
+              tsEnabled ? "bg-primary/10 text-primary font-semibold" : "bg-surface-2 text-text-muted font-medium"
             }`}>Tailscale</span>
             {tsEnabled && !tsLoading && tsReachable ? (
               <>
-                <Input value={`${tsUrl}/v1`} readOnly className="flex-1 font-mono text-sm" />
+                <Input value={`${tsUrl}/v1`} readOnly className="flex-1 min-w-0" inputClassName="py-1.5 px-2.5 font-mono text-xs sm:text-sm select-all" />
                 <button
+                  type="button"
                   onClick={() => copy(`${tsUrl}/v1`, "ts_url")}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0"
+                  className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded text-text-muted hover:text-primary transition-colors shrink-0 flex items-center justify-center"
+                  title="Copy Tailscale URL"
+                  aria-label="Copy Tailscale URL"
                 >
                   <span className="material-symbols-outlined text-[18px]">{copied === "ts_url" ? "check" : "content_copy"}</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowDisableTsModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Disable Tailscale"
+                  aria-label="Disable Tailscale"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : tsEnabled && !tsLoading && !tsReachable ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 dark:border-amber-800 bg-amber-500/5 text-sm text-amber-600 dark:text-amber-400">
                   <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                  {tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}
+                  <span className="truncate">{tsEverReachable ? "Tailscale reconnecting..." : "Tailscale checking..."}</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowDisableTsModal(true)}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Disable Tailscale"
+                  aria-label="Disable Tailscale"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : (tsLoading || tsConnecting) ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-input text-sm text-text-muted">
                   <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                  {tsProgress || "Connecting..."}
+                  <span className="truncate">{tsProgress || "Connecting..."}</span>
                 </div>
                 {tsAuthUrl && (
                   <Button
@@ -864,18 +891,20 @@ export default function APIPageClient({ machineId }) {
                   </Button>
                 )}
                 <button
+                  type="button"
                   onClick={() => { setTsLoading(false); setTsConnecting(false); setTsProgress(""); clearUserAuth(); }}
-                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0"
+                  className="p-2 hover:bg-red-500/10 rounded text-red-500 transition-colors shrink-0 flex items-center justify-center"
                   title="Stop"
+                  aria-label="Stop"
                 >
                   <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
                 </button>
               </>
             ) : tsStatus?.type === "error" ? (
               <>
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {tsStatus.message}
+                <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-1.5 rounded border border-red-300 dark:border-red-800 bg-red-500/5 text-sm text-red-600 dark:text-red-400 truncate">
+                  <span className="material-symbols-outlined text-sm shrink-0">error</span>
+                  <span className="truncate">{tsStatus.message}</span>
                 </div>
                 <Button size="sm" icon="vpn_lock" onClick={handleOpenTsModal}>Enable</Button>
               </>
@@ -895,6 +924,28 @@ export default function APIPageClient({ machineId }) {
                 Enable
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* Endpoints */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-primary">alt_route</span>
+              Endpoints
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            {standardEndpoints.map((ep) => (
+              <EndpointRow
+                key={ep.copyId}
+                label={ep.label}
+                url={`${currentEndpoint}${ep.path}`}
+                copyId={ep.copyId}
+                copied={copied}
+                onCopy={copy}
+              />
+            ))}
           </div>
         </div>
 

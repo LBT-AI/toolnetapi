@@ -13,6 +13,7 @@ import runwayml from "./runwayml.js";
 import cloudflareAi from "./cloudflareAi.js";
 import antigravity from "./antigravity.js";
 import alimsIntl from "./alimsIntl.js";
+import genspark from "./genspark.js";
 
 const ADAPTERS = {
   openai: createOpenAIAdapter("openai"),
@@ -34,6 +35,7 @@ const ADAPTERS = {
   runwayml,
   "cloudflare-ai": cloudflareAi,
   "alims-intl": alimsIntl,
+  genspark,
 };
 
 export function getImageAdapter(provider) {

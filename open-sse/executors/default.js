@@ -42,6 +42,16 @@ const HEADER_HOOKS = {
   kimiHeaders: (h, c) => Object.assign(h, buildKimiHeaders(c?.providerSpecificData?.deviceId)),
   clineHeaders: (h, c) => Object.assign(h, buildClineHeaders(c.apiKey || c.accessToken)),
   kilocodeOrg: (h, c) => { if (c.providerSpecificData?.orgId) h["X-Kilocode-OrganizationID"] = c.providerSpecificData.orgId; },
+  gensparkHeaders: (h, c) => {
+    const key = c?.apiKey || c?.accessToken;
+    if (key) {
+      h["X-Api-Key"] = key;
+      h["Authorization"] = `Bearer ${key}`;
+      h["X-GSK-CLI-Caps"] = "cli-groups-v2,cli-paths-v3,cli-actions-v4";
+      h["X-GSK-CLI-Version"] = "1.7.1";
+    }
+  },
+
 };
 
 // Config-driven OAuth refresh grants — derived from registry oauth.refresh.

@@ -28,6 +28,7 @@ const DEFAULT_CAPACITY_ADAPTER = {
   videoInput: { enabled: false, roundRobin: false, models: [] },
 };
 const EMPTY_CAPACITY_ADAPTER = { ...DEFAULT_CAPACITY_ADAPTER };
+const EMPTY_CAP_ENTRY = { enabled: false, roundRobin: false, models: [] };
 
 // Backward-compat: legacy stored form was an array of {model, enabled}.
 function normalizeCapEntry(entry, capKey) {
@@ -454,7 +455,7 @@ function CapacityAdapterCap({ cap, entry, onChange, activeProviders, getCaps }) 
 
   const handleRemove = (index) => {
     const next = models.filter((_, i) => i !== index);
-    patch({ models: next.length === 0 ? [DEFAULT_FALLBACK_MODEL] : next });
+    patch({ models: next });
   };
 
   const handleMove = (index, delta) => {

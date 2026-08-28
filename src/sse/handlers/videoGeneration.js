@@ -7,7 +7,7 @@ import {
 } from "../services/auth.js";
 import { getSettings } from "@/lib/localDb";
 import { getModelInfo, getComboModels } from "../services/model.js";
-import { handleVideoProxyCore, handleDashScopeVideoCore, handleDashScopeVideoPoll, getVideoConfig, sanitizeSecrets } from "open-sse/handlers/videoCore.js";
+import { handleVideoProxyCore, handleDashScopeVideoCore, handleDashScopeVideoPoll, handleGensparkVideoCore, handleGensparkVideoPoll, getVideoConfig, sanitizeSecrets } from "open-sse/handlers/videoCore.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
@@ -26,6 +26,11 @@ const CREATE_ROTATION_STATUSES = new Set([
   HTTP_STATUS.FORBIDDEN,
   HTTP_STATUS.RATE_LIMITED,
 ]);
+
+// Providers that use native async API instead of xAI-style proxy.
+const DASHSCOPE_VIDEO_PROVIDERS = new Set(["alims-intl"]);
+const GENSPARK_VIDEO_PROVIDERS = new Set(["genspark"]);
+
 
 async function requireValidApiKey(request) {
   const apiKey = extractApiKey(request);
@@ -97,9 +102,6 @@ function withConnectionHeader(response, connectionId) {
 /**
  * POST /v1/videos/{generations|edits|extensions} — async job creation proxy.
  */
-// Providers that use the DashScope native video API instead of xAI-style proxy.
-const DASHSCOPE_VIDEO_PROVIDERS = new Set(["alims-intl"]);
-
 export async function handleVideoCreate(request, action) {
   const authError = await requireValidApiKey(request);
   if (authError) return authError;
@@ -141,6 +143,12 @@ export async function handleVideoCreate(request, action) {
   if (DASHSCOPE_VIDEO_PROVIDERS.has(provider)) {
     return handleDashScopeVideoCreate(request, bodyInfo.parsed, provider, model);
   }
+
+  // Genspark providers use tool CLI native async API — route separately
+  if (GENSPARK_VIDEO_PROVIDERS.has(provider)) {
+    return handleGensparkVideoCreate(request, bodyInfo.parsed, provider, model);
+  }
+
 
   // Strip the provider prefix (e.g. "xai/grok-imagine-video") before forwarding;
   // otherwise forward the original bytes untouched.
@@ -256,6 +264,24 @@ export async function handleVideoGet(request, requestId) {
     return result.response;
   }
 
+  // Genspark tasks are polled via /api/tool_cli/task_status
+  if (GENSPARK_VIDEO_PROVIDERS.has(provider)) {
+    const result = await handleGensparkVideoPoll({
+      taskId: requestId,
+      credentials: refreshedCredentials,
+      signal: request.signal,
+      log,
+    });
+    if (result.success) {
+      await clearAccountError(credentials.connectionId, credentials, null);
+      return withConnectionHeader(result.response, credentials.connectionId);
+    }
+    await markAccountUnavailable(
+      credentials.connectionId, result.status, sanitizeSecrets(result.error, refreshedCredentials), provider, null
+    );
+    return result.response;
+  }
+
   const result = await handleVideoProxyCore({
     provider,
     requestId,
@@ -337,3 +363,61 @@ async function handleDashScopeVideoCreate(request, parsedBody, provider, model) 
     return result.response;
   }
 }
+
+/**
+ * Genspark video creation — native async API via tool CLI.
+ */
+async function handleGensparkVideoCreate(request, parsedBody, provider, model) {
+  const prompt = parsedBody?.prompt || parsedBody?.input?.prompt || parsedBody?.query || "";
+  if (!prompt) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: prompt");
+
+  const parameters = {
+    ...parsedBody,
+    ...(parsedBody?.parameters || {}),
+  };
+  const excludeConnectionIds = new Set();
+  let lastError = null;
+  let lastStatus = null;
+
+  while (true) {
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+
+    if (!credentials || credentials.allRateLimited) {
+      if (credentials?.allRateLimited) {
+        const msg = lastError || credentials.lastError || "Unavailable";
+        const status = lastStatus || Number(credentials.lastErrorCode) || HTTP_STATUS.SERVICE_UNAVAILABLE;
+        return unavailableResponse(status, `[${provider}/${model}] ${msg}`, credentials.retryAfter, credentials.retryAfterHuman);
+      }
+      if (excludeConnectionIds.size === 0) return errorResponse(HTTP_STATUS.BAD_REQUEST, `No credentials for provider: ${provider}`);
+      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable");
+    }
+
+    const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+    const result = await handleGensparkVideoCore({
+      model, prompt, parameters,
+      credentials: refreshedCredentials,
+      signal: request.signal,
+      log,
+    });
+
+    if (result.success) {
+      await clearAccountError(credentials.connectionId, credentials, model);
+      log.info("VIDEO", `genspark | ${model} | SUCCEEDED (conn ${credentials.connectionId})`);
+      return withConnectionHeader(result.response, credentials.connectionId);
+    }
+
+    const { shouldFallback } = await markAccountUnavailable(
+      credentials.connectionId, result.status, result.error, provider, model
+    );
+
+    if (shouldFallback && CREATE_ROTATION_STATUSES.has(result.status)) {
+      excludeConnectionIds.add(credentials.connectionId);
+      lastError = result.error;
+      lastStatus = result.status;
+      continue;
+    }
+
+    return result.response;
+  }
+}
+

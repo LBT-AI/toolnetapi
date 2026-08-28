@@ -74,9 +74,11 @@ export function reorderByCapabilities(models, required) {
     return soft.every((c) => caps[c] === true) ? 0 : 1;
   };
 
+  const tiers = models.map((m, i) => ({ m, i, t: tierOf(m) }));
+  if (tiers.every((x) => x.t === tiers[0].t)) return models;
+
   // Stable sort by tier (Array.prototype.sort is stable in modern engines).
-  return models
-    .map((m, i) => ({ m, i, t: tierOf(m) }))
+  return tiers
     .sort((a, b) => a.t - b.t || a.i - b.i)
     .map((x) => x.m);
 }
@@ -176,6 +178,18 @@ export function detectRequiredCapabilities(body) {
   for (const it of trailingUserItems(body.input)) scanContent(it.content);       // responses
   const contents = body.contents || body.request?.contents;                      // gemini / antigravity
   for (const c of trailingUserItems(contents)) scanContent(c.parts);
+
+  // Tools: request-wide scanning (e.g. web search tools)
+  if (Array.isArray(body.tools)) {
+    for (const tool of body.tools) {
+      if (!tool) continue;
+      const type = tool.type || "";
+      const name = tool.function?.name || tool.name || "";
+      if (type === "web_search" || type.startsWith("web_search_") || name === "web_search" || type === "search") {
+        required.add("search");
+      }
+    }
+  }
 
   return required;
 }

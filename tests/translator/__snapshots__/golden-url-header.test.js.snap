@@ -698,6 +698,34 @@ exports[`GOLDEN buildHeaders (default executor providers) > gemini → headers (
 }
 `;
 
+exports[`GOLDEN buildHeaders (default executor providers) > genspark → headers (apiKey / oauth) 1`] = `
+{
+  "apiKey": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+    "X-Api-Key": "<CRED>",
+    "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+    "X-GSK-CLI-Version": "1.7.1",
+  },
+  "nonStream": {
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+    "X-Api-Key": "<CRED>",
+    "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+    "X-GSK-CLI-Version": "1.7.1",
+  },
+  "oauth": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+    "X-Api-Key": "<CRED>",
+    "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+    "X-GSK-CLI-Version": "1.7.1",
+  },
+}
+`;
+
 exports[`GOLDEN buildHeaders (default executor providers) > gitlab → headers (apiKey / oauth) 1`] = `
 {
   "apiKey": {
@@ -1750,6 +1778,13 @@ exports[`GOLDEN buildUrl (default executor providers) > gemini → url (stream +
 {
   "nonStream": "https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent",
   "stream": "https://generativelanguage.googleapis.com/v1beta/models/test-model:streamGenerateContent?alt=sse",
+}
+`;
+
+exports[`GOLDEN buildUrl (default executor providers) > genspark → url (stream + non-stream) 1`] = `
+{
+  "nonStream": "https://www.genspark.ai/api/tool_cli/agent_ask",
+  "stream": "https://www.genspark.ai/api/tool_cli/agent_ask",
 }
 `;
 

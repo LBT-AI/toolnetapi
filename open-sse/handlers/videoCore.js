@@ -380,3 +380,198 @@ export async function handleDashScopeVideoCore({
 
   return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, `alims-intl video generation timeout after ${DASHSCOPE_POLL_TIMEOUT_MS / 60000} min`);
 }
+
+/**
+ * Genspark video generation — native async API via tool CLI.
+ */
+export async function handleGensparkVideoCore({
+  model,
+  prompt,
+  parameters = {},
+  credentials,
+  signal,
+  log,
+}) {
+  const token = credentials?.apiKey || credentials?.accessToken;
+  if (!token) return createErrorResult(HTTP_STATUS.UNAUTHORIZED, "No credentials for genspark video");
+
+  const cleanModel = model?.replace(/^genspark\//, "") || "kling/v3";
+  const url = "https://www.genspark.ai/api/tool_cli/video_generation";
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": token,
+    "Authorization": `Bearer ${token}`,
+    "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+    "X-GSK-CLI-Version": "1.7.1",
+  };
+
+  const body = {
+    query: prompt,
+    model: cleanModel,
+    ...(parameters.aspect_ratio ? { aspect_ratio: parameters.aspect_ratio } : {}),
+    ...(parameters.duration ? { duration: Number(parameters.duration) } : {}),
+    ...(parameters.audio_enable !== undefined ? { audio_enable: Boolean(parameters.audio_enable) } : {}),
+    ...(parameters.tier ? { tier: parameters.tier } : {}),
+    ...(parameters.video_size ? { video_size: parameters.video_size } : {}),
+    ...(parameters.image_urls ? { image_urls: parameters.image_urls } : {}),
+    ...(parameters.video_url ? { video_url: parameters.video_url } : {}),
+    ...(parameters.video_urls ? { video_urls: parameters.video_urls } : {}),
+    ...(parameters.audio_urls ? { audio_urls: parameters.audio_urls } : {}),
+  };
+
+  log?.debug?.("VIDEO", `genspark | ${cleanModel} | submit → ${url}`);
+
+  let submitRes;
+  try {
+    submitRes = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (err) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `genspark video submit failed: ${err.message}`);
+  }
+
+  const submitText = await submitRes.text().catch(() => "");
+  if (!submitRes.ok) {
+    return createErrorResult(submitRes.status, `genspark video submit error: ${submitText.slice(0, 500)}`);
+  }
+
+  const lines = submitText.trim().split("\n");
+  let finalResult = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || !line.startsWith("{")) continue;
+    try {
+      const parsed = JSON.parse(line);
+      if (parsed.status || parsed.version === undefined) {
+        finalResult = parsed;
+      }
+    } catch {}
+  }
+
+  if (!finalResult) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "genspark video: invalid response");
+  }
+  if (finalResult.status === "error") {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `[genspark/${cleanModel}] ${finalResult.message || "Video generation failed"}`);
+  }
+
+  const data = finalResult.data || {};
+  const generated = data.generated_videos?.[0];
+  const videoUrl = generated?.video_urls?.[0] || data.video_url || data.url || (Array.isArray(data.videos) ? data.videos[0] : null);
+  const taskId = generated?.project_id || generated?.task_id || data.project_id || data.run_id || data.task_id || `gsk_${Date.now()}`;
+  const statusStr = String(generated?.status || data.status || finalResult.status || "").toLowerCase();
+  const isCompleted = !!videoUrl || statusStr === "success" || statusStr === "succeeded" || statusStr === "completed" || statusStr === "ok";
+
+  const normalized = {
+    id: taskId,
+    object: "video.generation",
+    status: isCompleted ? "completed" : "processing",
+    model,
+    data: videoUrl ? [{ url: videoUrl }] : [],
+    _raw: data,
+  };
+
+  return {
+    success: true,
+    response: new Response(JSON.stringify(normalized), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    }),
+  };
+}
+
+/**
+ * Genspark video status poll handler.
+ */
+export async function handleGensparkVideoPoll({
+  taskId,
+  credentials,
+  signal,
+  log,
+}) {
+  const token = credentials?.apiKey || credentials?.accessToken;
+  if (!token) return createErrorResult(HTTP_STATUS.UNAUTHORIZED, "No credentials for genspark video");
+
+  const url = "https://www.genspark.ai/api/tool_cli/task_status";
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": token,
+    "Authorization": `Bearer ${token}`,
+    "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+    "X-GSK-CLI-Version": "1.7.1",
+  };
+
+  let pollRes;
+  try {
+    pollRes = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ project_id: taskId }),
+      signal,
+    });
+  } catch (err) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `genspark task poll failed: ${err.message}`);
+  }
+
+  const pollText = await pollRes.text().catch(() => "");
+  if (!pollRes.ok) {
+    return createErrorResult(pollRes.status, `genspark task poll error: ${pollText.slice(0, 500)}`);
+  }
+
+  const lines = pollText.trim().split("\n");
+  let finalResult = null;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || !line.startsWith("{")) continue;
+    try {
+      const parsed = JSON.parse(line);
+      if (parsed.status || parsed.version === undefined) {
+        finalResult = parsed;
+      }
+    } catch {}
+  }
+
+  if (!finalResult) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "genspark task poll: invalid response");
+  }
+
+  const data = finalResult.data || {};
+  const generated = data.generated_videos?.[0];
+  const videoUrl = generated?.video_urls?.[0]
+    || data.video_url
+    || data.url
+    || data.result_url
+    || (Array.isArray(data.artifacts) ? data.artifacts.find(a => a.type === "video")?.url : null);
+  const statusStr = String(generated?.status || data.status || finalResult.status || "").toLowerCase();
+
+  let status = "processing";
+  if (videoUrl || statusStr === "completed" || statusStr === "succeeded" || statusStr === "success" || statusStr === "ok") {
+    status = "completed";
+  } else if (statusStr === "failed" || statusStr === "error") {
+    status = "failed";
+  } else if (statusStr === "queued" || statusStr === "pending") {
+    status = "queued";
+  }
+
+  const normalized = {
+    id: taskId,
+    object: "video.generation",
+    status,
+    data: videoUrl ? [{ url: videoUrl }] : [],
+    error: status === "failed" ? { message: data.message || finalResult.message || "Video generation failed" } : undefined,
+  };
+
+  log?.debug?.("VIDEO", `genspark | task ${taskId} → ${status}`);
+
+  return {
+    success: true,
+    response: new Response(JSON.stringify(normalized), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    }),
+  };
+}
+

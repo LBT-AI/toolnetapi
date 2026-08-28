@@ -418,6 +418,20 @@ export async function POST(request) {
           break;
         }
 
+        case "genspark": {
+          const res = await fetch("https://www.genspark.ai/api/tool_cli/me", {
+            headers: {
+              "X-Api-Key": apiKey,
+              "Authorization": `Bearer ${apiKey}`,
+              "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+              "X-GSK-CLI-Version": "1.7.1",
+            },
+            signal: AbortSignal.timeout(8000),
+          });
+          isValid = res.status !== 401 && res.status !== 403;
+          break;
+        }
+
         case "opencode-go": {
           const res = await fetch("https://opencode.ai/zen/go/v1/chat/completions", {
             method: "POST",

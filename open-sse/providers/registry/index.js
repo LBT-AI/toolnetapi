@@ -124,6 +124,8 @@ import p121 from "./xiaomi-tokenplan.js";
 import p122 from "./youcom.js";
 import p123 from "./zed.js";
 import p124 from "./kira.js";
+import p125 from "./genspark.js";
+
 
 export default [
   p0,
@@ -251,4 +253,6 @@ export default [
   p122,
   p123,
   p124,
+  p125,
 ];
+

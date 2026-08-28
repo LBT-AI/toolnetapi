@@ -837,6 +837,18 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         }, effectiveProxy);
         return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
       }
+      case "genspark": {
+        const res = await fetchWithConnectionProxy("https://www.genspark.ai/api/tool_cli/me", {
+          headers: {
+            "X-Api-Key": connection.apiKey,
+            "Authorization": `Bearer ${connection.apiKey}`,
+            "X-GSK-CLI-Caps": "cli-groups-v2,cli-paths-v3,cli-actions-v4",
+            "X-GSK-CLI-Version": "1.7.1",
+          },
+        }, effectiveProxy);
+        const valid = res.status !== 401 && res.status !== 403;
+        return { valid, error: valid ? null : "Invalid API key" };
+      }
       case "opencode": {
         const res = await fetchWithConnectionProxy("https://opencode.ai/zen/v1/chat/completions", {
           method: "POST",

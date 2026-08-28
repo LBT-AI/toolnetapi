@@ -868,6 +868,25 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         const valid = res.ok || res.status === 200;
         return { valid, error: valid ? null : `OpenCode upstream error: ${res.status}` };
       }
+      case "api-airforce": {
+        const res = await fetchWithConnectionProxy("https://api.airforce/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${connection.apiKey}`,
+            "HTTP-Referer": "https://endpoint-proxy.local",
+            "X-Title": "Endpoint Proxy",
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-instruct-fp8-fast",
+            messages: [{ role: "user", content: "test" }],
+            max_tokens: 1,
+            stream: false,
+          }),
+        }, effectiveProxy);
+        const valid = res.status !== 401 && res.status !== 403;
+        return { valid, error: valid ? null : "Invalid API key" };
+      }
       default:
         return { valid: false, error: "Provider test not supported" };
     }

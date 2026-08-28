@@ -42,8 +42,6 @@ export default {
     { id: "gemma-4-26b-a4b-it", name: "Gemma 4 26B", contextLength: 8192 },
     { id: "devstral-latest", name: "Devstral Latest", contextLength: 32768 },
     { id: "claude-3-7-sonnet-20250219", name: "Claude 3.7 Sonnet", contextLength: 200000 },
-    { id: "deepseek-chat", name: "DeepSeek Chat (V3)", contextLength: 65536 },
-    { id: "deepseek-reasoner", name: "DeepSeek Reasoner (R1)", contextLength: 65536 },
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", contextLength: 1048576 },
     { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash", contextLength: 1048576 },
   ],

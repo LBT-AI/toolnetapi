@@ -6,11 +6,12 @@ import {
   isValidApiKey,
 } from "../services/auth.js";
 import { getSettings } from "@/lib/localDb";
-import { getModelInfo } from "../services/model.js";
-import { handleVideoProxyCore, getVideoConfig, sanitizeSecrets } from "open-sse/handlers/videoCore.js";
+import { getModelInfo, getComboModels } from "../services/model.js";
+import { handleVideoProxyCore, handleDashScopeVideoCore, handleDashScopeVideoPoll, getVideoConfig, sanitizeSecrets } from "open-sse/handlers/videoCore.js";
 import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
+import { handleComboChat } from "open-sse/services/combo.js";
 import * as log from "../utils/logger.js";
 
 // Video generation is xAI-only today; requests without a provider prefix
@@ -64,9 +65,14 @@ async function resolveVideoProvider(parsedBody) {
   if (!parsedBody?.model) return { provider: DEFAULT_VIDEO_PROVIDER, model: null };
 
   const modelStr = String(parsedBody.model);
+
+  // Combo names don't contain "/"; resolve before provider lookup.
+  const comboModels = await getComboModels(modelStr);
+  if (comboModels) return { provider: null, model: null, comboModels, comboName: modelStr };
+
   const modelInfo = await getModelInfo(modelStr);
   if (!modelInfo.provider) {
-    return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Combos are not supported for video generation") };
+    return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, `Unknown model: ${modelStr}`) };
   }
   if (!getVideoConfig(modelInfo.provider)) {
     // Bare model ids (no explicit "provider/" prefix) fall back to the default
@@ -91,6 +97,9 @@ function withConnectionHeader(response, connectionId) {
 /**
  * POST /v1/videos/{generations|edits|extensions} — async job creation proxy.
  */
+// Providers that use the DashScope native video API instead of xAI-style proxy.
+const DASHSCOPE_VIDEO_PROVIDERS = new Set(["alims-intl"]);
+
 export async function handleVideoCreate(request, action) {
   const authError = await requireValidApiKey(request);
   if (authError) return authError;
@@ -100,7 +109,38 @@ export async function handleVideoCreate(request, action) {
 
   const resolved = await resolveVideoProvider(bodyInfo.parsed);
   if (resolved.error) return resolved.error;
-  const { provider, model } = resolved;
+  const { provider, model, comboModels, comboName } = resolved;
+
+  // Combo expansion — run fallback/round-robin across video models
+  if (comboModels) {
+    const settings = await getSettings();
+    const comboStrategies = settings.comboStrategies || {};
+    const comboStrategy = comboStrategies[comboName]?.fallbackStrategy || settings.comboStrategy || "fallback";
+    const comboStickyLimit = settings.comboStickyRoundRobinLimit;
+    log.info("VIDEO", `Combo "${comboName}" with ${comboModels.length} models (strategy: ${comboStrategy})`);
+    return handleComboChat({
+      body: bodyInfo.parsed,
+      models: comboModels,
+      handleSingleModel: (b, m) => handleVideoCreate(
+        new Request(request.url, {
+          method: "POST",
+          headers: request.headers,
+          body: JSON.stringify({ ...b, model: m }),
+        }),
+        action
+      ),
+      log,
+      comboName,
+      comboStrategy,
+      comboStickyLimit,
+      autoSwitch: false,
+    });
+  }
+
+  // DashScope providers use native async API — route separately
+  if (DASHSCOPE_VIDEO_PROVIDERS.has(provider)) {
+    return handleDashScopeVideoCreate(request, bodyInfo.parsed, provider, model);
+  }
 
   // Strip the provider prefix (e.g. "xai/grok-imagine-video") before forwarding;
   // otherwise forward the original bytes untouched.
@@ -185,7 +225,10 @@ export async function handleVideoGet(request, requestId) {
 
   if (!requestId) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing video request id");
 
-  const provider = DEFAULT_VIDEO_PROVIDER;
+  // x-video-provider header lets the client pin to the originating provider.
+  // Falls back to DEFAULT_VIDEO_PROVIDER (xai) for backward compatibility.
+  const providerHint = request.headers.get("x-video-provider") || null;
+  const provider = providerHint || DEFAULT_VIDEO_PROVIDER;
   const preferredConnectionId = request.headers.get("x-connection-id") || null;
 
   const credentials = await getProviderCredentials(provider, null, null, { preferredConnectionId });
@@ -194,6 +237,24 @@ export async function handleVideoGet(request, requestId) {
   }
 
   const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+
+  // DashScope tasks are polled via /api/v1/tasks/{id} — not xAI proxy.
+  if (DASHSCOPE_VIDEO_PROVIDERS.has(provider)) {
+    const result = await handleDashScopeVideoPoll({
+      taskId: requestId,
+      credentials: refreshedCredentials,
+      signal: request.signal,
+      log,
+    });
+    if (result.success) {
+      await clearAccountError(credentials.connectionId, credentials, null);
+      return withConnectionHeader(result.response, credentials.connectionId);
+    }
+    await markAccountUnavailable(
+      credentials.connectionId, result.status, sanitizeSecrets(result.error, refreshedCredentials), provider, null
+    );
+    return result.response;
+  }
 
   const result = await handleVideoProxyCore({
     provider,
@@ -220,4 +281,59 @@ export async function handleVideoGet(request, requestId) {
     credentials.connectionId, result.status, sanitizeSecrets(result.error, refreshedCredentials), provider, null
   );
   return result.response;
+}
+
+/**
+ * Alibaba DashScope video creation — native async API with polling.
+ * Handles alims-intl wan2.x / happyhorse-* video models.
+ */
+async function handleDashScopeVideoCreate(request, parsedBody, provider, model) {
+  const prompt = parsedBody?.prompt || parsedBody?.input?.prompt || "";
+  if (!prompt) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing required field: prompt");
+
+  const parameters = parsedBody?.parameters || {};
+  const excludeConnectionIds = new Set();
+  let lastError = null;
+  let lastStatus = null;
+
+  while (true) {
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+
+    if (!credentials || credentials.allRateLimited) {
+      if (credentials?.allRateLimited) {
+        const msg = lastError || credentials.lastError || "Unavailable";
+        const status = lastStatus || Number(credentials.lastErrorCode) || HTTP_STATUS.SERVICE_UNAVAILABLE;
+        return unavailableResponse(status, `[${provider}/${model}] ${msg}`, credentials.retryAfter, credentials.retryAfterHuman);
+      }
+      if (excludeConnectionIds.size === 0) return errorResponse(HTTP_STATUS.BAD_REQUEST, `No credentials for provider: ${provider}`);
+      return errorResponse(lastStatus || HTTP_STATUS.SERVICE_UNAVAILABLE, lastError || "All accounts unavailable");
+    }
+
+    const refreshedCredentials = await checkAndRefreshToken(provider, credentials);
+    const result = await handleDashScopeVideoCore({
+      model, prompt, parameters,
+      credentials: refreshedCredentials,
+      signal: request.signal,
+      log,
+    });
+
+    if (result.success) {
+      await clearAccountError(credentials.connectionId, credentials, model);
+      log.info("VIDEO", `alims-intl | ${model} | SUCCEEDED (conn ${credentials.connectionId})`);
+      return withConnectionHeader(result.response, credentials.connectionId);
+    }
+
+    const { shouldFallback } = await markAccountUnavailable(
+      credentials.connectionId, result.status, result.error, provider, model
+    );
+
+    if (shouldFallback && CREATE_ROTATION_STATUSES.has(result.status)) {
+      excludeConnectionIds.add(credentials.connectionId);
+      lastError = result.error;
+      lastStatus = result.status;
+      continue;
+    }
+
+    return result.response;
+  }
 }

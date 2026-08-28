@@ -94,6 +94,23 @@ export async function handleChat(request, clientRawRequest = null) {
 
   const requiredCapabilities = detectRequiredCapabilities(body);
 
+  // Guard: reject non-LLM combos and non-LLM single models so image/video/audio
+  // models don't silently mis-route through /chat/completions.
+  const comboRecord = !modelStr.includes("/")
+    ? await import("@/lib/localDb").then((m) => m.getComboByName(modelStr)).catch(() => null)
+    : null;
+  if (comboRecord && comboRecord.kind && comboRecord.kind !== "llm") {
+    const endpointHint = {
+      image: "POST /v1/images/generations",
+      video: "POST /v1/videos/generations",
+      tts: "POST /v1/audio/speech",
+      stt: "POST /v1/audio/transcriptions",
+      embedding: "POST /v1/embeddings",
+    }[comboRecord.kind] || `/v1/${comboRecord.kind}`;
+    log.warn("CHAT", `Rejected non-LLM combo "${modelStr}" (kind=${comboRecord.kind}) at /chat/completions`);
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, `Model "${modelStr}" is a ${comboRecord.kind} combo. Use ${endpointHint} instead.`);
+  }
+
   // Check if model is a combo (has multiple models with fallback)
   const comboModels = await getComboModels(modelStr);
   if (comboModels) {

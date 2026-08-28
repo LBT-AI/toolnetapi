@@ -281,7 +281,8 @@ export async function buildModelsList(kindFilter, options = {}) {
 
   const models = [];
 
-  // Combos first (filtered by kind). Web combos expose `kind` so AI knows search vs fetch.
+  // Combos first (filtered by kind). All non-LLM combos expose `kind` so clients
+  // know which endpoint to use (image → /v1/images/generations, video → /v1/videos/generations, etc.)
   for (const combo of combos) {
     if (!comboMatchesKinds(combo, kindFilter)) continue;
     const entry = {
@@ -289,7 +290,8 @@ export async function buildModelsList(kindFilter, options = {}) {
       object: "model",
       owned_by: "combo",
     };
-    if (combo.kind === "webSearch" || combo.kind === "webFetch") {
+    // Expose kind for every non-LLM combo so clients can route correctly
+    if (combo.kind && combo.kind !== "llm") {
       entry.kind = combo.kind;
     }
     models.push(entry);
@@ -466,6 +468,8 @@ export async function buildModelsList(kindFilter, options = {}) {
           object: "model",
           owned_by: outputAlias,
         };
+        // Expose kind for non-LLM models so clients can route to the right endpoint
+        if (kind !== LLM_KIND) model.kind = kind;
         // Live-catalog resolvers (kiro/qoder/github/clinepass) mostly only return
         // { id, name } — no per-model capability data. Fall back to the same
         // pattern-matched capabilities the dashboard uses (useModelCaps.js) so

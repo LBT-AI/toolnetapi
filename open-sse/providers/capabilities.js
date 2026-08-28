@@ -126,8 +126,12 @@ export const PROVIDER_CAPABILITIES = {
   "nvidia": {
     "minimaxai/minimax-m3": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
     "z-ai/glm-5.2": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
-    "deepseek-ai/deepseek-v4-pro": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
-    "deepseek-ai/deepseek-v4-flash": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
+    "deepseek-ai/deepseek-v4-pro-0813": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
+    "deepseek-ai/deepseek-v4-flash-0731": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
+    "nvidia/nemotron-3.5-lightning-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/nemotron-3-super-120b-a12b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/nemotron-3-nano-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
   },
   "sambanova": {
     "DeepSeek-V3.1": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },

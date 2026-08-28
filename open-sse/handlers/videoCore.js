@@ -2,6 +2,11 @@ import { createErrorResult } from "../utils/error.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
 import { refreshTokenByProvider } from "../services/tokenRefresh.js";
 import { PROVIDER_MEDIA } from "../providers/index.js";
+import { sleep } from "./imageProviders/_base.js";
+
+const DASHSCOPE_VIDEO_PATH = "/services/aigc/video-generation/video-synthesis";
+const DASHSCOPE_POLL_INTERVAL_MS = 5000;
+const DASHSCOPE_POLL_TIMEOUT_MS = 300000; // 5 min — video renders take 1-5 min
 
 // Upstream fetch deadline for video job submission/polling (the job itself is
 // async upstream — this only bounds the HTTP round-trip, not video rendering).
@@ -163,4 +168,215 @@ export async function handleVideoProxyCore({
       },
     }),
   };
+}
+
+/**
+ * Single-shot DashScope task poll — returns normalized status immediately.
+ * Used by GET /v1/videos/{id} when x-video-provider: alims-intl.
+ *
+ * Response shape:
+ *   queued/processing → { id, status: "queued"|"processing", model }
+ *   completed         → { id, status: "completed", data: [{ url }], model }
+ *   failed            → { id, status: "failed", error: { message } }
+ */
+export async function handleDashScopeVideoPoll({
+  taskId,
+  credentials,
+  signal,
+  log,
+}) {
+  const config = getVideoConfig("alims-intl");
+  if (!config) return createErrorResult(HTTP_STATUS.BAD_REQUEST, "alims-intl videoConfig missing");
+
+  const token = credentials?.apiKey || credentials?.accessToken;
+  if (!token) return createErrorResult(HTTP_STATUS.UNAUTHORIZED, "No credentials for alims-intl video");
+
+  const base = credentials?.providerSpecificData?.dashScopeBase
+    || credentials?.providerSpecificData?.baseUrl?.replace(/\/compatible-mode\/v1\/?$/, "/api/v1").replace(/\/api\/v1\/api\/v1/, "/api/v1")
+    || config.baseUrl;
+
+  let pollRes;
+  try {
+    pollRes = await fetch(`${base}/tasks/${taskId}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+      signal,
+    });
+  } catch (err) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl task poll failed: ${err.message}`);
+  }
+
+  const text = await pollRes.text().catch(() => "");
+  if (!pollRes.ok) {
+    return createErrorResult(pollRes.status, `alims-intl task poll error: ${text.slice(0, 500)}`);
+  }
+
+  let data;
+  try { data = JSON.parse(text); } catch {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "alims-intl task poll: invalid JSON response");
+  }
+
+  const taskStatus = data?.output?.task_status;
+  const taskModel = data?.output?.model_name || null;
+
+  // Map DashScope statuses → unified statuses
+  let normalized;
+  if (taskStatus === "SUCCEEDED") {
+    const videoUrl = data?.output?.video_url;
+    normalized = {
+      id: taskId,
+      object: "video.generation",
+      status: "completed",
+      model: taskModel,
+      data: videoUrl ? [{ url: videoUrl }] : [],
+    };
+  } else if (taskStatus === "FAILED") {
+    normalized = {
+      id: taskId,
+      object: "video.generation",
+      status: "failed",
+      model: taskModel,
+      error: { message: data?.output?.message || "Video generation failed" },
+    };
+  } else if (taskStatus === "PENDING") {
+    normalized = { id: taskId, object: "video.generation", status: "queued", model: taskModel };
+  } else {
+    // RUNNING or unknown
+    normalized = { id: taskId, object: "video.generation", status: "processing", model: taskModel };
+  }
+
+  log?.debug?.("VIDEO", `alims-intl | task ${taskId} → ${normalized.status}`);
+
+  return {
+    success: true,
+    response: new Response(JSON.stringify(normalized), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    }),
+  };
+}
+
+/**
+ * Alibaba DashScope video generation — native async API.
+ *
+ * Submit:  POST {base}/services/aigc/video-generation/video-synthesis
+ *          X-DashScope-Async: enable
+ *          { model, input: { prompt }, parameters: {} }
+ *       →  { output: { task_id, task_status:"PENDING" } }
+ *
+ * Poll:    GET {base}/tasks/{task_id}
+ *       →  { output: { task_status:"SUCCEEDED", video_url } }
+ *
+ * Host:  workspace key → providerSpecificData.dashScopeBase
+ *        standard key  → dashscope-intl.aliyuncs.com/api/v1
+ */
+export async function handleDashScopeVideoCore({
+  model,
+  prompt,
+  parameters = {},
+  credentials,
+  signal,
+  log,
+  pollIntervalMs = DASHSCOPE_POLL_INTERVAL_MS,
+}) {
+  const config = getVideoConfig("alims-intl");
+  if (!config) return createErrorResult(HTTP_STATUS.BAD_REQUEST, "alims-intl videoConfig missing");
+
+  const token = credentials?.apiKey || credentials?.accessToken;
+  if (!token) return createErrorResult(HTTP_STATUS.UNAUTHORIZED, "No credentials for alims-intl video");
+
+  // Workspace keys use per-connection host; standard keys use dashscope-intl
+  const base = credentials?.providerSpecificData?.dashScopeBase
+    || credentials?.providerSpecificData?.baseUrl?.replace(/\/compatible-mode\/v1\/?$/, "/api/v1").replace(/\/api\/v1\/api\/v1/, "/api/v1")
+    || config.baseUrl;
+
+  const submitUrl = `${base}${DASHSCOPE_VIDEO_PATH}`;
+  const headers = {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "X-DashScope-Async": "enable",
+  };
+
+  log?.debug?.("VIDEO", `alims-intl | ${model} | submit → ${submitUrl}`);
+
+  let submitRes;
+  try {
+    submitRes = await fetch(submitUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model, input: { prompt }, parameters }),
+      signal,
+    });
+  } catch (err) {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl video submit failed: ${err.message}`);
+  }
+
+  const submitText = await submitRes.text().catch(() => "");
+  if (!submitRes.ok) {
+    return createErrorResult(submitRes.status, `alims-intl video submit error: ${submitText.slice(0, 500)}`);
+  }
+
+  let submitData;
+  try { submitData = JSON.parse(submitText); } catch {
+    return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "alims-intl video: invalid submit response");
+  }
+
+  const taskId = submitData?.output?.task_id;
+  if (!taskId) return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl video: no task_id — ${submitText.slice(0, 200)}`);
+
+  log?.info?.("VIDEO", `alims-intl | ${model} | task ${taskId} PENDING — polling...`);
+
+  // Poll until SUCCEEDED / FAILED / timeout
+  const pollUrl = `${base}/tasks/${taskId}`;
+  const pollHeaders = { "Authorization": `Bearer ${token}` };
+  const deadline = Date.now() + DASHSCOPE_POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    await sleep(pollIntervalMs);
+
+    let pollRes;
+    try {
+      pollRes = await fetch(pollUrl, { headers: pollHeaders, signal });
+    } catch (err) {
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `alims-intl video poll failed: ${err.message}`);
+    }
+
+    const pollText = await pollRes.text().catch(() => "");
+    if (!pollRes.ok) return createErrorResult(pollRes.status, `alims-intl video poll error: ${pollText.slice(0, 500)}`);
+
+    let pollData;
+    try { pollData = JSON.parse(pollText); } catch {
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "alims-intl video: invalid poll response");
+    }
+
+    const status = pollData?.output?.task_status;
+    log?.debug?.("VIDEO", `alims-intl | ${model} | task ${taskId} ${status}`);
+
+    if (status === "FAILED") {
+      const msg = pollData?.output?.message || "alims-intl video generation failed";
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `[alims-intl/${model}] ${msg}`);
+    }
+
+    if (status !== "SUCCEEDED") continue;
+
+    // Normalize to OpenAI-compat video response shape
+    const videoUrl = pollData?.output?.video_url;
+    const normalized = {
+      id: taskId,
+      object: "video.generation",
+      status: "completed",
+      model,
+      data: videoUrl ? [{ url: videoUrl }] : [],
+      usage: pollData?.output?.usage || null,
+      _raw: pollData.output,
+    };
+
+    return {
+      success: true,
+      response: new Response(JSON.stringify(normalized), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      }),
+    };
+  }
+
+  return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, `alims-intl video generation timeout after ${DASHSCOPE_POLL_TIMEOUT_MS / 60000} min`);
 }

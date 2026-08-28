@@ -70,6 +70,13 @@ export const ERROR_RULES = [
   { text: "ip limit",                 backoff: true },
   { text: "capacity",                 backoff: true },
   { text: "overloaded",               backoff: true },
+  // --- Alibaba DashScope free-tier / balance exhausted (HTTP 400, must override status rule) ---
+  { text: "has been used up",         cooldownMs: COOLDOWN.long },  // "Free quota for model X has been used up"
+  { text: "has run out",              cooldownMs: COOLDOWN.long },  // "Free quota has run out"
+  { text: "insufficient balance",     cooldownMs: COOLDOWN.long },  // account balance
+  { text: "arrearage",                cooldownMs: COOLDOWN.long },  // account in arrears
+  { text: "token quota",              cooldownMs: COOLDOWN.long },  // "token quota has been exceeded"
+  { text: "free tier",                cooldownMs: COOLDOWN.long },  // generic free tier exhausted
 
   // --- Status-based rules (fallback when text doesn't match) ---
   { status: 400, shouldFallback: false }, // Client request errors do not failover

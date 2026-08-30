@@ -1783,8 +1783,8 @@ exports[`GOLDEN buildUrl (default executor providers) > gemini → url (stream +
 
 exports[`GOLDEN buildUrl (default executor providers) > genspark → url (stream + non-stream) 1`] = `
 {
-  "nonStream": "https://www.genspark.ai/api/tool_cli/agent_ask",
-  "stream": "https://www.genspark.ai/api/tool_cli/agent_ask",
+  "nonStream": "https://www.genspark.ai/api/llm_proxy/v1/chat/completions",
+  "stream": "https://www.genspark.ai/api/llm_proxy/v1/chat/completions",
 }
 `;
 

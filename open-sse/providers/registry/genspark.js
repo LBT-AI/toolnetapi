@@ -29,7 +29,7 @@ export default {
       "X-GSK-CLI-Version": "1.7.1",
     },
   },
-  serviceKinds: ["llm", "image", "video", "audio"],
+  serviceKinds: ["llm", "image", "video"],
   imageConfig: {
     baseUrl: "https://www.genspark.ai/api/tool_cli/image_generation",
   },
@@ -112,11 +112,6 @@ export default {
     { id: "bfl/flux-3-preview-high", name: "BFL FLUX 3 Video", kind: "video", params: ["prompt", "image_urls", "aspect_ratio", "duration", "video_size"] },
     { id: "fal-ai/bytedance/seedance-2.5", name: "ByteDance Seedance 2.5", kind: "video", params: ["prompt", "image_urls", "video_urls", "aspect_ratio", "duration", "video_size"] },
     { id: "wan/v3.0", name: "Alibaba Wan 3.0", kind: "video", params: ["prompt", "image_urls", "aspect_ratio", "duration", "tier", "video_size"] },
-
-    // ── Audio / Voice Models ───────────────────────────────────
-    { id: "audio-generation", name: "Genspark Audio Generation", kind: "audio" },
-    { id: "audio-transcribe", name: "Genspark Audio Transcribe", kind: "audio" },
-    { id: "voice-cloning", name: "Genspark Voice Cloning", kind: "audio" },
   ],
   passthroughModels: true,
 };

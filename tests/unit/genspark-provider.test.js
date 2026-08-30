@@ -23,8 +23,10 @@ describe("Genspark Provider", () => {
     expect(PROVIDERS["genspark"].baseUrl).toBe("https://www.genspark.ai/api/llm_proxy/v1/chat/completions");
   });
 
-  it("configures media services for image, video, and audio", () => {
-    expect(entry.serviceKinds).toEqual(expect.arrayContaining(["llm", "image", "video", "audio"]));
+  it("configures media services for image and video only", () => {
+    expect(entry.serviceKinds).toEqual(expect.arrayContaining(["llm", "image", "video"]));
+    // Audio is not wired yet — must not be advertised until a real handler exists.
+    expect(entry.serviceKinds).not.toContain("audio");
     expect(PROVIDER_MEDIA["genspark"].imageConfig.baseUrl).toBe("https://www.genspark.ai/api/tool_cli/image_generation");
     expect(PROVIDER_MEDIA["genspark"].videoConfig.baseUrl).toBe("https://www.genspark.ai/api/tool_cli/video_generation");
     expect(PROVIDER_MEDIA["genspark"].videoConfig.pollUrl).toBe("https://www.genspark.ai/api/tool_cli/task_status");
@@ -74,6 +76,9 @@ describe("Genspark Provider", () => {
       "alibaba/happy-horse",
       "wan/v3.0",
     ]));
+
+    const audioModels = models.filter((m) => m.kind === "audio");
+    expect(audioModels).toEqual([]);
   });
 
   it("resolves model prefixes correctly with subpath models", () => {

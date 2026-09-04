@@ -167,9 +167,12 @@ export default function ProvidersPage() {
   }, []);
 
   const getProviderStats = (providerId, authType) => {
-    const authTypes = Array.isArray(authType) ? authType : [authType];
+    let authTypes = null;
+    if (authType && authType !== "all" && authType !== "freeTier" && authType !== "free") {
+      authTypes = Array.isArray(authType) ? authType : [authType];
+    }
     const providerConnections = connections.filter(
-      (c) => c.provider === providerId && authTypes.includes(c.authType),
+      (c) => c.provider === providerId && (!authTypes || authTypes.includes(c.authType)),
     );
 
     const getEffectiveStatus = (conn) => {
@@ -213,9 +216,12 @@ export default function ProvidersPage() {
   // Toggle all connections for a provider on/off. authType may be a single
   // string or an array (kiro counts oauth + api_key/apikey together).
   const handleToggleProvider = async (providerId, authType, newActive) => {
-    const authTypes = Array.isArray(authType) ? authType : [authType];
+    let authTypes = null;
+    if (authType && authType !== "all" && authType !== "freeTier" && authType !== "free") {
+      authTypes = Array.isArray(authType) ? authType : [authType];
+    }
     const matches = (c) =>
-      c.provider === providerId && authTypes.includes(c.authType);
+      c.provider === providerId && (!authTypes || authTypes.includes(c.authType));
     const providerConns = connections.filter(matches);
     setConnections((prev) =>
       prev.map((c) => (matches(c) ? { ...c, isActive: newActive } : c)),
@@ -485,16 +491,25 @@ export default function ProvidersPage() {
               />
             );
           })}
-          {freeTierEntries.map(([key, info]) => (
-            <ApiKeyProviderCard
-              key={key}
-              providerId={key}
-              provider={info}
-              stats={getProviderStats(key, "apikey")}
-              authType="apikey"
-              onToggle={(active) => handleToggleProvider(key, "apikey", active)}
-            />
-          ))}
+          {freeTierEntries.map(([key, info]) => {
+            const tierAuthTypes =
+              info.authModes ||
+              (info.hasOAuth || info.authType === "oauth"
+                ? ["oauth", "apikey", "api_key"]
+                : ["apikey", "api_key", "none", "oauth"]);
+            return (
+              <ProviderCard
+                key={key}
+                providerId={key}
+                provider={info}
+                stats={getProviderStats(key, tierAuthTypes)}
+                authType="free"
+                onToggle={(active) =>
+                  handleToggleProvider(key, tierAuthTypes, active)
+                }
+              />
+            );
+          })}
         </div>
       </div>
       )}
@@ -652,7 +667,7 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
               }}
             >
               <ProviderIcon
-                src={`/providers/${provider.id}.png`}
+                src={getProviderIconSrc(provider.id) || `/providers/${provider.id}.png`}
                 alt={provider.name}
                 size={30}
                 className="object-contain rounded-lg max-w-[32px] max-h-[32px]"

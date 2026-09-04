@@ -376,7 +376,7 @@ const PROVIDER_MODELS_CONFIG = {
         warning = `Failed to fetch Kiro models: ${error.message}`;
         console.log("Failed to fetch Kiro models dynamically, falling back to static:", error.message);
       }
-      return { models: [], warning };
+      return { models: getStaticProviderModels("kiro"), warning };
     }
   },
   qoder: {

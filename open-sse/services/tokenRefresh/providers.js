@@ -31,10 +31,67 @@ export async function refreshXaiToken(refreshToken, log) {
   }, log);
 }
 
+// Config-driven refresh profiles — each entry overrides parts of the generic
+// OAuth2 refresh call (headers, body format, field inclusion).
+const REFRESH_PROFILES = {
+  iflow: (config, refreshToken) => ({
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      Authorization: `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`,
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+    }),
+  }),
+  github: (config, refreshToken) => ({
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: new URLSearchParams({
+      ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+    }),
+  }),
+  kimi: (config, refreshToken, credentials) => ({
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      ...buildKimiHeaders(credentials?.providerSpecificData?.deviceId),
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+    }),
+  }),
+  claude: (config, refreshToken) => ({
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+    }),
+  }),
+};
+
 export async function refreshAccessToken(provider, refreshToken, credentials, log) {
   const config = PROVIDERS[provider];
 
-  if (!config || !config.refreshUrl) {
+  // Resolve refresh URL: prefer registry refreshUrl, fall back to OAUTH_ENDPOINTS
+  const endpointKey = provider === "claude" ? "anthropic" : provider;
+  const refreshUrl = config?.refreshUrl || OAUTH_ENDPOINTS[endpointKey]?.token || OAUTH_ENDPOINTS[provider]?.token || null;
+
+  if (!config || !refreshUrl) {
     log?.warn?.("TOKEN_REFRESH", `No refresh URL configured for provider: ${provider}`);
     return null;
   }
@@ -46,18 +103,25 @@ export async function refreshAccessToken(provider, refreshToken, credentials, lo
 
   return dedupRefresh(provider, refreshToken, async () => {
   try {
-    const response = await fetch(config.refreshUrl, {
+    const profile = REFRESH_PROFILES[provider];
+    const { headers, body } = profile
+      ? profile(config, refreshToken, credentials)
+      : {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+            client_id: config.clientId,
+            client_secret: config.clientSecret,
+          }),
+        };
+    const response = await fetch(refreshUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-      }),
+      headers,
+      body,
     });
 
     if (!response.ok) {

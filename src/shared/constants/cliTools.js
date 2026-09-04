@@ -139,6 +139,14 @@ export const CLI_TOOLS = {
     description: "OpenCode AI Terminal Assistant",
     configType: "custom",
   },
+  freebuff: {
+    id: "freebuff",
+    name: "Freebuff CLI",
+    image: "/providers/freebuff.png",
+    color: "#54A967",
+    description: "Freebuff free terminal coding agent",
+    configType: "custom",
+  },
   cowork: {
     id: "cowork",
     name: "Claude Cowork",

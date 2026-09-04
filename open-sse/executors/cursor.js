@@ -4,6 +4,7 @@ import { HTTP_STATUS } from "../config/runtimeConfig.js";
 import {
   generateCursorBody,
   encodeField,
+  encodeAgentValue,
   wrapConnectRPCFrame,
   decodeMessage,
   parseConnectRPCFrame,
@@ -83,6 +84,34 @@ function isAgentTextRequest(body) {
   });
 }
 
+/**
+ * Check whether a request can be routed through Cursor AgentService.
+ * Unlike isAgentTextRequest, this accepts tool_calls and tool-role messages
+ * (agent-capable), but still rejects non-text content like images.
+ */
+function isAgentCapableRequest(body) {
+  if (!body || !Array.isArray(body?.messages)) return false;
+  return body.messages.every((message) => {
+    // tool-role messages are allowed
+    if (message?.role === "tool") return true;
+    // assistant messages with tool_calls are allowed (content may be null)
+    if (message?.tool_calls?.length) {
+      // content must be null, string, or array of text parts only
+      const c = message.content;
+      if (c === null || c === undefined) return true;
+      if (typeof c === "string") return true;
+      if (Array.isArray(c)) return c.every((part) => part?.type === "text");
+      return false;
+    }
+    // All other messages: content must be string or array of text parts
+    if (typeof message?.content === "string") return true;
+    if (Array.isArray(message?.content)) {
+      return message.content.every((part) => part?.type === "text");
+    }
+    return false;
+  });
+}
+
 function encodeHistoryMessage(message) {
   const content = textFromContent(message?.content);
   if (!content) return null;
@@ -95,7 +124,7 @@ function encodeHistoryMessage(message) {
   return agentMessage(1, agentMessage(1, agentMessage(1, text)));
 }
 
-function buildAgentRunFrame(messages, model) {
+function buildAgentRunFrame(messages, model, tools = []) {
   const system = messages
     .filter((message) => message?.role === "system")
     .map((message) => textFromContent(message.content))
@@ -124,16 +153,48 @@ function buildAgentRunFrame(messages, model) {
   );
   const conversationAction = agentMessage(1, userAction);
   const requestedModel = concatBuffers(agentString(1, model), agentBool(7, true));
+  // field 4 in RunRequest = mcp_tools (repeated McpToolDefinition)
+  const mcpToolsEncoded = (tools && tools.length > 0)
+    ? concatBuffers(...tools.map((t) => agentMessage(4, encodeMcpToolForAgent(t))))
+    : null;
   const runRequest = concatBuffers(
     // An empty ConversationStateStructure starts a fresh local agent session.
     agentMessage(1, new Uint8Array()),
     agentMessage(2, conversationAction),
     ...(system ? [agentString(8, system)] : []),
     agentMessage(9, requestedModel),
+    ...(mcpToolsEncoded ? [mcpToolsEncoded] : []),
   );
 
   // agent.v1.AgentClientMessage.run_request.
   return wrapConnectRPCFrame(agentMessage(1, runRequest));
+}
+
+// MCP tool name prefix helpers for agent frames
+const AGENT_MCP_PREFIX = "mcp_custom_";
+
+function formatAgentToolName(name) {
+  if (!name) return "tool";
+  if (name.startsWith("mcp_")) return name;
+  return `${AGENT_MCP_PREFIX}${name}`;
+}
+
+/**
+ * Encode a single MCP tool definition for the AgentService run request.
+ * Matches Cursor agent.proto: McpToolDefinition { name=1, description=2, input_schema=3(Value), provider=4, tool_name=5 }
+ */
+function encodeMcpToolForAgent(tool) {
+  const WIRE_LEN = 2;
+  const name = tool.function?.name || tool.name || "";
+  const description = tool.function?.description || tool.description || "";
+  const schema = tool.function?.parameters || tool.input_schema || {};
+  const parts = [];
+  if (name) parts.push(encodeField(1, WIRE_LEN, name));
+  if (description) parts.push(encodeField(2, WIRE_LEN, description));
+  if (Object.keys(schema).length > 0) parts.push(encodeField(3, WIRE_LEN, encodeAgentValue(schema)));
+  parts.push(encodeField(4, WIRE_LEN, "9router"));
+  if (name) parts.push(encodeField(5, WIRE_LEN, name));
+  return parts.length ? Buffer.concat(parts) : new Uint8Array(0);
 }
 
 function extractAgentString(message, field) {
@@ -1098,5 +1159,7 @@ export class CursorExecutor extends BaseExecutor {
     return null;
   }
 }
+
+export { isAgentCapableRequest, buildAgentRunFrame };
 
 export default CursorExecutor;

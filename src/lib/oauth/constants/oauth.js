@@ -198,6 +198,18 @@ export const ZED_HOSTED_CONFIG = {
   oauthTimeoutMs: 600_000,
 };
 
+// Freebuff OAuth Configuration (CLI device-code login & credentials import)
+export const FREEBUFF_CONFIG = {
+  ...PROVIDER_OAUTH["freebuff"],
+  loginCodeUrl: "https://freebuff.com/api/auth/cli/code",
+  loginStatusUrl: "https://freebuff.com/api/auth/cli/status",
+  sessionUrl: "https://www.codebuff.com/api/v1/freebuff/session",
+  meUrl: "https://www.codebuff.com/api/v1/me",
+  usageUrl: "https://www.codebuff.com/api/v1/usage",
+  localConfigPath: "~/.config/manicode/credentials.json",
+  oauthTimeoutMs: 300_000,
+};
+
 // OAuth timeout (5 minutes)
 export const OAUTH_TIMEOUT = 300000;
 
@@ -227,4 +239,6 @@ export const PROVIDERS = {
   TRAE: "trae",
   WINDSURF: "windsurf",
   ZED: "zed",
+  FREEBUFF: "freebuff",
 };
+

@@ -131,13 +131,16 @@ function extractModel(url, body) {
       return parsed.conversationState.currentMessage?.userInputMessage?.modelId || null;
     }
     const model = urlModel || parsed.model || null;
-    if (String(model).replace(/^models\//, "") === "gemini-3.6-flash-tiered") {
+    const cleanModel = String(model).replace(/^models\//, "");
+    const flashTierMatch = cleanModel.match(/^gemini-(3\.[678])-flash-tiered$/);
+    if (flashTierMatch) {
+      const version = flashTierMatch[1];
       const rawLevel = parsed.request?.generationConfig?.thinkingConfig?.thinkingLevel
         || parsed.generationConfig?.thinkingConfig?.thinkingLevel;
       const level = ["high", "medium", "low"].includes(String(rawLevel).toLowerCase())
         ? String(rawLevel).toLowerCase()
         : "medium";
-      return `gemini-3.6-flash-${level}`;
+      return `gemini-${version}-flash-${level}`;
     }
     return model;
   } catch {

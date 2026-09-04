@@ -216,7 +216,7 @@ export class KiroExecutor extends BaseExecutor {
     super("kiro", PROVIDERS.kiro);
   }
 
-  buildHeaders(credentials, stream = true) {
+  buildHeaders(credentials, stream = true, url = null) {
     const headers = {
       ...this.config.headers,
       "Amz-Sdk-Request": "attempt=1; max=3",
@@ -224,7 +224,7 @@ export class KiroExecutor extends BaseExecutor {
     };
 
     // API-key auth: the key is stored as accessToken and sent as a bearer token
-    // exactly like an OAuth access token, but with an extra `tokentype: API_KEY`
+    // exactly like an OAuth access token, but with an extra `TokenType: API_KEY`
     // header so CodeWhisperer treats it as a long-lived API key rather than an
     // OIDC/social access token. Mirrors the Kiro IDE headless-auth behavior.
     // Enterprise / Microsoft Entra (external_idp) tokens are OAuth access tokens,
@@ -236,15 +236,27 @@ export class KiroExecutor extends BaseExecutor {
     const apiKey = credentials?.apiKey || (isApiKey ? credentials?.accessToken : null);
     if (isApiKey && apiKey) {
       headers["Authorization"] = `Bearer ${apiKey}`;
-      headers["tokentype"] = "API_KEY";
-    } else if (credentials.accessToken) {
+      headers["TokenType"] = "API_KEY";
+    } else if (credentials?.accessToken) {
       headers["Authorization"] = `Bearer ${credentials.accessToken}`;
       if (isExternalIdp) {
         headers["TokenType"] = "EXTERNAL_IDP";
       }
     }
 
+    if (url) {
+      const isCw = url.includes("codewhisperer.");
+      if (!isCw) {
+        delete headers["X-Amz-Target"];
+      }
+    }
+
     return headers;
+  }
+
+  shouldRetry(status, urlIndex) {
+    const isAuthOrSurfaceError = status === 401 || status === 403 || status === 429;
+    return isAuthOrSurfaceError && urlIndex + 1 < this.getFallbackCount();
   }
 
   /**
@@ -279,6 +291,14 @@ export class KiroExecutor extends BaseExecutor {
       region && region !== "us-east-1" && u.includes("amazonaws.com")
         ? u.replace(/([a-z]+)\.[a-z0-9-]+\.amazonaws\.com/, `$1.${region}.amazonaws.com`)
         : u;
+
+    if (authMethod === "api_key") {
+      const q = baseUrls.find((u) => u.includes("q.") && u.includes("amazonaws.com"));
+      const cw = baseUrls.find((u) => u.includes("codewhisperer.") && u.includes("amazonaws.com"));
+      const runtime = baseUrls.find((u) => u.includes("kiro.dev"));
+      const ordered = [q ? regionalize(q) : null, cw ? regionalize(cw) : null, runtime].filter(Boolean);
+      return ordered.length > 0 ? ordered : baseUrls;
+    }
 
     const amazon = baseUrls.filter((u) => u.includes("amazonaws.com")).map(regionalize);
     const others = baseUrls.filter((u) => !u.includes("amazonaws.com"));

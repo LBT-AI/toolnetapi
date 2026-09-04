@@ -16,8 +16,13 @@ export function loadPid() {
   return null;
 }
 
-export function clearPid() {
+export function clearPid(expectedPid) {
   try {
-    if (fs.existsSync(PID_FILE)) fs.unlinkSync(PID_FILE);
+    if (!fs.existsSync(PID_FILE)) return;
+    if (expectedPid !== undefined) {
+      const current = loadPid();
+      if (current !== expectedPid) return; // old child must not clear successor PID
+    }
+    fs.unlinkSync(PID_FILE);
   } catch { /* ignore */ }
 }

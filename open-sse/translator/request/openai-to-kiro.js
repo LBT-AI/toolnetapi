@@ -524,10 +524,10 @@ export function openaiToKiroRequest(model, body, stream, credentials) {
   const temperature = body.temperature;
   const topP = body.top_p;
 
-  const { upstream: upstreamModel, agentic } = resolveKiroModel(model);
+  const { upstream: upstreamModel, agentic, effort: modelEffort } = resolveKiroModel(model);
   const thinkingBudget = resolveKiroThinkingBudget(body, credentials?.rawHeaders, model);
-  const additionalModelRequestFields = buildKiroAdditionalModelRequestFieldsForModel(body, upstreamModel);
-  const usesNativeGptEffort = usesKiroNativeGptEffort(body, upstreamModel);
+  const additionalModelRequestFields = buildKiroAdditionalModelRequestFieldsForModel(body, upstreamModel, modelEffort);
+  const usesNativeGptEffort = usesKiroNativeGptEffort(body, upstreamModel, modelEffort);
 
   const { history, currentMessage } = convertMessages(messages, tools, upstreamModel);
 

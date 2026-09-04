@@ -160,10 +160,10 @@ function extractKiroGptEffortLevel(body) {
   return null;
 }
 
-export function buildKiroAdditionalModelRequestFields(body, effortPath = "output_config") {
+export function buildKiroAdditionalModelRequestFields(body, effortPath = "output_config", modelEffort = null) {
   const effort = effortPath === "reasoning"
-    ? extractKiroGptEffortLevel(body)
-    : extractKiroEffortLevel(body);
+    ? (extractKiroGptEffortLevel(body) || (modelEffort === "max" ? "xhigh" : (["low", "medium", "high", "xhigh"].includes(modelEffort) ? modelEffort : null)))
+    : (extractKiroEffortLevel(body) || (modelEffort === "xhigh" || modelEffort === "max" ? "high" : (["low", "medium", "high"].includes(modelEffort) ? modelEffort : null)));
   if (!effort) return undefined;
   if (effortPath === "reasoning") {
     // Mirrors Kiro CLI/KAS buildEffortRequestFields("reasoning") for GPT.
@@ -201,15 +201,15 @@ export function supportsKiroAdditionalModelRequestFields(model) {
   return resolveKiroEffortPath(model) !== null;
 }
 
-export function usesKiroNativeGptEffort(body, model) {
+export function usesKiroNativeGptEffort(body, model, modelEffort = null) {
   return resolveKiroEffortPath(model) === "reasoning"
-    && extractKiroGptEffortLevel(body) !== null;
+    && (extractKiroGptEffortLevel(body) !== null || (modelEffort && ["low", "medium", "high", "xhigh", "max"].includes(modelEffort)));
 }
 
-export function buildKiroAdditionalModelRequestFieldsForModel(body, model) {
+export function buildKiroAdditionalModelRequestFieldsForModel(body, model, modelEffort = null) {
   const effortPath = resolveKiroEffortPath(model);
   if (!effortPath) return undefined;
-  return buildKiroAdditionalModelRequestFields(body, effortPath);
+  return buildKiroAdditionalModelRequestFields(body, effortPath, modelEffort);
 }
 
 /**
@@ -295,6 +295,14 @@ export function resolveKiroModel(model) {
   let upstream = model;
   let agentic = false;
   let thinking = false;
+  let effort = null;
+  if (typeof upstream === "string") {
+    const intensityMatch = upstream.match(/\((low|medium|high|xhigh|max)\)$/i);
+    if (intensityMatch) {
+      effort = intensityMatch[1].toLowerCase();
+      upstream = upstream.slice(0, -intensityMatch[0].length);
+    }
+  }
   if (isAgenticModel(upstream)) {
     agentic = true;
     upstream = stripAgenticSuffix(upstream);
@@ -303,7 +311,7 @@ export function resolveKiroModel(model) {
     thinking = true;
     upstream = stripThinkingSuffix(upstream);
   }
-  return { upstream, agentic, thinking };
+  return { upstream, agentic, thinking, effort };
 }
 
 /**

@@ -125,6 +125,7 @@ import p122 from "./youcom.js";
 import p123 from "./zed.js";
 import p124 from "./kira.js";
 import p125 from "./genspark.js";
+import p126 from "./freebuff.js";
 
 
 export default [
@@ -254,5 +255,6 @@ export default [
   p123,
   p124,
   p125,
+  p126,
 ];
 

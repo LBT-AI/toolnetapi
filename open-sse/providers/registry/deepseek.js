@@ -40,6 +40,10 @@ export default {
       auth: { combined: true, header: "x-api-key", scheme: "raw" },
     },
   ],
+  features: {
+    usage: true,
+    usageApikey: true,
+  },
   models: [
     { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
     { id: "deepseek-v4-pro-max", name: "DeepSeek V4 Pro Max", upstreamModelId: "deepseek-v4-pro" },

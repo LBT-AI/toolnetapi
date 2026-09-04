@@ -394,6 +394,7 @@ export async function POST(request) {
         case "nvidia":
         case "agnes":
         case "poolside":
+        case "freebuff":
         case "toolnet": {
           const endpoints = {
             ...Object.fromEntries(

@@ -127,6 +127,16 @@ const OAUTH_TEST_CONFIG = {
       402: "Connected, but Grok Build credits are exhausted (spending limit). Add credits or upgrade SuperGrok.",
     },
   },
+  freebuff: {
+    url: "https://www.codebuff.com/api/v1/me?fields=id,email",
+    method: "GET",
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    extraHeaders: {
+      "User-Agent": "freebuff-cli",
+    },
+    refreshable: false,
+  },
 };
 
 /**
@@ -886,6 +896,16 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         }, effectiveProxy);
         const valid = res.status !== 401 && res.status !== 403;
         return { valid, error: valid ? null : "Invalid API key" };
+      }
+      case "freebuff": {
+        const res = await fetchWithConnectionProxy("https://www.codebuff.com/api/v1/me?fields=id,email", {
+          headers: {
+            "Authorization": `Bearer ${connection.apiKey || connection.accessToken}`,
+            "User-Agent": "freebuff-cli",
+          },
+        }, effectiveProxy);
+        const valid = res.ok;
+        return { valid, error: valid ? null : `Freebuff validation error (${res.status})` };
       }
       default:
         return { valid: false, error: "Provider test not supported" };

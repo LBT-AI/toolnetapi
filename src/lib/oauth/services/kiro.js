@@ -305,17 +305,34 @@ export class KiroService {
     }
     const trimmed = apiKey.trim();
 
-    let profileArn = null;
+    const endpoint = `https://q.${region}.amazonaws.com/ListAvailableModels?origin=AI_EDITOR`;
+    let response;
     try {
-      profileArn = await this.listAvailableProfiles(trimmed, region);
+      response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${trimmed}`,
+          TokenType: "API_KEY",
+        },
+      });
     } catch (error) {
       throw new Error(`API key validation failed: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const error = await response.text().catch(() => "");
+      throw new Error(`API key validation failed: ${error}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data?.models) || data.models.length === 0) {
+      throw new Error("API key validation failed: returned no available models");
     }
 
     return {
       accessToken: trimmed,
       refreshToken: null,
-      profileArn,
+      profileArn: null,
       region,
       authMethod: "api_key",
     };

@@ -682,19 +682,17 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
       }
       case "bobide": {
         const psd = connection.providerSpecificData || {};
-        if (psd.baseUrl) {
-          try {
-            const res = await fetchWithConnectionProxy(`${psd.baseUrl.replace(/\/$/, "")}/models`, {
-              headers: { Authorization: `Bearer ${connection.apiKey}` },
-            }, effectiveProxy);
-            const valid = res.status !== 401 && res.status !== 403;
-            return { valid, error: valid ? null : "Invalid API key or base URL" };
-          } catch (err) {
-            return { valid: false, error: err.message };
-          }
+        const url = psd.baseUrl ? `${psd.baseUrl.replace(/\/$/, "")}/models` : "https://api.us-east.bob.ibm.com/inference/v1/model/info";
+        const authHeader = psd.baseUrl ? `Bearer ${connection.apiKey}` : `apikey ${connection.apiKey}`;
+        try {
+          const res = await fetchWithConnectionProxy(url, {
+            headers: { Authorization: authHeader, "User-Agent": "bobshell/2.0.0" },
+          }, effectiveProxy);
+          const valid = res.status === 200 || (res.status !== 401 && res.status !== 403);
+          return { valid, error: valid ? null : "Invalid or expired IBM Bob API Key" };
+        } catch (err) {
+          return { valid: false, error: err.message };
         }
-        const valid = !!(connection.apiKey && connection.apiKey.trim().length > 0);
-        return { valid, error: valid ? null : "API key is required" };
       }
       case "kira": {
         const res = await fetchWithConnectionProxy("https://kiraai.vn/api/v1/chat/completions", {

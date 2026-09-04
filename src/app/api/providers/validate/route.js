@@ -337,8 +337,7 @@ export async function POST(request) {
           break;
         }
         case "volcengine-ark":
-        case "byteplus":
-        case "bobide": {
+        case "byteplus": {
           const psd = body.providerSpecificData || {};
           if (psd.baseUrl) {
             try {
@@ -351,6 +350,22 @@ export async function POST(request) {
               isValid = false;
             }
           } else {
+            isValid = !!apiKey && apiKey.trim().length > 0;
+          }
+          break;
+        }
+        case "bobide": {
+          try {
+            const res = await fetch("https://api.us-east.bob.ibm.com/inference/v1/model/info", {
+              method: "GET",
+              headers: {
+                "Authorization": `apikey ${apiKey}`,
+                "User-Agent": "bobshell/2.0.0",
+              },
+              signal: AbortSignal.timeout(8000),
+            });
+            isValid = res.ok;
+          } catch {
             isValid = !!apiKey && apiKey.trim().length > 0;
           }
           break;

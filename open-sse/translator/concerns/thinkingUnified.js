@@ -244,7 +244,7 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels) {
       // Sonnet 5. Send both fields — the documented adaptive-thinking shape.
       body.thinking = { type: "adaptive" };
       const level = toLevel(eff);
-      body.output_config = { effort: level === "xhigh" ? "high" : level };
+      body.output_config = { effort: level === "xhigh" || level === "auto" ? "high" : level };
       break;
     }
     case "claude-budget": {

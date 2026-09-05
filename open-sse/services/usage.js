@@ -14,6 +14,9 @@ import { getDeepseekUsage } from "./usage/deepseek.js";
 import { getMiniMaxUsage } from "./usage/minimax.js";
 import { getCodeBuddyCnUsage } from "./usage/codebuddy-cn.js";
 import { getGrokCliUsage } from "./usage/grok-cli.js";
+import { getOpenCodeGoUsage } from "./usage/opencode-go.js";
+import { getGroqUsage } from "./usage/groq.js";
+import { getZedUsage } from "./usage/zed.js";
 import { resolveQoderCredentials } from "./qoderModels.js";
 import {
   getQwenUsage,
@@ -55,6 +58,9 @@ const USAGE_HANDLERS = {
   "vercel-ai-gateway": (c) => getVercelAiGatewayUsage(c.apiKey, c.proxyOptions),
   "codebuddy-cn": (c) => getCodeBuddyCnUsage(c.accessToken, c.apiKey, c.providerSpecificData, c.proxyOptions),
   "grok-cli": (c) => getGrokCliUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
+  "opencode-go": (c) => getOpenCodeGoUsage(c.apiKey, c.proxyOptions),
+  groq: (c) => getGroqUsage(c.apiKey, c.proxyOptions),
+  zed: (c) => getZedUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
 };
 
 export async function getUsageForProvider(connection, proxyOptions = null, options = {}) {

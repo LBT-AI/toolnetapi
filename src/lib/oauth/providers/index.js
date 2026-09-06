@@ -2,7 +2,8 @@
 import "open-sse/index.js";
 
 import { generatePKCE } from "../utils/pkce.js";
-import { extractCodexAccountInfo, fetchKiroProfileArn } from "../providerHelpers.js";
+import { extractCodexAccountInfo, fetchKiroProfileArn, resolveKiroIdentity, extractKiroClaims } from "../providerHelpers.js";
+import { backfillKiroIdentities } from "./kiro.js";
 
 import claude from "./claude.js";
 import codex from "./codex.js";
@@ -60,7 +61,13 @@ const PROVIDERS = {
 export { PROVIDERS };
 
 // Re-export helpers that other files import from this path
-export { extractCodexAccountInfo, fetchKiroProfileArn };
+export {
+  extractCodexAccountInfo,
+  fetchKiroProfileArn,
+  extractKiroClaims,
+  resolveKiroIdentity,
+  backfillKiroIdentities,
+};
 
 /**
  * Get provider handler
@@ -177,7 +184,25 @@ export async function pollForToken(providerName, deviceCode, codeVerifier, extra
       // Kiro IDC/Builder-ID tokens lack profileArn; resolve it to avoid 403
       if (providerName === "kiro" && !tokens.providerSpecificData?.profileArn) {
         const profileArn = await fetchKiroProfileArn(tokens.accessToken);
-        if (profileArn) tokens.providerSpecificData.profileArn = profileArn;
+        if (profileArn) {
+          tokens.providerSpecificData.profileArn = profileArn;
+          const updatedIdentity = resolveKiroIdentity({
+            accessToken: tokens.accessToken,
+            profileArn,
+          }, {
+            accountLabel: tokens.providerSpecificData.accountLabel,
+            authMethod: tokens.providerSpecificData.authMethod,
+          });
+          if (!tokens.email && updatedIdentity.email) {
+            tokens.email = updatedIdentity.email;
+          }
+          if (updatedIdentity.identityKey) {
+            tokens.providerSpecificData.identityKey = updatedIdentity.identityKey;
+          }
+          if (updatedIdentity.displayName && (!tokens.name || tokens.name.startsWith("AWS Builder ID"))) {
+            tokens.name = updatedIdentity.displayName;
+          }
+        }
       }
       return { success: true, tokens };
     } else {

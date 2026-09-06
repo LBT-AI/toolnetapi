@@ -64,6 +64,22 @@ function deriveConnectionName(data, fallbackName) {
       || data.providerSpecificData?.githubName
       || fallbackName;
   }
+  if (data.provider === "kiro") {
+    const label = data.providerSpecificData?.accountLabel || data.accountLabel;
+    const email = data.email;
+    const profileArn = data.providerSpecificData?.profileArn;
+    let shortProfile = null;
+    if (profileArn) {
+      const parts = profileArn.split("/");
+      const last = parts[parts.length - 1];
+      shortProfile = `Profile …${last.length > 8 ? last.slice(-6) : last}`;
+    }
+    return label
+      || email
+      || shortProfile
+      || (data.providerSpecificData?.identityKey?.startsWith("kiro:") ? `AWS Builder ID (${data.providerSpecificData.identityKey.slice(5, 11)})` : null)
+      || fallbackName;
+  }
   return fallbackName;
 }
 
@@ -108,7 +124,58 @@ export async function createProviderConnection(data) {
     const all = db.all(`SELECT * FROM providerConnections WHERE provider = ?`, [data.provider]).map(rowToConn);
 
     let existing = null;
-    if (data.authType === "oauth" && data.email) {
+    if (data.provider === "kiro") {
+      const incomingEmail = data.email ? String(data.email).trim().toLowerCase() : null;
+      const incomingSub = data.providerSpecificData?.sub || null;
+      const incomingProfileArn = data.providerSpecificData?.profileArn || null;
+      const incomingIdentityKey = data.providerSpecificData?.identityKey || null;
+      const incomingLabel = (data.providerSpecificData?.accountLabel || data.accountLabel || data.name || "").trim().toLowerCase();
+      const isIncomingGeneric = !incomingLabel || /^account\s+\d+$/i.test(incomingLabel);
+
+      existing = all.find(c => {
+        if (c.authType !== "oauth" && c.authType !== "imported") return false;
+
+        const cEmail = c.email ? String(c.email).trim().toLowerCase() : null;
+        const cSub = c.providerSpecificData?.sub || null;
+        const cProfileArn = c.providerSpecificData?.profileArn || null;
+        const cIdentityKey = c.providerSpecificData?.identityKey || null;
+        const cLabel = (c.providerSpecificData?.accountLabel || c.name || "").trim().toLowerCase();
+        const isCGeneric = !cLabel || /^account\s+\d+$/i.test(cLabel);
+
+        // 1. Match by normalized email
+        if (incomingEmail && cEmail && incomingEmail === cEmail) {
+          return true;
+        }
+        if (incomingEmail && cLabel && !isCGeneric && incomingEmail === cLabel) {
+          return true;
+        }
+        if (cEmail && incomingLabel && !isIncomingGeneric && cEmail === incomingLabel) {
+          return true;
+        }
+
+        // 2. Match by sub (JWT subject ID)
+        if (incomingSub && cSub && incomingSub === cSub) {
+          return true;
+        }
+
+        // 3. Match by profileArn
+        if (incomingProfileArn && cProfileArn && incomingProfileArn === cProfileArn) {
+          return true;
+        }
+
+        // 4. Match by identityKey
+        if (incomingIdentityKey && cIdentityKey && incomingIdentityKey === cIdentityKey) {
+          return true;
+        }
+
+        // 5. Match by explicit user label (non-generic)
+        if (!isIncomingGeneric && !isCGeneric && incomingLabel === cLabel) {
+          return true;
+        }
+
+        return false;
+      });
+    } else if (data.authType === "oauth" && data.email) {
       const incomingUsername = data.providerSpecificData?.username;
       const incomingWs = data.providerSpecificData?.chatgptAccountId;
       existing = all.find(c => {
@@ -147,9 +214,47 @@ export async function createProviderConnection(data) {
     // access_token: never dedup — user manages duplicates manually
 
     if (existing) {
-      const merged = { ...existing, ...data, updatedAt: now };
+      const isExistingGeneric = !existing.name || /^account\s+\d+$/i.test(existing.name.trim());
+      let mergedName = existing.name;
+      if (isExistingGeneric && data.name && !/^account\s+\d+$/i.test(data.name.trim())) {
+        mergedName = data.name;
+      } else if (!mergedName && data.name) {
+        mergedName = data.name;
+      }
+
+      // Merge providerSpecificData safely so existing settings (proxy, etc.) are preserved
+      const mergedPsd = {
+        ...(existing.providerSpecificData || {}),
+        ...(data.providerSpecificData || {}),
+      };
+      if (existing.providerSpecificData?.proxyPoolId && !data.providerSpecificData?.proxyPoolId) {
+        mergedPsd.proxyPoolId = existing.providerSpecificData.proxyPoolId;
+      }
+      if (existing.providerSpecificData?.connectionProxyUrl && !data.providerSpecificData?.connectionProxyUrl) {
+        mergedPsd.connectionProxyUrl = existing.providerSpecificData.connectionProxyUrl;
+        mergedPsd.connectionProxyEnabled = existing.providerSpecificData.connectionProxyEnabled;
+      }
+
+      const merged = {
+        ...existing,
+        ...data,
+        id: existing.id,
+        priority: existing.priority,
+        isActive: existing.isActive !== undefined ? existing.isActive : true,
+        proxyPoolId: existing.proxyPoolId || mergedPsd.proxyPoolId || null,
+        name: mergedName,
+        email: data.email || existing.email || null,
+        providerSpecificData: Object.keys(mergedPsd).length > 0 ? mergedPsd : undefined,
+        updatedAt: now,
+      };
+
+      if (data.accessToken) merged.accessToken = data.accessToken;
+      if (data.refreshToken) merged.refreshToken = data.refreshToken;
+      if (data.expiresAt) merged.expiresAt = data.expiresAt;
+      if (data.testStatus) merged.testStatus = data.testStatus;
+
       upsert(db, merged);
-      result = merged;
+      result = { ...merged, _isDuplicate: true, updatedExisting: true };
       return;
     }
 

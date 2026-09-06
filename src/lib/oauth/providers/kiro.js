@@ -1,5 +1,5 @@
 import { KIRO_CONFIG, assertValidAwsRegion } from "../constants/oauth.js";
-import { extractEmailFromAccessToken } from "../providerHelpers.js";
+import { extractEmailFromAccessToken, resolveKiroIdentity, extractKiroClaims } from "../providerHelpers.js";
 
 const kiro = {
   config: KIRO_CONFIG,
@@ -116,6 +116,7 @@ const kiro = {
           _region: extraData?._region,
           _authMethod: extraData?._authMethod,
           _startUrl: extraData?._startUrl,
+          _accountLabel: extraData?._accountLabel || extraData?.accountLabel,
         },
       };
     }
@@ -129,14 +130,22 @@ const kiro = {
     };
   },
   mapTokens: (tokens) => {
-    const email = extractEmailFromAccessToken(tokens.access_token);
+    const identity = resolveKiroIdentity(tokens, {
+      profileArn: tokens?.profile_arn,
+      accountLabel: tokens?._accountLabel || tokens?.accountLabel,
+      authMethod: tokens?._authMethod,
+    });
     const mapped = {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
-      email,
+      email: identity.email,
+      name: identity.displayName,
       providerSpecificData: {
-        profileArn: tokens?.profile_arn || null,
+        profileArn: identity.profileArn,
+        identityKey: identity.identityKey,
+        accountLabel: identity.accountLabel,
+        sub: identity.sub,
         clientId: tokens._clientId,
         clientSecret: tokens._clientSecret,
         region: tokens._region || "us-east-1",
@@ -148,4 +157,57 @@ const kiro = {
   },
 };
 
+let kiroBackfillDone = false;
+
+export async function backfillKiroIdentities() {
+  if (kiroBackfillDone) return;
+  kiroBackfillDone = true;
+  try {
+    const { getProviderConnections, updateProviderConnection } = await import("@/lib/localDb");
+    const connections = await getProviderConnections();
+    const targets = connections.filter((c) => c.provider === "kiro");
+
+    for (const conn of targets) {
+      let needsUpdate = false;
+      const patch = {};
+      const psd = { ...(conn.providerSpecificData || {}) };
+
+      if (!conn.email && conn.accessToken) {
+        const claims = extractKiroClaims(conn.accessToken);
+        if (claims.email) {
+          patch.email = claims.email.toLowerCase();
+          needsUpdate = true;
+        }
+        if (claims.sub && !psd.sub) {
+          psd.sub = claims.sub;
+          needsUpdate = true;
+        }
+      }
+
+      if (!psd.identityKey) {
+        const identity = resolveKiroIdentity({
+          accessToken: conn.accessToken,
+          profileArn: psd.profileArn,
+          email: patch.email || conn.email,
+          sub: psd.sub,
+        }, {
+          accountLabel: psd.accountLabel,
+        });
+        if (identity.identityKey) {
+          psd.identityKey = identity.identityKey;
+          needsUpdate = true;
+        }
+      }
+
+      if (needsUpdate) {
+        patch.providerSpecificData = psd;
+        await updateProviderConnection(conn.id, patch);
+      }
+    }
+  } catch {
+    kiroBackfillDone = false;
+  }
+}
+
+export { kiro };
 export default kiro;

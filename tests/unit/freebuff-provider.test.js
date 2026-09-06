@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import REGISTRY from "../../open-sse/providers/registry/index.js";
-import { FREE_TIER_PROVIDERS, AI_PROVIDERS } from "../../src/shared/constants/providers.js";
+import { CLI_FREE_PROVIDERS, AI_PROVIDERS } from "../../src/shared/constants/providers.js";
 import { PROVIDER_MODELS } from "../../open-sse/config/providerModels.js";
 import { CLI_TOOLS } from "../../src/shared/constants/cliTools.js";
 
 describe("Freebuff provider registration", () => {
-  it("exists in the main REGISTRY as a freeTier category provider", () => {
+  it("exists in the main REGISTRY as a cliFree category provider", () => {
     const freebuff = REGISTRY.find((p) => p.id === "freebuff");
     expect(freebuff).toBeTruthy();
-    expect(freebuff.category).toBe("freeTier");
+    expect(freebuff.category).toBe("cliFree");
     expect(freebuff.hasFree).toBe(true);
     expect(freebuff.alias).toBe("fb");
     expect(freebuff.display.name).toBe("Freebuff");
@@ -16,10 +16,10 @@ describe("Freebuff provider registration", () => {
     expect(freebuff.display.website).toBe("https://freebuff.com");
   });
 
-  it("is included in FREE_TIER_PROVIDERS and AI_PROVIDERS for dashboard", () => {
-    expect(FREE_TIER_PROVIDERS.freebuff).toBeTruthy();
-    expect(FREE_TIER_PROVIDERS.freebuff.id).toBe("freebuff");
-    expect(FREE_TIER_PROVIDERS.freebuff.name).toBe("Freebuff");
+  it("is included in CLI_FREE_PROVIDERS and AI_PROVIDERS for dashboard", () => {
+    expect(CLI_FREE_PROVIDERS.freebuff).toBeTruthy();
+    expect(CLI_FREE_PROVIDERS.freebuff.id).toBe("freebuff");
+    expect(CLI_FREE_PROVIDERS.freebuff.name).toBe("Freebuff");
     expect(AI_PROVIDERS.freebuff).toBeTruthy();
   });
 

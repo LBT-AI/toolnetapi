@@ -72,17 +72,70 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
   const rowAuthType = connection.authType || (isOAuth ? "oauth" : "apikey");
   const isOAuthConnection = rowAuthType === "oauth";
   const isCookieConnection = rowAuthType === "cookie";
-  const authIcon = isCookieConnection ? "cookie" : isOAuthConnection ? "lock" : "key";
-  const authLabel = isOAuthConnection ? "OAuth" : isCookieConnection ? "Cookie" : "API Key";
-  const displayName = connection.name?.trim()
-    || connection.email?.trim()
-    || connection.displayName?.trim()
-    || (isOAuthConnection ? "OAuth Account" : isCookieConnection ? "Cookie Account" : "API Key");
-  const secondaryDisplayName = connection.name?.trim() && connection.email?.trim() && connection.name.trim() !== connection.email.trim()
-    ? connection.email.trim()
-    : connection.name?.trim() && connection.displayName?.trim() && connection.name.trim() !== connection.displayName.trim()
-      ? connection.displayName.trim()
-      : null;
+  const isCliSession = rowAuthType === "cliSession" || connection.provider === "freebuff";
+  const authIcon = isCliSession ? "terminal" : isCookieConnection ? "cookie" : isOAuthConnection ? "lock" : "key";
+
+  const kiroAuthMethod = connection.providerSpecificData?.authMethod || connection.authMethod;
+  let authLabel = isCliSession ? "CLI Session" : isOAuthConnection ? "OAuth" : isCookieConnection ? "Cookie" : "API Key";
+  if (connection.provider === "kiro") {
+    if (kiroAuthMethod === "builder-id") {
+      authLabel = "AWS Builder ID";
+    } else if (kiroAuthMethod === "idc") {
+      authLabel = "AWS IAM Identity Center";
+    } else if (kiroAuthMethod === "api-key" || kiroAuthMethod === "apikey" || rowAuthType === "apikey") {
+      authLabel = "API Key";
+    } else if (kiroAuthMethod === "import" || kiroAuthMethod === "imported") {
+      authLabel = "Imported Token";
+    }
+  }
+
+  let displayName;
+  let secondaryDisplayName = null;
+
+  if (connection.provider === "kiro") {
+    const accountLabel = connection.providerSpecificData?.accountLabel?.trim();
+    const email = connection.email?.trim();
+    const profileArn = connection.providerSpecificData?.profileArn?.trim();
+    const rawName = connection.name?.trim();
+    const isGenericAccount = !rawName || /^account\s+\d+$/i.test(rawName);
+
+    let shortProfile = null;
+    if (profileArn) {
+      const parts = profileArn.split("/");
+      const last = parts[parts.length - 1];
+      shortProfile = `Profile …${last.length > 8 ? last.slice(-6) : last}`;
+    }
+
+    if (accountLabel) {
+      displayName = accountLabel;
+      if (email && email.toLowerCase() !== accountLabel.toLowerCase()) {
+        secondaryDisplayName = email;
+      } else if (shortProfile) {
+        secondaryDisplayName = shortProfile;
+      }
+    } else if (email) {
+      displayName = email;
+      if (shortProfile) {
+        secondaryDisplayName = shortProfile;
+      }
+    } else if (shortProfile) {
+      displayName = shortProfile;
+    } else if (!isGenericAccount) {
+      displayName = rawName;
+    } else {
+      displayName = rawName || `Account ${connection.priority || 1}`;
+    }
+  } else {
+    displayName = connection.name?.trim()
+      || connection.email?.trim()
+      || connection.displayName?.trim()
+      || (isOAuthConnection ? "OAuth Account" : isCookieConnection ? "Cookie Account" : "API Key");
+    secondaryDisplayName = connection.name?.trim() && connection.email?.trim() && connection.name.trim() !== connection.email.trim()
+      ? connection.email.trim()
+      : connection.name?.trim() && connection.displayName?.trim() && connection.name.trim() !== connection.displayName.trim()
+        ? connection.displayName.trim()
+        : null;
+  }
 
   // Use useState + useEffect for impure Date.now() to avoid calling during render
   const [isCooldown, setIsCooldown] = useState(false);
@@ -110,6 +163,76 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
       if (interval) clearInterval(interval);
     };
   }, [modelLockUntil]);
+
+  const [loadingAction, setLoadingAction] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
+
+  const handleFreebuffRestart = async () => {
+    setLoadingAction("restart");
+    try {
+      const res = await fetch("/api/providers/freebuff/restart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId: connection.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage("Restarted");
+      } else {
+        setActionMessage(data.error || "Failed");
+      }
+    } catch (e) {
+      setActionMessage(e.message);
+    } finally {
+      setLoadingAction(null);
+      setTimeout(() => setActionMessage(null), 3000);
+    }
+  };
+
+  const handleFreebuffStop = async () => {
+    setLoadingAction("stop");
+    try {
+      const res = await fetch("/api/providers/freebuff/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId: connection.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage("Stopped");
+      } else {
+        setActionMessage(data.error || "Failed");
+      }
+    } catch (e) {
+      setActionMessage(e.message);
+    } finally {
+      setLoadingAction(null);
+      setTimeout(() => setActionMessage(null), 3000);
+    }
+  };
+
+  const handleFreebuffLogin = async () => {
+    setLoadingAction("login");
+    try {
+      const res = await fetch("/api/providers/freebuff/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId: connection.id, action: "start" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.loginUrl) {
+        window.open(data.loginUrl, "_blank");
+        setActionMessage("Login URL opened");
+      } else {
+        setActionMessage(data.error || "Login init failed");
+      }
+    } catch (e) {
+      setActionMessage(e.message);
+    } finally {
+      setLoadingAction(null);
+      setTimeout(() => setActionMessage(null), 4000);
+    }
+  };
 
   // Determine effective status (override unavailable if cooldown expired)
   const effectiveStatus = (connection.testStatus === "unavailable" && !isCooldown)
@@ -211,61 +334,110 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
         </div>
       </div>
       <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
-        <div className="grid flex-1 grid-cols-3 gap-1 sm:flex sm:flex-none">
-          {/* Proxy button with inline dropdown */}
-          {(proxyPools || []).length > 0 && (
-            <div className="relative" ref={proxyDropdownRef}>
-              <button
-                onClick={() => setShowProxyDropdown((v) => !v)}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${hasAnyProxy ? "text-primary" : "text-text-muted hover:text-primary"}`}
-                disabled={updatingProxy}
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {updatingProxy ? "progress_activity" : "lan"}
-                </span>
-                <span className="text-[10px] leading-tight">Proxy</span>
-              </button>
-              {showProxyDropdown && (
-                <div className="absolute right-0 top-full z-50 mt-1 max-w-[78vw] min-w-[160px] rounded-lg border border-border bg-bg py-1 shadow-lg">
-                  <button
-                    onClick={() => handleSelectProxy("__none__")}
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${!boundProxyPoolId ? "text-primary font-medium" : "text-text-main"}`}
-                  >
-                    None
-                  </button>
-                  {(proxyPools || []).map((pool) => (
+        {connection.provider === "freebuff" ? (
+          <div className="flex flex-wrap items-center gap-1 sm:flex-none">
+            {actionMessage && (
+              <span className="text-[11px] text-primary px-1">{actionMessage}</span>
+            )}
+            <button
+              onClick={handleFreebuffLogin}
+              disabled={loadingAction === "login"}
+              title="Launch Freebuff login in CLI"
+              className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {loadingAction === "login" ? "progress_activity" : "login"}
+              </span>
+              <span className="text-[10px] leading-tight">Login</span>
+            </button>
+            <button
+              onClick={handleFreebuffRestart}
+              disabled={loadingAction === "restart"}
+              title="Restart PTY worker"
+              className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {loadingAction === "restart" ? "progress_activity" : "restart_alt"}
+              </span>
+              <span className="text-[10px] leading-tight">Restart</span>
+            </button>
+            <button
+              onClick={handleFreebuffStop}
+              disabled={loadingAction === "stop"}
+              title="Stop PTY worker"
+              className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {loadingAction === "stop" ? "progress_activity" : "stop_circle"}
+              </span>
+              <span className="text-[10px] leading-tight">Stop</span>
+            </button>
+            <button
+              onClick={onDelete}
+              title="Delete connection"
+              className="flex flex-col items-center rounded px-2 py-1 text-red-500 hover:bg-red-500/10"
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span className="text-[10px] leading-tight">Delete</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid flex-1 grid-cols-3 gap-1 sm:flex sm:flex-none">
+            {/* Proxy button with inline dropdown */}
+            {(proxyPools || []).length > 0 && (
+              <div className="relative" ref={proxyDropdownRef}>
+                <button
+                  onClick={() => setShowProxyDropdown((v) => !v)}
+                  className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${hasAnyProxy ? "text-primary" : "text-text-muted hover:text-primary"}`}
+                  disabled={updatingProxy}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {updatingProxy ? "progress_activity" : "lan"}
+                  </span>
+                  <span className="text-[10px] leading-tight">Proxy</span>
+                </button>
+                {showProxyDropdown && (
+                  <div className="absolute right-0 top-full z-50 mt-1 max-w-[78vw] min-w-[160px] rounded-lg border border-border bg-bg py-1 shadow-lg">
                     <button
-                      key={pool.id}
-                      onClick={() => handleSelectProxy(pool.id)}
-                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${boundProxyPoolId === pool.id ? "text-primary font-medium" : "text-text-main"}`}
+                      onClick={() => handleSelectProxy("__none__")}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${!boundProxyPoolId ? "text-primary font-medium" : "text-text-main"}`}
                     >
-                      {pool.name}
+                      None
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {autoPing && (
-            <Tooltip text={autoPingTooltip}>
-              <button
-                onClick={() => autoPing.onToggle(!autoPing.on)}
-                className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${autoPing.on ? "text-primary" : "text-text-muted hover:text-primary"}`}
-              >
-                <span className="material-symbols-outlined text-[18px]">bolt</span>
-                <span className="text-[10px] leading-tight">Auto-ping</span>
-              </button>
-            </Tooltip>
-          )}
-          <button onClick={onEdit} className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5">
-            <span className="material-symbols-outlined text-[18px]">edit</span>
-            <span className="text-[10px] leading-tight">Edit</span>
-          </button>
-          <button onClick={onDelete} className="flex flex-col items-center rounded px-2 py-1 text-red-500 hover:bg-red-500/10">
-            <span className="material-symbols-outlined text-[18px]">delete</span>
-            <span className="text-[10px] leading-tight">Delete</span>
-          </button>
-        </div>
+                    {(proxyPools || []).map((pool) => (
+                      <button
+                        key={pool.id}
+                        onClick={() => handleSelectProxy(pool.id)}
+                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${boundProxyPoolId === pool.id ? "text-primary font-medium" : "text-text-main"}`}
+                      >
+                        {pool.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {autoPing && (
+              <Tooltip text={autoPingTooltip}>
+                <button
+                  onClick={() => autoPing.onToggle(!autoPing.on)}
+                  className={`flex w-full flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${autoPing.on ? "text-primary" : "text-text-muted hover:text-primary"}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">bolt</span>
+                  <span className="text-[10px] leading-tight">Auto-ping</span>
+                </button>
+              </Tooltip>
+            )}
+            <button onClick={onEdit} className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5">
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              <span className="text-[10px] leading-tight">Edit</span>
+            </button>
+            <button onClick={onDelete} className="flex flex-col items-center rounded px-2 py-1 text-red-500 hover:bg-red-500/10">
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span className="text-[10px] leading-tight">Delete</span>
+            </button>
+          </div>
+        )}
         <Toggle
           size="sm"
           checked={connection.isActive ?? true}

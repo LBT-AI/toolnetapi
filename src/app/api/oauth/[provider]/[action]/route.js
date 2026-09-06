@@ -261,19 +261,23 @@ export async function POST(request, { params }) {
         testStatus: "active",
       });
 
+      const isExchangeDuplicate = !!(connection._isDuplicate || connection.updatedExisting);
       return NextResponse.json({ 
         success: true, 
+        duplicate: isExchangeDuplicate,
+        updatedExisting: isExchangeDuplicate,
         connection: {
           id: connection.id,
           provider: connection.provider,
-          email: connection.email,
-          displayName: connection.displayName,
+          email: connection.email || null,
+          displayName: connection.displayName || connection.name,
+          priority: connection.priority,
         }
       });
     }
 
     if (action === "poll") {
-      const { deviceCode, codeVerifier, extraData } = body;
+      const { deviceCode, codeVerifier, extraData, accountLabel, name } = body;
 
       if (!deviceCode) {
         return NextResponse.json({ error: "Missing device code" }, { status: 400 });
@@ -287,7 +291,11 @@ export async function POST(request, { params }) {
         result = await pollForToken(provider, deviceCode, null, extraData);
       } else if (provider === "kiro") {
         // Kiro needs extraData (clientId, clientSecret) from device code response
-        result = await pollForToken(provider, deviceCode, null, extraData);
+        const enrichedExtra = {
+          ...(extraData || {}),
+          _accountLabel: accountLabel || name || extraData?._accountLabel,
+        };
+        result = await pollForToken(provider, deviceCode, null, enrichedExtra);
       } else if (provider === "qoder") {
         // Qoder needs both the PKCE verifier (codeVerifier) and the machineId
         // captured at device-code time (extraData._qoderMachineId) so
@@ -311,17 +319,27 @@ export async function POST(request, { params }) {
           provider: providerId,
           authType: "oauth",
           ...result.tokens,
+          name: accountLabel || name || result.tokens.name,
+          accountLabel: accountLabel || name || result.tokens.providerSpecificData?.accountLabel,
           expiresAt: result.tokens.expiresIn 
             ? new Date(Date.now() + result.tokens.expiresIn * 1000).toISOString() 
             : null,
           testStatus: "active",
         });
 
+        const isDuplicate = !!(connection._isDuplicate || connection.updatedExisting);
+        const displayName = connection.name || connection.email || (isDuplicate ? `Connection #${connection.priority}` : "Account");
+
         return NextResponse.json({ 
           success: true, 
+          duplicate: isDuplicate,
+          updatedExisting: isDuplicate,
           connection: {
             id: connection.id,
             provider: connection.provider,
+            email: connection.email || null,
+            displayName: displayName,
+            priority: connection.priority,
           }
         });
       }

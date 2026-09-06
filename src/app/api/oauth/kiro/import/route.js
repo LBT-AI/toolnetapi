@@ -30,10 +30,15 @@ export async function POST(request) {
 
     const tokenData = await kiroService.refreshToken(refreshToken.trim(), providerSpecificData);
 
-    const email = kiroService.extractEmailFromJWT(tokenData.accessToken);
-    const resolvedAuthMethod = isIdc ? "idc" : "imported";
-    const providerLabel = isIdc ? "Enterprise" : "Imported";
-    const resolvedProfileArn = profileArn || tokenData.profileArn || null;
+    const { resolveKiroIdentity } = await import("@/lib/oauth/providers");
+    const identity = resolveKiroIdentity({
+      accessToken: tokenData.accessToken,
+      refreshToken: tokenData.refreshToken || refreshToken.trim(),
+      profileArn: resolvedProfileArn,
+    }, {
+      email,
+      authMethod: resolvedAuthMethod,
+    });
 
     const connection = await createProviderConnection({
       provider: "kiro",
@@ -41,9 +46,11 @@ export async function POST(request) {
       accessToken: tokenData.accessToken,
       refreshToken: tokenData.refreshToken || refreshToken.trim(),
       expiresAt: new Date(Date.now() + (tokenData.expiresIn || 3600) * 1000).toISOString(),
-      email: email || null,
+      email: identity.email || email || null,
+      name: identity.displayName,
       providerSpecificData: {
         profileArn: resolvedProfileArn,
+        identityKey: identity.identityKey,
         authMethod: resolvedAuthMethod,
         provider: providerLabel,
         ...(isIdc ? { clientId, clientSecret, region: region || "us-east-1" } : {}),
@@ -51,12 +58,16 @@ export async function POST(request) {
       testStatus: "active",
     });
 
+    const isDuplicate = !!(connection._isDuplicate || connection.updatedExisting);
     return NextResponse.json({
       success: true,
+      duplicate: isDuplicate,
+      updatedExisting: isDuplicate,
       connection: {
         id: connection.id,
         provider: connection.provider,
         email: connection.email,
+        displayName: connection.name || connection.email,
       },
     });
   } catch (error) {

@@ -37,6 +37,14 @@ export function copyStandaloneAssets({ projectRoot = process.cwd(), distDir = pr
     cpSync(serverWrapperSource, serverWrapperDestination, { force: true });
     console.log(`[standalone-assets] Copied custom-server.js to ${serverWrapperDestination}`);
   }
+
+  // Copy node-pty native addons into standalone bundle
+  const ptyBuildSource = resolve(projectRoot, "node_modules", "node-pty", "build");
+  const ptyBuildDestination = resolve(standaloneDir, "node_modules", "node-pty", "build");
+  if (existsSync(ptyBuildSource)) {
+    cpSync(ptyBuildSource, ptyBuildDestination, { recursive: true, force: true });
+    console.log(`[standalone-assets] Copied node-pty build to ${ptyBuildDestination}`);
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(dirname(fileURLToPath(import.meta.url)), "copy-standalone-assets.mjs")) {

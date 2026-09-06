@@ -35,4 +35,15 @@ export {
   deleteApiKey,
   validateApiKey,
   isCloudEnabled,
+  // Local Agents
+  createPairingCode,
+  verifyPairingCode,
+  consumePairingCode,
+  createAgent,
+  getAgent,
+  getAllAgents,
+  updateAgentStatus,
+  revokeAgent,
+  deleteAgent,
+  verifyAgentToken,
 } from "@/lib/localDb";

@@ -1,15 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { FreebuffService } from "../../src/lib/oauth/services/freebuff.js";
 import freebuffProvider from "../../src/lib/oauth/providers/freebuff.js";
-import { FREE_TIER_PROVIDERS } from "../../src/shared/constants/providers.js";
+import { CLI_FREE_PROVIDERS } from "../../src/shared/constants/providers.js";
 
 describe("Freebuff Multi-Account Auth & Service", () => {
-  it("registers freebuff with dual auth modes (oauth, apikey) in FREE_TIER_PROVIDERS", () => {
-    const provider = FREE_TIER_PROVIDERS.freebuff;
+  it("registers freebuff in CLI_FREE_PROVIDERS with cliSession auth type", () => {
+    const provider = CLI_FREE_PROVIDERS.freebuff;
     expect(provider).toBeDefined();
-    expect(provider.hasOAuth).toBe(true);
-    expect(provider.authType).toBe("oauth");
-    expect(provider.authModes).toEqual(["oauth", "apikey"]);
+    expect(provider.hasFree).toBe(true);
+    expect(provider.authType).toBe("cliSession");
   });
 
   it("instantiates FreebuffService and generates enhanced fingerprint ID", () => {

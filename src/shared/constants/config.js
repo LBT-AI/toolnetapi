@@ -95,6 +95,7 @@ export const QUOTA_AUTOPING_CONFIG = {
 // Re-export from providers.js for backward compatibility
 export {
   FREE_PROVIDERS,
+  CLI_FREE_PROVIDERS,
   OAUTH_PROVIDERS,
   APIKEY_PROVIDERS,
   WEB_COOKIE_PROVIDERS,

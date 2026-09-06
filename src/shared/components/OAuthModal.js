@@ -18,6 +18,10 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
   const [isDeviceCode, setIsDeviceCode] = useState(false);
   const [deviceData, setDeviceData] = useState(null);
   const [polling, setPolling] = useState(false);
+  const [accountLabel, setAccountLabel] = useState("");
+  const accountLabelRef = useRef("");
+  accountLabelRef.current = accountLabel;
+  const [duplicateInfo, setDuplicateInfo] = useState(null);
   const popupRef = useRef(null);
   const pollingAbortRef = useRef(false);
   const openedRef = useRef(false);
@@ -117,16 +121,25 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
         const res = await fetch(`/api/oauth/${provider}/poll`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deviceCode, codeVerifier, extraData }),
+          body: JSON.stringify({
+            deviceCode,
+            codeVerifier,
+            extraData,
+            accountLabel: accountLabelRef.current?.trim() || undefined,
+          }),
         });
 
         const data = await res.json();
 
         if (data.success) {
           pollingAbortRef.current = true; // Stop polling immediately
+          if (data.duplicate || data.updatedExisting) {
+            setDuplicateInfo(data.connection);
+          } else {
+            setDuplicateInfo(null);
+          }
           setStep("success");
           setPolling(false);
-          onSuccess?.();
           return;
         }
 
@@ -155,6 +168,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
     if (!provider) return;
     try {
       setError(null);
+      setDuplicateInfo(null);
 
       // Device code flow providers (must match oauth providers with flowType: "device_code")
       const deviceCodeProviders = [
@@ -539,8 +553,11 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
     } else if (provider === "xai") {
       fetch("/api/oauth/xai/stop-proxy").catch(() => {});
     }
+    if (step === "success") {
+      onSuccess?.();
+    }
     onClose();
-  }, [onClose, provider]);
+  }, [onClose, onSuccess, provider, step]);
 
   if (!provider || !providerInfo) return null;
   const isXaiProvider = provider === "xai";
@@ -662,6 +679,23 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
                   />
                 </div>
               </div>
+              {provider === "kiro" && (
+                <div className="mt-4 text-left">
+                  <label className="block text-xs font-medium text-text-muted mb-1">
+                    Account Label / Email (optional)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. user@gmail.com or Work Account"
+                    value={accountLabel}
+                    onChange={(e) => setAccountLabel(e.target.value)}
+                    className="w-full text-sm"
+                  />
+                  <p className="text-[11px] text-text-muted mt-1">
+                    Helps identify this account if AWS does not expose an email address.
+                  </p>
+                </div>
+              )}
             </div>
             {polling && (
               <div className="flex items-center justify-center gap-2 text-sm text-text-muted">
@@ -675,12 +709,22 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
         {/* Success Step */}
         {step === "success" && (
           <div className="text-center py-6">
-            <div className="size-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-green-600">check_circle</span>
+            <div className={`size-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              duplicateInfo ? "bg-amber-100 dark:bg-amber-900/30" : "bg-green-100 dark:bg-green-900/30"
+            }`}>
+              <span className={`material-symbols-outlined text-3xl ${
+                duplicateInfo ? "text-amber-600" : "text-green-600"
+              }`}>
+                {duplicateInfo ? "info" : "check_circle"}
+              </span>
             </div>
-            <h3 className="text-lg font-semibold mb-2">Connected Successfully!</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {duplicateInfo ? "Account Already Connected" : "Connected Successfully!"}
+            </h3>
             <p className="text-sm text-text-muted mb-4">
-              Your {providerInfo.name} account has been connected.
+              {duplicateInfo
+                ? `Account already connected: ${duplicateInfo.displayName || duplicateInfo.email || "This account"} is already configured as ${providerInfo?.name || "Kiro"} connection #${duplicateInfo.priority || ""}. Credentials were refreshed instead of creating a duplicate.`
+                : `Your ${providerInfo?.name || "account"} has been connected.`}
             </p>
             <Button onClick={handleClose} fullWidth>
               Done

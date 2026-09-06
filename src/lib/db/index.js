@@ -52,6 +52,13 @@ export {
   getMitmAlias, setMitmAliasAll,
 } from "./repos/aliasRepo.js";
 
+// Local Agents
+export {
+  createPairingCode, verifyPairingCode, consumePairingCode,
+  createAgent, getAgent, getAllAgents, updateAgentStatus,
+  revokeAgent, deleteAgent, verifyAgentToken,
+} from "./repos/agentRepo.js";
+
 // Pricing
 export {
   getPricing, getPricingForModel, updatePricing, resetPricing, resetAllPricing,

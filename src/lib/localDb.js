@@ -21,4 +21,8 @@ export {
   upsertAlibabaModelPool, deleteAlibabaModelPool, deleteAlibabaModelPoolsByConnection,
   ALIBABA_GROUP_NAMES, DEFAULT_QUOTA_LIMIT, DEFAULT_QUOTA_PERIOD_DAYS,
   exportDb, importDb,
+  // Local Agents
+  createPairingCode, verifyPairingCode, consumePairingCode,
+  createAgent, getAgent, getAllAgents, updateAgentStatus,
+  revokeAgent, deleteAgent, verifyAgentToken,
 } from "@/lib/db/index.js";

@@ -44,6 +44,7 @@ const byCategory = (cat) => Object.fromEntries(
 
 export const FREE_PROVIDERS = byCategory("free");
 export const FREE_TIER_PROVIDERS = byCategory("freeTier");
+export const CLI_FREE_PROVIDERS = byCategory("cliFree");
 
 // Thinking config definitions
 // options: list of selectable modes ("auto" = no override from server)
@@ -98,7 +99,7 @@ export function isCustomEmbeddingProvider(providerId) {
 }
 
 // All providers (combined)
-export const AI_PROVIDERS = { ...FREE_PROVIDERS, ...FREE_TIER_PROVIDERS, ...OAUTH_PROVIDERS, ...APIKEY_PROVIDERS, ...WEB_COOKIE_PROVIDERS };
+export const AI_PROVIDERS = { ...FREE_PROVIDERS, ...FREE_TIER_PROVIDERS, ...CLI_FREE_PROVIDERS, ...OAUTH_PROVIDERS, ...APIKEY_PROVIDERS, ...WEB_COOKIE_PROVIDERS };
 
 // Auth methods
 export const AUTH_METHODS = {

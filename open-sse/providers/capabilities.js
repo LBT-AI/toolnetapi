@@ -123,6 +123,19 @@ const CODEX_GPT_56_DEFAULT_CAPS = { vision: true, reasoning: true, search: true,
 export const PROVIDER_CAPABILITIES = {
   // NVIDIA NIM is OpenAI-compatible → rejects MiniMax/GLM native `thinking` field.
   // Force openai reasoning_effort format for its reasoning models. #issue
+  "groq": {
+    "qwen/qwen3.8-27b": { vision: true, tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 131042, maxOutput: 16384 },
+    "openai/gpt-oss-20b": { vision: false, tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 65536 },
+    "openai/gpt-oss-120b": { vision: false, tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 65536 },
+    "openai/gpt-oss-safeguard-20b": { vision: false, tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 65536 },
+    "groq/compound": { vision: false, tools: false, reasoning: false, contextWindow: 131072, maxOutput: 8192 },
+    "compound": { vision: false, tools: false, reasoning: false, contextWindow: 131072, maxOutput: 8192 },
+    "groq/compound-mini": { vision: false, tools: false, reasoning: false, contextWindow: 131072, maxOutput: 8192 },
+    "compound-mini": { vision: false, tools: false, reasoning: false, contextWindow: 131072, maxOutput: 8192 },
+    "allam-2-7b": { vision: false, tools: false, reasoning: false, contextWindow: 4096, maxOutput: 4096 },
+    "meta-llama/llama-prompt-guard-2-86m": { vision: false, tools: false, reasoning: false, contextWindow: 512, maxOutput: 512 },
+    "meta-llama/llama-prompt-guard-2-22m": { vision: false, tools: false, reasoning: false, contextWindow: 512, maxOutput: 512 },
+  },
   "nvidia": {
     "minimaxai/minimax-m3": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
     "z-ai/glm-5.2": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },

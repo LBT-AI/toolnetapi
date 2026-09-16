@@ -11,6 +11,7 @@ import { resolveQoderModels } from "open-sse/services/qoderModels.js";
 import { resolveGrokCliModels } from "open-sse/services/grokCliModels.js";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { resolveCursorModels } from "open-sse/services/cursorModels.js";
+import { resolveGroqModels } from "open-sse/services/groqModels.js";
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -330,6 +331,29 @@ const PROVIDER_MODELS_CONFIG = {
       return {
         models: getStaticProviderModels("cursor"),
         warning: "Cursor returned no live models; falling back to static catalog.",
+      };
+    },
+  },
+
+  groq: {
+    customResolver: async (connection) => {
+      const proxy = await resolveConnectionProxyConfig(connection.providerSpecificData || {});
+      const result = await resolveGroqModels({
+        apiKey: connection.apiKey,
+        accessToken: connection.accessToken,
+      }, {
+        log: console,
+        proxyOptions: {
+          connectionProxyEnabled: proxy.connectionProxyEnabled === true,
+          connectionProxyUrl: proxy.connectionProxyUrl || "",
+          connectionNoProxy: proxy.connectionNoProxy || "",
+          vercelRelayUrl: proxy.vercelRelayUrl || "",
+          strictProxy: proxy.strictProxy === true,
+        },
+      });
+      return {
+        models: result.models || getStaticProviderModels("groq"),
+        warning: result.warning,
       };
     },
   },

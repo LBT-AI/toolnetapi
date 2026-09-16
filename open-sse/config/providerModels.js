@@ -4,6 +4,7 @@ import REGISTRY from "../providers/registry/index.js";
 import { PROVIDER_MODELS } from "../providers/index.js";
 import { modelQuotaFamily, modelStrip, modelTargetFormat, modelSupportedFormats, normalizeModelId } from "../providers/models/schema.js";
 import { CODEX_REVIEW_SUFFIX } from "../providers/models/helpers.js";
+import { normalizeGroqModelId } from "../services/groqNormalize.js";
 
 export { PROVIDER_MODELS };
 
@@ -29,6 +30,12 @@ function findModel(models, modelId, aliasOrId) {
   if (!models) return undefined;
   const found = models.find(m => m.id === modelId);
   if (found) return found;
+  if (aliasOrId === "groq") {
+    const normalized = normalizeGroqModelId(modelId);
+    if (normalized !== modelId) {
+      return models.find(m => m.id === normalized);
+    }
+  }
   if (!DOT_VERSION_PROVIDERS.has(aliasOrId)) return undefined;
   const normalized = normalizeModelId(modelId);
   if (normalized === modelId) return undefined;
@@ -76,6 +83,9 @@ export function getModelUpstreamId(aliasOrId, modelId) {
   const sufMatch = typeof modelId === "string" ? modelId.match(/\([^()]+\)\s*$/) : null;
   const suffix = sufMatch ? sufMatch[0] : "";
   const baseId = suffix ? modelId.slice(0, sufMatch.index).trim() : modelId;
+  if (aliasOrId === "groq") {
+    return normalizeGroqModelId(baseId) + suffix;
+  }
   const models = PROVIDER_MODELS[aliasOrId];
   const found = findModel(models, baseId, aliasOrId);
   const resolvedId = found?.upstreamModelId || found?.id;

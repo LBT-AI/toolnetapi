@@ -15,6 +15,7 @@ import { resolveCopilotModels } from "open-sse/services/copilotModels.js";
 import { resolveClinepassModels } from "open-sse/services/clinepassModels.js";
 import { resolveGrokCliModels } from "open-sse/services/grokCliModels.js";
 import { resolveCursorModels } from "open-sse/services/cursorModels.js";
+import { resolveGroqModels } from "open-sse/services/groqModels.js";
 import { updateProviderCredentials } from "@/sse/services/tokenRefresh";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { capabilitiesFromServiceKind, getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
@@ -104,6 +105,20 @@ const LIVE_MODEL_RESOLVERS = {
       accessToken: conn.accessToken,
       providerSpecificData: conn.providerSpecificData || {},
     }, { log: console });
+    return result?.models?.length ? { models: result.models } : null;
+  },
+  groq: async (conn) => {
+    const proxy = await resolveConnectionProxyConfig(conn.providerSpecificData || {});
+    const result = await resolveGroqModels(conn, {
+      log: console,
+      proxyOptions: {
+        connectionProxyEnabled: proxy.connectionProxyEnabled === true,
+        connectionProxyUrl: proxy.connectionProxyUrl || "",
+        connectionNoProxy: proxy.connectionNoProxy || "",
+        vercelRelayUrl: proxy.vercelRelayUrl || "",
+        strictProxy: proxy.strictProxy === true,
+      },
+    });
     return result?.models?.length ? { models: result.models } : null;
   }
 };

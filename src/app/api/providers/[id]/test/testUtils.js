@@ -661,8 +661,99 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
       }
       case "groq": {
-        const res = await fetchWithConnectionProxy("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);
-        return { valid: res.ok, error: res.ok ? null : "Invalid API key" };
+        let modelsRes;
+        try {
+          modelsRes = await fetchWithConnectionProxy("https://api.groq.com/openai/v1/models", {
+            headers: {
+              Authorization: `Bearer ${connection.apiKey}`,
+              "User-Agent": "ToolNetAPI/1.0.0",
+            },
+          }, effectiveProxy);
+        } catch (fetchErr) {
+          return { valid: false, error: `Connection failed: ${fetchErr.message}`, errorType: "PROVIDER_TEMPORARY_ERROR" };
+        }
+
+        if (modelsRes.status === 401) {
+          return { valid: false, error: "Invalid API key", statusCode: 401, errorType: "INVALID_CREDENTIAL" };
+        }
+        if (modelsRes.status === 403) {
+          return { valid: false, error: "Forbidden", statusCode: 403, errorType: "FORBIDDEN" };
+        }
+        if (modelsRes.status === 404) {
+          return { valid: false, error: "Endpoint unavailable", statusCode: 404, errorType: "MODEL_UNAVAILABLE" };
+        }
+        if (modelsRes.status === 429) {
+          return { valid: true, warning: "Rate limited (cooldown active)", rateLimited: true, statusCode: 429, errorType: "RATE_LIMITED" };
+        }
+        if (modelsRes.status >= 500) {
+          return { valid: false, error: `Provider temporary error (${modelsRes.status})`, statusCode: modelsRes.status, errorType: "PROVIDER_TEMPORARY_ERROR" };
+        }
+        if (!modelsRes.ok) {
+          return { valid: false, error: `Groq error (${modelsRes.status})` };
+        }
+
+        const modelsData = await modelsRes.json().catch(() => null);
+        const rawModels = Array.isArray(modelsData?.data) ? modelsData.data : [];
+        const activeModels = rawModels.filter((m) => m.active !== false);
+
+        // Select health check model according to preference:
+        // qwen/qwen3.8-27b -> openai/gpt-oss-20b -> openai/gpt-oss-120b -> other valid text/chat model
+        const preferredList = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"];
+        const activeModelIds = new Set(activeModels.map((m) => m.id));
+        let chosenModel = preferredList.find((id) => activeModelIds.has(id));
+
+        if (!chosenModel) {
+          const fallbackTextModel = activeModels.find((m) => {
+            const isTextOut = Array.isArray(m.output_modalities) ? m.output_modalities.includes("text") : true;
+            const isSttOrTts = m.id.startsWith("whisper") || m.id.startsWith("canopylabs/");
+            const isGuard = m.id.includes("prompt-guard");
+            return isTextOut && !isSttOrTts && !isGuard;
+          });
+          chosenModel = fallbackTextModel?.id || activeModels[0]?.id;
+        }
+
+        if (!chosenModel) {
+          return { valid: false, error: "No active text model available for testing", errorType: "MODEL_UNAVAILABLE" };
+        }
+
+        // Lightweight completion probe to confirm model serves requests
+        try {
+          const chatRes = await fetchWithConnectionProxy("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${connection.apiKey}`,
+              "Content-Type": "application/json",
+              "User-Agent": "ToolNetAPI/1.0.0",
+            },
+            body: JSON.stringify({
+              model: chosenModel,
+              messages: [{ role: "user", content: "hi" }],
+              max_tokens: 1,
+            }),
+          }, effectiveProxy);
+
+          if (chatRes.status === 401) {
+            return { valid: false, error: "Invalid API key", statusCode: 401, errorType: "INVALID_CREDENTIAL" };
+          }
+          if (chatRes.status === 403) {
+            return { valid: false, error: "Forbidden", statusCode: 403, errorType: "FORBIDDEN" };
+          }
+          if (chatRes.status === 429) {
+            return { valid: true, warning: `Model ${chosenModel} rate limited, but key is valid`, rateLimited: true };
+          }
+          if (chatRes.status === 404) {
+            // Model not found on chat endpoint
+            return { valid: true, warning: `Tested on ${chosenModel} (404), models list ok` };
+          }
+          if (!chatRes.ok && chatRes.status >= 500) {
+            return { valid: true, warning: `Groq temporary server error (${chatRes.status}), credentials valid` };
+          }
+
+          return { valid: true, error: null };
+        } catch (chatErr) {
+          // If models endpoint succeeded, credentials are fundamentally valid
+          return { valid: true, warning: `Chat check skipped: ${chatErr.message}` };
+        }
       }
       case "mistral": {
         const res = await fetchWithConnectionProxy("https://api.mistral.ai/v1/models", { headers: { Authorization: `Bearer ${connection.apiKey}` } }, effectiveProxy);

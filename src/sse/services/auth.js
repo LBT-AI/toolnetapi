@@ -275,14 +275,22 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   const reason = typeof errorText === "string" ? errorText.slice(0, 100) : "Provider error";
   const lockUpdate = buildModelLockUpdate(githubResetAtMs ? null : model, cooldownMs);
 
-  await updateProviderConnection(connectionId, {
+  const isPermanentAuthError = status === 401 || status === 403 || status === 402;
+  const updatePayload = {
     ...lockUpdate,
-    testStatus: "unavailable",
     lastError: reason,
     errorCode: status,
     lastErrorAt: new Date().toISOString(),
     backoffLevel: newBackoffLevel ?? backoffLevel
-  });
+  };
+
+  // 429 rate limit, 404 (model-specific), and 5xx transient errors do NOT invalidate the account credentials.
+  // Only permanent auth errors (401/402/403) or GitHub monthly account exhaustion set testStatus: "unavailable".
+  if (isPermanentAuthError || githubResetAtMs) {
+    updatePayload.testStatus = "unavailable";
+  }
+
+  await updateProviderConnection(connectionId, updatePayload);
 
   const lockKey = Object.keys(lockUpdate)[0];
   const connName = conn?.displayName || conn?.name || conn?.email || connectionId.slice(0, 8);

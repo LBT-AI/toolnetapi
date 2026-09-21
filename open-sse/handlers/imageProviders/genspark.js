@@ -16,7 +16,7 @@ export default {
     };
   },
   buildBody: (model, body) => {
-    const cleanModel = model?.replace(/^genspark\//, "") || "nano-banana-2-flash-lite";
+    const cleanModel = model?.replace(/^(?:genspark|gsk)\//, "") || "nano-banana-2-flash-lite";
     const req = {
       query: body.prompt,
       model: cleanModel,

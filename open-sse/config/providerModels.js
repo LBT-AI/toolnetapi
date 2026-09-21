@@ -36,6 +36,37 @@ function findModel(models, modelId, aliasOrId) {
       return models.find(m => m.id === normalized);
     }
   }
+  if (aliasOrId) {
+    const prefixed = `${aliasOrId}/${modelId}`;
+    const foundPrefixed = models.find(m => m.id === prefixed || m.upstreamModelId === prefixed);
+    if (foundPrefixed) return foundPrefixed;
+
+    if (typeof modelId === "string" && modelId.startsWith(`${aliasOrId}/`)) {
+      const stripped = modelId.slice(aliasOrId.length + 1);
+      const foundStripped = models.find(m => m.id === stripped);
+      if (foundStripped) return foundStripped;
+    }
+  }
+  const lowerId = typeof modelId === "string" ? modelId.toLowerCase() : "";
+  const normalizedSlug = lowerId.replace(/[\s_]+/g, "-");
+  if (lowerId) {
+    const foundCi = models.find(m => {
+      const mLower = typeof m.id === "string" ? m.id.toLowerCase() : "";
+      return mLower === lowerId ||
+        mLower === normalizedSlug ||
+        (aliasOrId && (
+          mLower === `${aliasOrId}/${lowerId}` ||
+          mLower === `${aliasOrId}/${normalizedSlug}` ||
+          (m.upstreamModelId && (
+            m.upstreamModelId.toLowerCase() === lowerId ||
+            m.upstreamModelId.toLowerCase() === normalizedSlug ||
+            m.upstreamModelId.toLowerCase() === `${aliasOrId}/${lowerId}` ||
+            m.upstreamModelId.toLowerCase() === `${aliasOrId}/${normalizedSlug}`
+          ))
+        ));
+    });
+    if (foundCi) return foundCi;
+  }
   if (!DOT_VERSION_PROVIDERS.has(aliasOrId)) return undefined;
   const normalized = normalizeModelId(modelId);
   if (normalized === modelId) return undefined;

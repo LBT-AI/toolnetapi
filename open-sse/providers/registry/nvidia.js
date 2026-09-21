@@ -33,6 +33,8 @@ export default {
     { id: "nvidia/nemotron-3-super-120b-a12b", name: "Nemotron 3 Super 120B A12B" },
     { id: "nvidia/nemotron-3-nano-30b-a3b", name: "Nemotron 3 Nano 30B A3B" },
     { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", name: "Nemotron 3 Nano Omni 30B A3B Reasoning" },
+    { id: "nvidia/riva-translate-4b-instruct-v2", name: "Riva Translate 4B Instruct v2", contextLength: 8192 },
+    { id: "nvidia/riva-translate-1.6b", name: "Riva Translate 1.6B", contextLength: 4096 },
     { id: "nvidia/nv-embedqa-e5-v5", name: "NV EmbedQA E5 v5", kind: "embedding" },
     { id: "nvidia/parakeet-ctc-1.1b-asr", name: "Parakeet CTC 1.1B", params: ["language"], kind: "stt" },
     { id: "fastpitch", name: "FastPitch", kind: "tts" },

@@ -375,6 +375,7 @@ async function handleGensparkVideoCreate(request, parsedBody, provider, model) {
     ...parsedBody,
     ...(parsedBody?.parameters || {}),
   };
+  const isProbe = request.headers.get("x-ping-probe") === "true" || request.headers.get("x-probe") === "true";
   const excludeConnectionIds = new Set();
   let lastError = null;
   let lastStatus = null;
@@ -398,6 +399,7 @@ async function handleGensparkVideoCreate(request, parsedBody, provider, model) {
       credentials: refreshedCredentials,
       signal: request.signal,
       log,
+      probe: isProbe,
     });
 
     if (result.success) {
@@ -406,15 +408,17 @@ async function handleGensparkVideoCreate(request, parsedBody, provider, model) {
       return withConnectionHeader(result.response, credentials.connectionId);
     }
 
-    const { shouldFallback } = await markAccountUnavailable(
-      credentials.connectionId, result.status, result.error, provider, model
-    );
+    if (result.status !== HTTP_STATUS.REQUEST_TIMEOUT) {
+      const { shouldFallback } = await markAccountUnavailable(
+        credentials.connectionId, result.status, result.error, provider, model
+      );
 
-    if (shouldFallback && CREATE_ROTATION_STATUSES.has(result.status)) {
-      excludeConnectionIds.add(credentials.connectionId);
-      lastError = result.error;
-      lastStatus = result.status;
-      continue;
+      if (shouldFallback && CREATE_ROTATION_STATUSES.has(result.status)) {
+        excludeConnectionIds.add(credentials.connectionId);
+        lastError = result.error;
+        lastStatus = result.status;
+        continue;
+      }
     }
 
     return result.response;

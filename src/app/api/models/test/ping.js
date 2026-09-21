@@ -104,7 +104,7 @@ export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:$
   if (kind === "video") {
     const res = await fetch(`${baseUrl}/api/v1/videos/generations`, {
       method: "POST",
-      headers,
+      headers: { ...headers, "x-ping-probe": "true" },
       body: JSON.stringify({ model, prompt: "test" }),
       signal: AbortSignal.timeout(20000),
     });

@@ -27,6 +27,8 @@ const BUILTIN_MODEL_ALIASES = {
   "laguna-s-2.1-free": "opencode/laguna-s-2.1-free",
   "mimo-v2.5-free": "opencode/mimo-v2.5-free",
   "muse-spark-1.2-contributor-free": "opencode/muse-spark-1.2-contributor-free",
+  "riva-translate-4b-instruct-v2": "nvidia/nvidia/riva-translate-4b-instruct-v2",
+  "riva-translate-1.6b": "nvidia/nvidia/riva-translate-1.6b",
 };
 
 /**
@@ -137,6 +139,7 @@ const MODEL_PREFIX_PROVIDERS = [
   [/^gpt-/, "openai"],
   [/^o[134]/, "openai"],
   [/^deepseek-/, "openrouter"],
+  [/^riva-/, "nvidia"],
 ];
 
 /**

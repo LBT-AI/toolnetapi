@@ -145,6 +145,8 @@ export const PROVIDER_CAPABILITIES = {
     "nvidia/nemotron-3-super-120b-a12b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/riva-translate-4b-instruct-v2": { tools: false, reasoning: false, contextWindow: 8192, maxOutput: 4096 },
+    "nvidia/riva-translate-1.6b": { tools: false, reasoning: false, contextWindow: 4096, maxOutput: 4096 },
   },
   "sambanova": {
     "DeepSeek-V3.1": { reasoning: true, thinkingFormat: "openai", contextWindow: 131072, maxOutput: 16384 },
@@ -345,6 +347,7 @@ export const PATTERN_CAPABILITIES = [
   { pattern: "hy3*",            caps: { reasoning: true, thinkingFormat: "hunyuan", contextWindow: 262144, maxOutput: 262144 } },
   { pattern: "*step-*",         caps: { reasoning: true, thinkingFormat: "step", contextWindow: 128000 } },
   { pattern: "*nemotron*",      caps: { reasoning: true, contextWindow: 128000 } },
+  { pattern: "*riva-translate*", caps: { tools: false, reasoning: false, contextWindow: 8192, maxOutput: 4096 } },
   { pattern: "*ling-*",         caps: { reasoning: true, contextWindow: 128000 } },
 ];
 

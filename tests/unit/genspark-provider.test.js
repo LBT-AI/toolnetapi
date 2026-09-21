@@ -43,9 +43,9 @@ describe("Genspark Provider", () => {
       "claude-haiku-4-5",
       "gpt-5.4-mini",
       "grok-4.5",
-      "kimi-k2p6",
+      "kimi-k3",
       "minimax-m3",
-      "gemini-3.1-pro-preview",
+      "gpt-5.6-sol",
     ]));
 
     const imageModels = models.filter((m) => m.kind === "image");
@@ -131,6 +131,35 @@ describe("Genspark Provider", () => {
   it("exports video core handlers", () => {
     expect(typeof handleGensparkVideoCore).toBe("function");
     expect(typeof handleGensparkVideoPoll).toBe("function");
+  });
+
+  it("handles video core probe mode on first heartbeat", async () => {
+    const originalFetch = global.fetch;
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"version": 1, "debug": true, "message": "Still processing... (5.0s elapsed)", "heartbeat": 1}\n'));
+      }
+    });
+
+    global.fetch = async () => new Response(stream, {
+      status: 200,
+      headers: { "Content-Type": "application/x-ndjson" }
+    });
+
+    try {
+      const result = await handleGensparkVideoCore({
+        model: "genspark/kling/v3",
+        prompt: "a cute cat",
+        credentials: { apiKey: "gsk_test" },
+        probe: true,
+      });
+      expect(result.success).toBe(true);
+      const json = await result.response.json();
+      expect(json.object).toBe("video.generation");
+      expect(json.status).toBe("processing");
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   it("keeps every registry id unique", () => {

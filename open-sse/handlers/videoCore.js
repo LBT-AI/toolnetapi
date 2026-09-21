@@ -352,11 +352,12 @@ export async function handleGensparkVideoCore({
   credentials,
   signal,
   log,
+  probe = false,
 }) {
   const token = credentials?.apiKey || credentials?.accessToken;
   if (!token) return createErrorResult(HTTP_STATUS.UNAUTHORIZED, "No credentials for genspark video");
 
-  const cleanModel = model?.replace(/^genspark\//, "") || "kling/v3";
+  const cleanModel = model?.replace(/^(?:genspark|gsk)\//, "") || "kling/v3";
   const url = "https://www.genspark.ai/api/tool_cli/video_generation";
   const headers = {
     "Content-Type": "application/json",
@@ -380,7 +381,7 @@ export async function handleGensparkVideoCore({
     ...(parameters.audio_urls ? { audio_urls: parameters.audio_urls } : {}),
   };
 
-  log?.debug?.("VIDEO", `genspark | ${cleanModel} | submit → ${url}`);
+  log?.debug?.("VIDEO", `genspark | ${cleanModel} | submit → ${url}${probe ? " (probe)" : ""}`);
 
   let submitRes;
   try {
@@ -391,28 +392,85 @@ export async function handleGensparkVideoCore({
       signal,
     });
   } catch (err) {
+    if (signal?.aborted || err.name === "AbortError") {
+      return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, "genspark video submit aborted");
+    }
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `genspark video submit failed: ${err.message}`);
   }
 
-  const submitText = await submitRes.text().catch(() => "");
   if (!submitRes.ok) {
+    const submitText = await submitRes.text().catch(() => "");
     return createErrorResult(submitRes.status, `genspark video submit error: ${submitText.slice(0, 500)}`);
   }
 
-  const lines = submitText.trim().split("\n");
   let finalResult = null;
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || !line.startsWith("{")) continue;
+  const reader = submitRes.body?.getReader?.();
+  if (reader) {
+    const decoder = new TextDecoder();
+    let buffer = "";
     try {
-      const parsed = JSON.parse(line);
-      if (parsed.status || parsed.version === undefined) {
-        finalResult = parsed;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line || !line.startsWith("{")) continue;
+          try {
+            const parsed = JSON.parse(line);
+            if (probe) {
+              reader.cancel().catch(() => {});
+              return {
+                success: true,
+                response: new Response(JSON.stringify({
+                  id: parsed.data?.project_id || `gsk_probe_${Date.now()}`,
+                  object: "video.generation",
+                  status: "processing",
+                  model,
+                  data: [],
+                }), {
+                  status: 200,
+                  headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+                }),
+              };
+            }
+            if (parsed.status || parsed.version === undefined) {
+              finalResult = parsed;
+            }
+          } catch {}
+        }
       }
-    } catch {}
+      if (buffer.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(buffer.trim());
+          if (parsed.status || parsed.version === undefined) finalResult = parsed;
+        } catch {}
+      }
+    } catch (err) {
+      if (signal?.aborted || err.name === "AbortError") {
+        return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, "genspark video stream aborted");
+      }
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, `genspark video stream error: ${err.message}`);
+    }
+  } else {
+    const submitText = await submitRes.text().catch(() => "");
+    const lines = submitText.trim().split("\n");
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || !line.startsWith("{")) continue;
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed.status || parsed.version === undefined) finalResult = parsed;
+      } catch {}
+    }
   }
 
   if (!finalResult) {
+    if (signal?.aborted) {
+      return createErrorResult(HTTP_STATUS.REQUEST_TIMEOUT, "genspark video: request aborted");
+    }
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "genspark video: invalid response");
   }
   if (finalResult.status === "error") {

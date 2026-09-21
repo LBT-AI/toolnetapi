@@ -1044,12 +1044,21 @@ export async function testSingleConnection(id) {
   const updateData = {
     testStatus: result.valid ? "active" : "error",
     lastError: result.valid ? (softWarning || null) : result.error,
+    errorCode: result.valid && !softWarning ? null : (result.errorCode || connection.errorCode || null),
     lastErrorAt: result.valid
       ? softWarning
         ? new Date().toISOString()
         : null
       : new Date().toISOString(),
   };
+
+  if (result.valid && !softWarning) {
+    for (const key of Object.keys(connection)) {
+      if (key.startsWith("modelLock_")) {
+        updateData[key] = null;
+      }
+    }
+  }
 
   if (result.refreshed && result.newTokens) {
     if (result.newTokens.accessToken) updateData.accessToken = result.newTokens.accessToken;

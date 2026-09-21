@@ -44,6 +44,8 @@ export default {
     { id: "granite-8b-code-instruct", name: "IBM Granite Code 8B", contextLength: 128000, maxOutputTokens: 16384, supportsTools: true, supportsStreaming: true, isFree: true, description: "Mô hình IBM Granite Code 8B tối ưu cho giải thích code & SQL/DB2." },
     { id: "gpt-oss-20b", name: "GPT OSS 20B", contextLength: 131072, maxOutputTokens: 131072, supportsTools: true, supportsStreaming: true, supportsReasoning: true, isFree: true, description: "Mô hình mã nguồn mở 20B tốc độ cao với khả năng reasoning." },
     { id: "openai/gpt-oss-20b", name: "OpenAI GPT OSS 20B", upstreamModelId: "gpt-oss-20b", contextLength: 131072, maxOutputTokens: 131072, supportsTools: true, supportsStreaming: true, supportsReasoning: true, isFree: true },
+    { id: "rnj-1-test", name: "IBM RNJ 1 Test", contextLength: 128000, maxOutputTokens: 16384, supportsTools: true, supportsStreaming: true, isFree: true, description: "Mô hình thử nghiệm thế hệ mới của IBM Research (RNJ)." },
+    { id: "rnj-1-nextedit-v1-0", name: "IBM RNJ 1 NextEdit v1.0", contextLength: 128000, maxOutputTokens: 16384, supportsTools: true, supportsStreaming: true, isFree: true, description: "Mô hình IBM Research tối ưu chuyên sâu cho tác vụ chỉnh sửa mã nguồn (Next-Edit)." },
 
     // Aliases mapped to live models to prevent 404
     { id: "ultra", name: "Bob Ultra (Claude Opus 4.8)", upstreamModelId: "premium", contextLength: 200000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true, description: "Claude Opus/Sonnet xử lý tác vụ tư duy kiến trúc và dự án lớn." },

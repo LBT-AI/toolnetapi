@@ -17,6 +17,9 @@ export default {
   transport: {
     baseUrl: "https://api.groq.com/openai/v1/chat/completions",
     validateUrl: "https://api.groq.com/openai/v1/models",
+    usage: {
+      url: "https://api.groq.com/openai/v1/models",
+    },
   },
   models: [
     { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 27B", contextLength: 131042, maxOutputTokens: 16384, supportsTools: true, supportsVision: true, supportsReasoning: true, supportsStreaming: true },
@@ -48,5 +51,9 @@ export default {
     authHeader: "bearer",
     format: "openai",
     defaultModel: "canopylabs/orpheus-v1-english",
+  },
+  features: {
+    usage: true,
+    usageApikey: true,
   },
 };

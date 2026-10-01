@@ -27,6 +27,9 @@ export default {
       "low",
       "medium",
       "high",
+      "xhigh",
+      "max",
+      "ultra",
     ],
     defaultMode: "auto",
   },
@@ -36,7 +39,7 @@ export default {
     forceStream: true,
     headers: {
       originator: "codex_cli_rs",
-      "User-Agent": "codex_cli_rs/0.136.0",
+      "User-Agent": "codex_cli_rs/0.155.0",
     },
     usage: {
       url: "https://chatgpt.com/backend-api/wham/usage",
@@ -46,6 +49,9 @@ export default {
   },
   models: [
     { id: "gpt-6-astra", name: "GPT 6.0 Astra" },
+    { id: "gpt-6-astra-review", name: "GPT 6.0 Astra Review", upstreamModelId: "gpt-6-astra", quotaFamily: "review" },
+    { id: "gpt-reserve", name: "GPT Reserve" },
+    { id: "gpt-reserve-review", name: "GPT Reserve Review", upstreamModelId: "gpt-reserve", quotaFamily: "review" },
     { id: "gpt-5.6-sol", name: "GPT 5.6 Sol" },
     { id: "gpt-5.6-sol-review", name: "GPT 5.6 Sol Review", upstreamModelId: "gpt-5.6-sol", quotaFamily: "review" },
     { id: "gpt-5.6-terra", name: "GPT 5.6 Terra" },
@@ -54,6 +60,7 @@ export default {
     { id: "gpt-5.6-luna-review", name: "GPT 5.6 Luna Review", upstreamModelId: "gpt-5.6-luna", quotaFamily: "review" },
     { id: "gpt-5.5", name: "GPT 5.5" },
     { id: "gpt-5.5-review", name: "GPT 5.5 Review", upstreamModelId: "gpt-5.5", quotaFamily: "review" },
+    { id: "codex-auto-review", name: "Codex Auto Review", quotaFamily: "review" },
     { id: "gpt-5.4", name: "GPT 5.4" },
     { id: "gpt-5.4-review", name: "GPT 5.4 Review", upstreamModelId: "gpt-5.4", quotaFamily: "review" },
     { id: "gpt-5.4-mini", name: "GPT 5.4 Mini" },

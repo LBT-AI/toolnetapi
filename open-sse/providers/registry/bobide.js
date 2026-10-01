@@ -55,6 +55,8 @@ export default {
     { id: "gemini-3.7-flash-medium", name: "Bob Gemini 3.7 Flash Medium", upstreamModelId: "wxO-model", contextLength: 1000000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
     { id: "sonnet-4.6", name: "Claude Sonnet 4.6", upstreamModelId: "premium-ide", contextLength: 270000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
     { id: "sonnet-5", name: "Claude Sonnet 5", upstreamModelId: "premium", contextLength: 200000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
+    { id: "premium-5", name: "Bob Premium 5", upstreamModelId: "premium", contextLength: 200000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
+    { id: "premium -5", name: "Bob Premium 5", upstreamModelId: "premium", contextLength: 200000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
     { id: "haiku-4.5", name: "Claude Haiku 4.5", upstreamModelId: "fast", contextLength: 200000, maxOutputTokens: 64000, supportsTools: true, supportsStreaming: true, isFree: true },
 
     // Free Tier Orchestration Mappings

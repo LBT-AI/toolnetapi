@@ -15,6 +15,7 @@ import { OAUTH_PROVIDERS, APIKEY_PROVIDERS } from "@/shared/constants/config";
 import {
   FREE_PROVIDERS,
   FREE_TIER_PROVIDERS,
+  CLI_FREE_PROVIDERS,
   WEB_COOKIE_PROVIDERS,
   OPENAI_COMPATIBLE_PREFIX,
   ANTHROPIC_COMPATIBLE_PREFIX,
@@ -340,6 +341,16 @@ export default function ProvidersPage() {
     if (ca !== cb) return ca - cb;
     return (a.name || "").localeCompare(b.name || "");
   });
+
+  const cliFreeEntries = Object.entries(CLI_FREE_PROVIDERS)
+    .filter(
+      ([key, info]) =>
+        !info.hidden &&
+        matchSearch(info.name) &&
+        (info.serviceKinds ?? ["llm"]).includes("llm") &&
+        matchStatus(getProviderStats(key, dualAuthTypes(info, key)), info.noAuth)
+    )
+    .sort(([, a], [, b]) => (b.noAuth ? 1 : 0) - (a.noAuth ? 1 : 0));
   // API Key: connected providers first, then alphabetical by name
   const apikeyEntries = Object.entries(APIKEY_PROVIDERS)
     .filter(
@@ -375,6 +386,7 @@ export default function ProvidersPage() {
     oauthEntries.length > 0 ||
     freeEntries.length > 0 ||
     freeTierEntries.length > 0 ||
+    cliFreeEntries.length > 0 ||
     apikeyEntries.length > 0 ||
     compatibleProviders.length > 0 ||
     anthropicCompatibleProviders.length > 0;
@@ -504,7 +516,7 @@ export default function ProvidersPage() {
       )}
 
       {/* Free Tier Providers */}
-      {(freeEntries.length > 0 || freeTierEntries.length > 0) && (
+      {(freeEntries.length > 0 || freeTierEntries.length > 0 || cliFreeEntries.length > 0) && (
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 leading-tight">
@@ -551,6 +563,25 @@ export default function ProvidersPage() {
             );
           })}
           {freeTierEntries.map(([key, info]) => {
+            const tierAuthTypes =
+              info.authModes ||
+              (info.hasOAuth || info.authType === "oauth"
+                ? ["oauth", "apikey", "api_key"]
+                : ["apikey", "api_key", "none", "oauth"]);
+            return (
+              <ProviderCard
+                key={key}
+                providerId={key}
+                provider={info}
+                stats={getProviderStats(key, tierAuthTypes)}
+                authType="free"
+                onToggle={(active) =>
+                  handleToggleProvider(key, tierAuthTypes, active)
+                }
+              />
+            );
+          })}
+          {cliFreeEntries.map(([key, info]) => {
             const tierAuthTypes =
               info.authModes ||
               (info.hasOAuth || info.authType === "oauth"

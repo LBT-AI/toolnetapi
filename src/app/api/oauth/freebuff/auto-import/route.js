@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FreebuffService } from "@/lib/oauth/services/freebuff";
 import { createProviderConnection, getProviderConnections, updateProviderConnection } from "@/models";
+import { seedAccountCredentials } from "open-sse/services/freebuff/accountManager.js";
 
 /**
  * GET /api/oauth/freebuff/auto-import
@@ -76,6 +77,20 @@ export async function POST(request) {
           testStatus: "active",
         });
         imported.push({ id: existing.id, name: existing.name || name, email, updated: true });
+        try {
+          seedAccountCredentials(existing.id, {
+            default: {
+              id: acc.id || existing.providerSpecificData?.userId || null,
+              name: acc.name || existing.providerSpecificData?.name || name,
+              email: email || existing.email || null,
+              authToken: acc.authToken,
+              fingerprintId: acc.fingerprintId || existing.providerSpecificData?.fingerprintId || null,
+              fingerprintHash: acc.fingerprintHash || existing.providerSpecificData?.fingerprintHash || null,
+            },
+          });
+        } catch (e) {
+          console.warn("[Freebuff Auto-Import] Failed to seed credentials:", e.message);
+        }
       } else {
         const created = await createProviderConnection({
           provider: "freebuff",
@@ -95,6 +110,20 @@ export async function POST(request) {
           testStatus: "active",
         });
         imported.push({ id: created.id, name: created.name, email: created.email, created: true });
+        try {
+          seedAccountCredentials(created.id, {
+            default: {
+              id: acc.id || null,
+              name: acc.name || name,
+              email: email || null,
+              authToken: acc.authToken,
+              fingerprintId: acc.fingerprintId || null,
+              fingerprintHash: acc.fingerprintHash || null,
+            },
+          });
+        } catch (e) {
+          console.warn("[Freebuff Auto-Import] Failed to seed credentials:", e.message);
+        }
       }
     }
 

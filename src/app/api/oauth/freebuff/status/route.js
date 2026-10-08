@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FreebuffService } from "@/lib/oauth/services/freebuff";
 import { createProviderConnection, getProviderConnections, updateProviderConnection } from "@/models";
+import { seedAccountCredentials } from "open-sse/services/freebuff/accountManager.js";
 
 /**
  * GET /api/oauth/freebuff/status
@@ -62,44 +63,74 @@ export async function GET(request) {
       let connection;
       if (existing) {
         // Update existing connection with new token
-        await updateProviderConnection(existing.id, {
-          accessToken: user.authToken,
-          apiKey: user.authToken,
-          isActive: true,
-          email: email || existing.email,
-          name: customLabel || existing.name || accountName,
-          providerSpecificData: {
-            ...(existing.providerSpecificData || {}),
-            userId: user.id || existing.providerSpecificData?.userId,
-            name: user.name || existing.providerSpecificData?.name,
+      await updateProviderConnection(existing.id, {
+        accessToken: user.authToken,
+        apiKey: user.authToken,
+        isActive: true,
+        email: email || existing.email,
+        name: customLabel || existing.name || accountName,
+        providerSpecificData: {
+          ...(existing.providerSpecificData || {}),
+          userId: user.id || existing.providerSpecificData?.userId,
+          name: user.name || existing.providerSpecificData?.name,
+          fingerprintId: user.fingerprintId || fingerprintId,
+          fingerprintHash: user.fingerprintHash || fingerprintHash,
+          authMethod: "browser_login",
+        },
+        testStatus: "active",
+      });
+      connection = { id: existing.id, name: accountName, email };
+      // Seed credentials to isolated account home
+      try {
+        seedAccountCredentials(existing.id, {
+          default: {
+            id: user.id || existing.providerSpecificData?.userId || null,
+            name: user.name || existing.providerSpecificData?.name || accountName,
+            email: email || existing.email || null,
+            authToken: user.authToken,
             fingerprintId: user.fingerprintId || fingerprintId,
             fingerprintHash: user.fingerprintHash || fingerprintHash,
-            authMethod: "browser_login",
           },
-          testStatus: "active",
         });
-        connection = { id: existing.id, name: accountName, email };
-      } else {
-        // Create new connection
-        const created = await createProviderConnection({
-          provider: "freebuff",
-          authType: "oauth",
-          name: accountName,
-          email: email,
-          accessToken: user.authToken,
-          apiKey: user.authToken,
-          expiresAt: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
-          providerSpecificData: {
-            userId: user.id || null,
-            name: user.name || null,
-            fingerprintId: user.fingerprintId || fingerprintId,
-            fingerprintHash: user.fingerprintHash || fingerprintHash,
-            authMethod: "browser_login",
-          },
-          testStatus: "active",
-        });
-        connection = { id: created.id, name: created.name, email: created.email };
+      } catch (e) {
+        console.warn("[Freebuff Status] Failed to seed credentials:", e.message);
       }
+    } else {
+      // Create new connection
+      const created = await createProviderConnection({
+        provider: "freebuff",
+        authType: "oauth",
+        name: accountName,
+        email: email,
+        accessToken: user.authToken,
+        apiKey: user.authToken,
+        expiresAt: new Date(Date.now() + 30 * 86400 * 1000).toISOString(),
+        providerSpecificData: {
+          userId: user.id || null,
+          name: user.name || null,
+          fingerprintId: user.fingerprintId || fingerprintId,
+          fingerprintHash: user.fingerprintHash || fingerprintHash,
+          authMethod: "browser_login",
+        },
+        testStatus: "active",
+      });
+      connection = { id: created.id, name: created.name, email: created.email };
+      // Seed credentials to isolated account home
+      try {
+        seedAccountCredentials(created.id, {
+          default: {
+            id: user.id || null,
+            name: user.name || accountName,
+            email: email || null,
+            authToken: user.authToken,
+            fingerprintId: user.fingerprintId || fingerprintId,
+            fingerprintHash: user.fingerprintHash || fingerprintHash,
+          },
+        });
+      } catch (e) {
+        console.warn("[Freebuff Status] Failed to seed credentials:", e.message);
+      }
+    }
 
       return NextResponse.json({
         status: "success",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FreebuffService } from "@/lib/oauth/services/freebuff";
 import { createProviderConnection, getProviderConnections, updateProviderConnection } from "@/models";
+import { seedAccountCredentials } from "open-sse/services/freebuff/accountManager.js";
 
 /**
  * POST /api/oauth/freebuff/import
@@ -80,6 +81,20 @@ export async function POST(request) {
         testStatus: "active",
       });
       connection = { id: existing.id, name: existing.name || accountName, email };
+      try {
+        seedAccountCredentials(existing.id, {
+          default: {
+            id: userId || existing.providerSpecificData?.userId || null,
+            name: userInfo?.name || existing.providerSpecificData?.name || accountName,
+            email: email || existing.email || null,
+            authToken,
+            fingerprintId: body.fingerprintId || existing.providerSpecificData?.fingerprintId || null,
+            fingerprintHash: body.fingerprintHash || existing.providerSpecificData?.fingerprintHash || null,
+          },
+        });
+      } catch (e) {
+        console.warn("[Freebuff Import] Failed to seed credentials:", e.message);
+      }
     } else {
       const created = await createProviderConnection({
         provider: "freebuff",
@@ -98,6 +113,20 @@ export async function POST(request) {
         testStatus: "active",
       });
       connection = { id: created.id, name: created.name, email: created.email };
+      try {
+        seedAccountCredentials(created.id, {
+          default: {
+            id: userId || null,
+            name: userInfo?.name || accountName,
+            email: email || null,
+            authToken,
+            fingerprintId: body.fingerprintId || null,
+            fingerprintHash: body.fingerprintHash || null,
+          },
+        });
+      } catch (e) {
+        console.warn("[Freebuff Import] Failed to seed credentials:", e.message);
+      }
     }
 
     return NextResponse.json({

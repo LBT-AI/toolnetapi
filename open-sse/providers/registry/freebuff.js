@@ -1,3 +1,27 @@
+import { FREEBUFF_CATALOG } from "../../services/freebuff/modelCatalog.js";
+
+const models = [];
+for (const m of FREEBUFF_CATALOG) {
+  const base = {
+    name: m.name,
+    upstreamModelId: m.id,
+    contextLength: m.contextLength,
+    maxOutputTokens: m.upstreamMaxOutputTokens,
+    supportsTools: m.supportsTools,
+    supportsStreaming: m.supportsStreaming,
+    isFree: true,
+    capabilities: {
+      contextWindow: m.effectiveContextLength,
+      maxOutput: m.effectiveMaxOutputTokens,
+      tools: m.supportsTools
+    }
+  };
+  models.push({ id: m.id, ...base });
+  for (const alias of m.aliases || []) {
+    models.push({ id: alias, ...base, name: m.name + " (alias)" });
+  }
+}
+
 export default {
   id: "freebuff",
   priority: 21,
@@ -31,25 +55,7 @@ export default {
     baseUrl: "freebuff://pty/worker",
     format: "openai",
   },
-  models: [
-    { id: "solar-pro-4", name: "Solar Pro 4", upstreamModelId: "solar-pro-4", contextLength: 65536, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true, description: "Upstage Solar Pro 4 model on Freebuff." },
-    { id: "solar-pro4", name: "Solar Pro 4 (alias)", upstreamModelId: "solar-pro-4", contextLength: 65536, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "mimo-v2.5", name: "MiMo 2.5", upstreamModelId: "mimo-2.5", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true, description: "Balanced model for everyday coding tasks." },
-    { id: "mimo-2.5", name: "MiMo 2.5", upstreamModelId: "mimo-2.5", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "mimo-v2.5-pro", name: "MiMo 2.5 Pro", upstreamModelId: "mimo-2.5-pro", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "glm-5.3-flash", name: "GLM 5.3 Flash", upstreamModelId: "glm-5.3-flash", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, supportsReasoning: true, isFree: true, description: "Deep reasoning GLM 5.3 Flash model on Freebuff." },
-    { id: "glm-5.2", name: "GLM 5.2", upstreamModelId: "glm-5.2", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", upstreamModelId: "deepseek-v4-flash", contextLength: 1048576, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, supportsReasoning: true, isFree: true, description: "Fast & smart DeepSeek V4 Flash." },
-    { id: "deepseek-v4-flash-0731", name: "DeepSeek V4 Flash 07/31", upstreamModelId: "deepseek-v4-flash-0731", contextLength: 1048576, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", upstreamModelId: "gemini-3.1-flash-lite", contextLength: 1048576, maxOutputTokens: 65536, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", upstreamModelId: "deepseek-v4-pro", contextLength: 1048576, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "gpt-5.6-luna", name: "GPT 5.6 Luna", upstreamModelId: "gpt-5.6-luna", contextLength: 272000, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true, description: "OpenAI GPT 5.6 Luna on Freebuff." },
-    { id: "minimax-m3", name: "MiniMax M3", upstreamModelId: "minimax-m3", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true, description: "MiniMax M3 model on Freebuff." },
-    { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", upstreamModelId: "gemini-3.8-flash", contextLength: 1048576, maxOutputTokens: 65536, supportsTools: false, supportsStreaming: true, supportsReasoning: true, isFree: true, description: "Google Gemini 3.8 Flash model on Freebuff." },
-    { id: "ox-alpha", name: "OX Alpha", upstreamModelId: "ox-alpha", contextLength: 131072, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "claude-fable-5", name: "Claude Fable 5", upstreamModelId: "claude-fable-5", contextLength: 200000, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-    { id: "kimi-k3-eco", name: "Kimi K3 Eco", upstreamModelId: "kimi-k3-eco", contextLength: 262144, maxOutputTokens: 16384, supportsTools: false, supportsStreaming: true, isFree: true },
-  ],
+  models,
   passthroughModels: true,
   serviceKinds: [
     "llm",

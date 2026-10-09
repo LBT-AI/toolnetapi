@@ -203,6 +203,13 @@ describe("Freebuff Integration Unit Tests", () => {
       expect(matcher("› MiMo 2.5")).toBe(true);
       expect(matcher("› Solar Pro 4")).toBe(false);
     });
+
+    it("should match new-style model names with reasoning tags (DeepSeek V4.1 Flash • high)", () => {
+      expect(normalizeFreebuffModelId("freebuff/deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
+      const matcher = getTuiMatcherForModel("deepseek-v4.1-flash");
+      expect(matcher("› DeepSeek V4.1 Flash • high · Smart & Fast · Images")).toBe(true);
+      expect(matcher("   Solar Pro 4 · Upstage flagship · Promotional")).toBe(false);
+    });
   });
 
   // -------------------------------------------------------------
@@ -382,6 +389,23 @@ describe("Freebuff Integration Unit Tests", () => {
       } finally {
         (await import("../../open-sse/services/freebuff/workerPool.js")).freebuffWorkerPool.dispatch = originalDispatch;
       }
+    });
+
+    
+    it("should throw capability error (400) when tools are requested", async () => {
+      const result = await executor.execute({
+        model: "freebuff/solar-pro-4",
+        body: {
+          messages: [{ role: "user", content: "What is the weather?" }],
+          tools: [{ type: "function", function: { name: "get_weather", description: "Gets the weather" } }]
+        },
+        stream: false,
+        credentials: { id: "test-conn" },
+      });
+      
+      expect(result.response.status).toBe(400);
+      const json = await result.response.json();
+      expect(json.error.message).toContain("capability error");
     });
 
     it("should map Freebuff errors to standard HTTP status codes", () => {

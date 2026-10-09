@@ -80,6 +80,8 @@ export class FreebuffExecutor extends BaseExecutor {
     // If external tool_calls requested but not supported yet
     if (Array.isArray(body?.tools) && body.tools.length > 0) {
       log?.warn?.("FREEBUFF_EXEC", "External client tool_calls requested, but Freebuff Phase 1 supports text chat only");
+      const err = new Error("Freebuff adapter does not support tool calling (400 capability error)");
+      return this.handleExecutionError(err);
     }
 
     if (!stream) {

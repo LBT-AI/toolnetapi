@@ -337,10 +337,13 @@ export class TerminalOutputCollector {
       if (trimmed.includes("✕ End session") || trimmed.includes("Solar Pro 4 ·")) continue;
       // Skip the TUI input box / footer chrome that may sit above the reply.
       // Border lines can also wrap across rows, so drop any line made up only
-      // of box-drawing characters.
+      // of box-drawing characters, plus every UI box row (they lead with │/┃).
       if (trimmed.startsWith("╭──") || trimmed.startsWith("╰──") || trimmed.startsWith("├──")) continue;
       if (/^[\u2500-\u257F\s]+$/.test(trimmed)) continue;
+      if (trimmed.startsWith("│") || trimmed.startsWith("┃")) continue;
       if (trimmed.includes("Enter a coding task")) continue;
+      // Status / onboarding / advertising chrome that shares the screen.
+      if (/(Freebucks remaining|day streak|Your first message starts the session|Starting your model session|Esc: back to draft|for history|\/model to change|Take over|Some models aren't available|May use data for AI training|Refer friends|Copy invite link|Ask the team|Join Discord|Get \d+x usage|Included with a paid plan|Paid plan)/i.test(trimmed)) continue;
       // Drop the echoed user turn ("User: <prompt>") above the assistant reply
       if (/^user\s*:/i.test(trimmed)) continue;
       if (trimmed.includes("██") || trimmed.includes("╚═╝") || trimmed.includes("╔═╝") || trimmed.includes("║")) continue;
@@ -360,8 +363,43 @@ export class TerminalOutputCollector {
     return this.cleanLines(this.collectedLines).join("\n");
   }
 
+  /**
+   * Extract the assistant reply from the settled on-screen viewport. Preferred
+   * over the accumulated scrollback because the TUI repaints every frame, so
+   * collectedLines contains partial renders ("TOOLNET_FREEB", "…_OK", …) that
+   * never existed as separate lines on screen.
+   * @returns {string|null} null when no reliable prompt boundary is visible.
+   */
+  extractFromScreen(promptText = "") {
+    const viewport = this.parser.rows || 40;
+    const lines = this.stripFooter(this.parser.getLines().slice(-viewport));
+    if (!lines.length) return null;
+
+    const promptSnippet = promptText.trim().slice(0, 30);
+    let promptEnd = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if ((promptSnippet && t.includes(promptSnippet)) || t.endsWith("⎘")) promptEnd = i;
+    }
+    if (promptEnd === -1) return null;
+
+    const cleaned = this.cleanLines(lines.slice(promptEnd + 1));
+    const out = [];
+    for (const line of cleaned) {
+      if (promptText && line.trim() === promptText.trim()) continue;
+      if (out.length > 0 && out[out.length - 1] === line) continue;
+      out.push(line);
+    }
+    return out.join("\n").trim();
+  }
+
   stop() {
     this.poll();
+
+    // Prefer the final viewport (see extractFromScreen); fall back to the
+    // accumulated scrollback only when the screen gives us nothing reliable.
+    const screenResult = this.extractFromScreen(this.lastPrompt || "");
+    if (screenResult) return screenResult;
 
     const allText = this.collectedLines;
 
@@ -387,9 +425,20 @@ export class TerminalOutputCollector {
     // Clean up responseLines: remove badges, banners, chrome and empty lines
     const cleaned = this.cleanLines(responseLines);
 
+    // The TUI repaints the transcript on every frame, so identical lines repeat
+    // throughout scrollback. Collapse consecutive duplicates and drop echoed
+    // prompt lines (Freebuff re-renders the submitted turn above the reply).
+    const promptForDedupe = (this.lastPrompt || "").trim();
+    const deduped = [];
+    for (const line of cleaned) {
+      if (promptForDedupe && line.trim() === promptForDedupe) continue;
+      if (deduped.length > 0 && deduped[deduped.length - 1] === line) continue;
+      deduped.push(line);
+    }
+
     // The response lines might include the user's prompt (because Freebuff echoes it).
     // Let's strip the prompt if it appears exactly at the beginning.
-    let responseString = cleaned.join("\n").trim();
+    let responseString = deduped.join("\n").trim();
     const promptTrimmed = (this.lastPrompt || "").trim();
     if (promptTrimmed && responseString.startsWith(promptTrimmed)) {
       responseString = responseString.slice(promptTrimmed.length).trim();

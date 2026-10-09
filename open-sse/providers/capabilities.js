@@ -125,7 +125,23 @@ const CODEX_GPT_56_DEFAULT_CAPS = { vision: true, reasoning: true, search: true,
 /**
  * Provider-specific capability overrides. Keyed by provider alias/id.
  */
+import { FREEBUFF_CATALOG } from "../services/freebuff/modelCatalog.js";
+
+const FREEBUFF_CAPS = {};
+for (const m of FREEBUFF_CATALOG) {
+  FREEBUFF_CAPS[m.id] = {
+    contextWindow: m.effectiveContextLength,
+    maxOutput: m.effectiveMaxOutputTokens,
+    tools: m.supportsTools,
+  };
+  for (const alias of m.aliases || []) {
+    FREEBUFF_CAPS[alias] = FREEBUFF_CAPS[m.id];
+  }
+}
+
 export const PROVIDER_CAPABILITIES = {
+  freebuff: FREEBUFF_CAPS,
+
   // NVIDIA NIM is OpenAI-compatible → rejects MiniMax/GLM native `thinking` field.
   // Force openai reasoning_effort format for its reasoning models. #issue
   "groq": {

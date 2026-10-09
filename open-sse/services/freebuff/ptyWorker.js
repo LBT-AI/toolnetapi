@@ -176,12 +176,11 @@ export class FreebuffPtyWorker {
 
     this.log?.info?.("FREEBUFF_PTY", `Switching model from ${this.currentModel} to ${normalizedTarget}`);
 
-    // If in READY, trigger /end-session command
     const state = this.parser.getState();
-    
+
     // Auto-detect current model if null
     if (this.currentModel === null && (state === TUI_STATES.READY || state === TUI_STATES.GENERATING)) {
-      const screen = this.parser.getLines().join("\\n");
+      const screen = this.parser.getLines().join("\n");
       const matcher = getTuiMatcherForModel(normalizedTarget);
       if (matcher(screen)) {
         this.log?.info?.("FREEBUFF_PTY", `Detected ${normalizedTarget} is already running on screen.`);
@@ -192,15 +191,16 @@ export class FreebuffPtyWorker {
 
     this.log?.info?.("FREEBUFF_PTY", `selectModel state check: ${state}`);
 
-    // Submit a slash command from READY (clears the prompt, pastes, submits).
+    // Submit a slash command from READY. Freebuff executes the command on the
+    // first Enter; a second Enter would immediately confirm whatever it opened
+    // (e.g. the model picker), so only submit once.
     const runSlashCommand = async (cmd) => {
       this.ptyProcess.write("\u001b"); // clear prompt
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 150));
       this.ptyProcess.write(`\u001b[200~${cmd}\u001b[201~`);
+      await new Promise((r) => setTimeout(r, 350));
+      this.ptyProcess.write("\r");
       await new Promise((r) => setTimeout(r, 300));
-      this.ptyProcess.write("\r"); // accept autocomplete if open
-      await new Promise((r) => setTimeout(r, 200));
-      this.ptyProcess.write("\r"); // submit
     };
 
     const waitForModelSelection = async (polls = 20) => {
@@ -216,51 +216,104 @@ export class FreebuffPtyWorker {
       // returned to the picker after `/end-session`. Try `/model` first, then
       // fall back so the worker works across CLI versions.
       await runSlashCommand("/model");
-      let inSelection = await waitForModelSelection(10);
+      let inSelection = await waitForModelSelection(15);
       if (!inSelection) {
         this.log?.warn?.("FREEBUFF_PTY", "'/model' did not open the picker, falling back to '/end-session'");
         await runSlashCommand("/end-session");
+        await new Promise((r) => setTimeout(r, 500));
+        await runSlashCommand("/model");
         inSelection = await waitForModelSelection(20);
       }
       if (!inSelection) {
-        this.log?.warn?.("FREEBUFF_PTY", "Could not enter MODEL_SELECTION, proceeding with current model");
-        return;
+        throw new Error("Could not enter MODEL_SELECTION state. Cannot change model.");
       }
     } else {
-      this.log?.warn?.("FREEBUFF_PTY", `Cannot change model because state is ${state}`);
-      return;
+      throw new Error(`Cannot change model because state is ${state}`);
     }
 
     const pickerMatcher = getTuiMatcherForModel(normalizedTarget);
 
-    // Expand "See all models" if present
-    const visibleText = this.parser.getLines().slice(-40).join("\n");
-    if (visibleText.includes("See all")) {
-      this.ptyProcess.write("\u001b[B"); // Down arrow to See all
+    // Expand "See all models" only if the target isn't already listed.
+    const pickerScreen = this.parser.getLines();
+    if (!pickerScreen.some((l) => pickerMatcher(l)) && pickerScreen.join("\n").includes("See all")) {
+      this.ptyProcess.write("\u001b[B"); // Down arrow to "See all"
       await new Promise((r) => setTimeout(r, 300));
       this.ptyProcess.write("\r"); // Expand
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 700));
     }
 
-    // Navigate to target model
+    // Navigate the picker to the target model. The default highlight can sit
+    // anywhere in the list and the list wraps, so walk Down and use cycle
+    // detection rather than assuming a direction.
     let found = false;
-    for (let attempts = 0; attempts < 10; attempts++) {
+    const seenHighlights = new Set();
+    let requiredFreebucks = 0;
+
+    for (let attempts = 0; attempts < 40; attempts++) {
       const lines = this.parser.getLines();
-      const currentSelectedLine = lines.find((l) => l.includes("›"));
+      const currentSelectedLineIndex = lines.findIndex((l) => l.includes("›"));
+      const currentSelectedLine = lines[currentSelectedLineIndex];
+      
       if (currentSelectedLine && pickerMatcher(currentSelectedLine)) {
         found = true;
+        const costMatch = lines.slice(currentSelectedLineIndex, currentSelectedLineIndex + 3)
+                            .join("\n")
+                            .match(/(\d+)\s*Freebucks\/hr/i);
+        if (costMatch) {
+          requiredFreebucks = parseInt(costMatch[1], 10);
+        }
         break;
       }
+      const label = currentSelectedLine || "";
+      if (seenHighlights.has(label)) break; // full cycle — model unavailable
+      seenHighlights.add(label);
       this.ptyProcess.write("\u001b[B"); // Down arrow
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    if (!found) {
+      this.ptyProcess.write("\u001b"); // Esc: close picker without changing model
+      await new Promise((r) => setTimeout(r, 700));
+      await this.waitForReady(READY_TIMEOUT_MS);
+      throw new Error(`Model '${normalizedTarget}' not found or unavailable for this account.`);
+    }
+
+    const pickerScreenForQuota = this.parser.getLines().join("\n");
+    let availableFreebucks = 0;
+    const availableMatch = pickerScreenForQuota.match(/(\d+)\/(?:\d+|Unlimited)\s*Freebucks remaining/i) || pickerScreenForQuota.match(/(\d+)\s*Freebucks remaining/i);
+    if (availableMatch) {
+      availableFreebucks = parseInt(availableMatch[1], 10);
+    } else if (pickerScreenForQuota.includes("Unlimited Freebucks")) {
+      availableFreebucks = Infinity;
+    }
+
+    if (requiredFreebucks > 0 && availableFreebucks < requiredFreebucks) {
+      this.ptyProcess.write("\u001b"); // Esc to close picker
+      await new Promise((r) => setTimeout(r, 700));
+      await this.waitForReady(READY_TIMEOUT_MS);
+      
+      const { getAccountInfo } = require("./accountManager.js");
+      const accountInfo = getAccountInfo(this.connectionId) || {};
+      const accountIdentifier = accountInfo.email || accountInfo.name || this.connectionId;
+      
+      throw new Error(`Freebuff Quota Rejected
+Account: ${accountIdentifier}
+Requested Model: ${normalizedTarget}
+Quota Status: ${availableFreebucks} Freebucks remaining
+Reason: Model requires ${requiredFreebucks} Freebucks/hr, but account only has ${availableFreebucks}.`);
     }
 
     // Confirm selection with Enter
     this.ptyProcess.write("\r");
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 800));
 
     // Wait for READY state again
     await this.waitForReady(READY_TIMEOUT_MS);
+    
+    const finalScreen = this.parser.getLines().join("\n");
+    if (!pickerMatcher(finalScreen)) {
+       throw new Error(`Failed to confirm switch to model ${normalizedTarget}. The model may be restricted.`);
+    }
     this.currentModel = normalizedTarget;
   }
 

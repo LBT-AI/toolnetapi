@@ -178,17 +178,6 @@ export class FreebuffPtyWorker {
 
     const state = this.parser.getState();
 
-    // Auto-detect current model if null
-    if (this.currentModel === null && (state === TUI_STATES.READY || state === TUI_STATES.GENERATING)) {
-      const screen = this.parser.getLines().join("\n");
-      const matcher = getTuiMatcherForModel(normalizedTarget);
-      if (matcher(screen)) {
-        this.log?.info?.("FREEBUFF_PTY", `Detected ${normalizedTarget} is already running on screen.`);
-        this.currentModel = normalizedTarget;
-        return;
-      }
-    }
-
     this.log?.info?.("FREEBUFF_PTY", `selectModel state check: ${state}`);
 
     // Submit a slash command from READY. Freebuff executes the command on the
@@ -199,8 +188,13 @@ export class FreebuffPtyWorker {
       await new Promise((r) => setTimeout(r, 150));
       this.ptyProcess.write(`\u001b[200~${cmd}\u001b[201~`);
       await new Promise((r) => setTimeout(r, 350));
-      this.ptyProcess.write("\r");
-      await new Promise((r) => setTimeout(r, 300));
+      this.ptyProcess.write("\r"); // autocomplete or enter for old CLI
+      await new Promise((r) => setTimeout(r, 400));
+      
+      if (this.parser.getState() !== TUI_STATES.MODEL_SELECTION) {
+        this.ptyProcess.write("\r"); // Second Enter for new CLI to open the picker
+        await new Promise((r) => setTimeout(r, 400));
+      }
     };
 
     const waitForModelSelection = async (polls = 20) => {

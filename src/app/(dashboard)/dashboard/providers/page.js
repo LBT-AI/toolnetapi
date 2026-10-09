@@ -97,6 +97,21 @@ function getConnectionErrorTag(connection) {
 
 const APIKEY_INITIAL_VISIBLE = 20;
 
+// Freebuff is flagged `noAuth` in the provider registry because its upstream
+// auth is handled by the CLI PTY worker rather than per-request credentials.
+// On the dashboard it is account-based (browser login / CLI import / manual
+// token), so its card must show real connection counts instead of a
+// misleading "Ready" badge. Display-only — the registry/runtime is untouched.
+const CONNECTION_DRIVEN_STATUS_PROVIDERS = new Set(["freebuff"]);
+
+const isConnectionDrivenStatus = (providerId) =>
+  CONNECTION_DRIVEN_STATUS_PROVIDERS.has(providerId);
+
+// noAuth drives the "Ready" badge and the status filter. Connection-driven
+// providers override it so "No connection" / "Active" filters stay accurate.
+const displayNoAuth = (providerId, info) =>
+  !!info?.noAuth && !isConnectionDrivenStatus(providerId);
+
 export default function ProvidersPage() {
   const [connections, setConnections] = useState([]);
   const [providerNodes, setProviderNodes] = useState([]);
@@ -348,7 +363,10 @@ export default function ProvidersPage() {
         !info.hidden &&
         matchSearch(info.name) &&
         (info.serviceKinds ?? ["llm"]).includes("llm") &&
-        matchStatus(getProviderStats(key, dualAuthTypes(info, key)), info.noAuth)
+        matchStatus(
+          getProviderStats(key, dualAuthTypes(info, key)),
+          displayNoAuth(key, info)
+        )
     )
     .sort(([, a], [, b]) => (b.noAuth ? 1 : 0) - (a.noAuth ? 1 : 0));
   // API Key: connected providers first, then alphabetical by name
@@ -594,6 +612,7 @@ export default function ProvidersPage() {
                 provider={info}
                 stats={getProviderStats(key, tierAuthTypes)}
                 authType="free"
+                connectionBased={isConnectionDrivenStatus(key)}
                 onToggle={(active) =>
                   handleToggleProvider(key, tierAuthTypes, active)
                 }
@@ -725,9 +744,18 @@ export default function ProvidersPage() {
   );
 }
 
-function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
+function ProviderCard({
+  providerId,
+  provider,
+  stats,
+  authType,
+  onToggle,
+  connectionBased = false,
+}) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
-  const isNoAuth = !!provider.noAuth;
+  // Account-based providers (freebuff) show real counts even though the
+  // registry marks them noAuth for the engine.
+  const isNoAuth = !connectionBased && !!provider.noAuth;
 
   const dotColors = {
     free: "bg-green-500",
@@ -833,6 +861,7 @@ ProviderCard.propTypes = {
   }).isRequired,
   authType: PropTypes.string,
   onToggle: PropTypes.func,
+  connectionBased: PropTypes.bool,
 };
 
 function ApiKeyProviderCard({

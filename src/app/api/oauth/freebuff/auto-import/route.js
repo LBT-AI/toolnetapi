@@ -5,13 +5,20 @@ import { seedAccountCredentials } from "open-sse/services/freebuff/accountManage
 
 /**
  * GET /api/oauth/freebuff/auto-import
- * Read local Freebuff CLI credentials from ~/.config/manicode/credentials.json
+ * List account metadata detected from ~/.config/manicode/credentials.json.
+ * NEVER returns authToken / fingerprintHash — the UI only needs name/email/id/profileKey.
  */
 export async function GET() {
   try {
     const service = new FreebuffService();
-    const result = await service.readLocalCredentials();
-    return NextResponse.json(result);
+    const { found, accounts, configPath } = await service.readLocalCredentials();
+    const safeAccounts = accounts.map((acc) => ({
+      profileKey: acc.profileKey,
+      id: acc.id || null,
+      name: acc.name || acc.profileKey,
+      email: acc.email || null,
+    }));
+    return NextResponse.json({ found, accounts: safeAccounts, configPath });
   } catch (error) {
     return NextResponse.json({ found: false, error: error.message }, { status: 500 });
   }
@@ -51,6 +58,22 @@ export async function POST(request) {
       const email = acc.email || null;
       const name = acc.name && email ? `${acc.name} (${email})` : email || acc.name || `Freebuff ${acc.id?.slice(0, 8) || "CLI"}`;
 
+      // A local credentials file only proves the CLI logged in once — verify the
+      // token against Freebuff before marking the connection Active. Unverified
+      // accounts are still imported (usable via the PTY) but not labelled Active.
+      let verified = false;
+      let verifyError = null;
+      try {
+        const profile = await service.getUserInfo(acc.authToken);
+        verified = !!profile;
+      } catch (err) {
+        verifyError = err.message || "Token validation failed";
+      }
+      const testStatus = verified ? "active" : "unknown";
+      const verificationFields = verified
+        ? { testStatus }
+        : { testStatus, lastError: verifyError, lastErrorAt: new Date().toISOString() };
+
       const existing = existingConns.find(
         (c) =>
           (email && c.email === email) ||
@@ -74,9 +97,9 @@ export async function POST(request) {
             fingerprintHash: acc.fingerprintHash || existing.providerSpecificData?.fingerprintHash,
             authMethod: "cli_import",
           },
-          testStatus: "active",
+          ...verificationFields,
         });
-        imported.push({ id: existing.id, name: existing.name || name, email, updated: true });
+        imported.push({ id: existing.id, name: existing.name || name, email, updated: true, testStatus });
         try {
           seedAccountCredentials(existing.id, {
             default: {
@@ -107,9 +130,9 @@ export async function POST(request) {
             fingerprintHash: acc.fingerprintHash || null,
             authMethod: "cli_import",
           },
-          testStatus: "active",
+          ...verificationFields,
         });
-        imported.push({ id: created.id, name: created.name, email: created.email, created: true });
+        imported.push({ id: created.id, name: created.name, email: created.email, created: true, testStatus });
         try {
           seedAccountCredentials(created.id, {
             default: {

@@ -9,6 +9,7 @@ import {
 import { APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { AI_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, CLI_FREE_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
 import { normalizeProviderId, normalizeProviderSpecificData } from "@/lib/providerNormalization";
+import { redactProviderSecrets } from "@/lib/providerRedaction";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +67,11 @@ export async function GET() {
       const name = isCompatible
         ? (c.name || nodeNameMap[c.provider] || c.providerSpecificData?.nodeName || c.provider)
         : c.name;
+      const providerSpecificData = redactProviderSecrets(c.provider, c.providerSpecificData);
       return {
         ...c,
         name,
+        providerSpecificData,
         apiKey: undefined,
         accessToken: undefined,
         refreshToken: undefined,

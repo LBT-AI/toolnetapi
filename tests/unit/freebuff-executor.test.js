@@ -244,6 +244,35 @@ describe("Freebuff Integration Unit Tests", () => {
       expect(result).toBe("Hello! How can I assist you?");
     });
 
+    it("should fail fast when the selected model is unaffordable (Not enough Freebucks)", async () => {
+      const worker = new FreebuffPtyWorker({
+        connectionId: "mock-conn-quota",
+        workspaceCwd: os.tmpdir(),
+      });
+
+      const mockPty = new MockPtyProcess();
+      worker.ptyProcess = mockPty;
+      worker.isDead = false;
+      worker.currentModel = "solar-pro-4"; // Already on target model, skip picker
+
+      mockPty.onData((data) => {
+        worker.parser.write(data, mockPty);
+      });
+
+      await mockPty.emitData("╭──────────────────────────────────────────╮\n│ Enter a coding task or / for commands    │\n╰──────────────────────────────────────────╯\n");
+
+      const execPromise = worker.executeTurn({ prompt: "Hello", model: "solar-pro-4" });
+      await new Promise((r) => setTimeout(r, 150));
+
+      // The TUI rejects the turn because the account cannot afford the model.
+      // This must surface as a clear error, not the raw terminal screen.
+      await mockPty.emitData(
+        "│ Not enough Freebucks for MiMo 2.6 Flash (10 Freebucks/hr). Choose another model with /model or visit https://        │\n│ freebuff.com/plans.                                                                                                  │\n│ Enter: retry  Esc: back to draft                                                                                     │\n"
+      );
+
+      await expect(execPromise).rejects.toThrow(/quota insufficient/i);
+    });
+
     it("should emit stream chunks during generation", async () => {
       const worker = new FreebuffPtyWorker({
         connectionId: "mock-conn-stream",
@@ -363,6 +392,13 @@ describe("Freebuff Integration Unit Tests", () => {
       const err429 = new Error("Freebuff quota exhausted (429)");
       const res429 = executor.handleExecutionError(err429);
       expect(res429.response.status).toBe(429);
+
+      // Real TUI message when the account cannot afford the selected model.
+      const errFreebucks = new Error(
+        "Freebuff quota insufficient for the selected model (Not enough Freebucks). Choose a cheaper model with /model."
+      );
+      const resFreebucks = executor.handleExecutionError(errFreebucks);
+      expect(resFreebucks.response.status).toBe(429);
 
       const err502 = new Error("Freebuff process crashed during generation (502)");
       const res502 = executor.handleExecutionError(err502);

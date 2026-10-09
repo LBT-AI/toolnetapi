@@ -111,7 +111,15 @@ export class FreebuffTerminalParser {
         return TUI_STATES.AUTH_REQUIRED;
       }
 
-      if (fullText.includes("Freebuff is already running") && fullText.includes("Take over")) {
+      // Freebuff gates a second session behind a "take over" modal. Its wording
+      // varies by CLI version ("Freebuff is already running … Take over" vs
+      // "one session across CLI and Desktop … Take over to stop the other session").
+      if (
+        fullText.includes("Take over") &&
+        (fullText.includes("Freebuff is already running") ||
+          fullText.includes("stop the other session") ||
+          fullText.includes("one session across CLI and Desktop"))
+      ) {
         return TUI_STATES.ALREADY_RUNNING;
       }
 
@@ -239,7 +247,16 @@ export class TerminalOutputCollector {
 
   stripFooter(lines) {
     let content = [...lines];
-    const footerStart = content.findIndex(l => l.includes("╭───"));
+    // The active input box is the LAST footer in scrollback; older turns leave
+    // their own boxes above. Slicing at the first one would discard the whole
+    // transcript of subsequent turns (breaking multi-turn and streaming).
+    let footerStart = -1;
+    for (let i = content.length - 1; i >= 0; i--) {
+      if (content[i].includes("╭───")) {
+        footerStart = i;
+        break;
+      }
+    }
     if (footerStart !== -1) {
       content = content.slice(0, footerStart);
     }
@@ -304,12 +321,50 @@ export class TerminalOutputCollector {
     this.promptBoundary = this.collectedLines.length - 1;
   }
 
+  /**
+   * Filter a set of raw collected lines down to assistant-visible text,
+   * dropping TUI chrome, badges, footers and the echoed user turn.
+   */
+  cleanLines(lines) {
+    const cleaned = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === "") continue;
+      if (trimmed.includes("thinking...") || trimmed.includes("working...") || trimmed.includes("■ Esc") || trimmed.includes("0/25 Freebucks")) continue;
+      if (/^⎘\s*•.*•\s*[△▽]/.test(trimmed)) continue;
+      if (/^\s*\[\d{2}:\d{2}\s*(?:AM|PM)\]\s*$/.test(trimmed)) continue;
+      if (trimmed.includes("Freebuff will run commands") || trimmed.startsWith("Directory ")) continue;
+      if (trimmed.includes("✕ End session") || trimmed.includes("Solar Pro 4 ·")) continue;
+      // Skip the TUI input box / footer chrome that may sit above the reply.
+      // Border lines can also wrap across rows, so drop any line made up only
+      // of box-drawing characters.
+      if (trimmed.startsWith("╭──") || trimmed.startsWith("╰──") || trimmed.startsWith("├──")) continue;
+      if (/^[\u2500-\u257F\s]+$/.test(trimmed)) continue;
+      if (trimmed.includes("Enter a coding task")) continue;
+      // Drop the echoed user turn ("User: <prompt>") above the assistant reply
+      if (/^user\s*:/i.test(trimmed)) continue;
+      if (trimmed.includes("██") || trimmed.includes("╚═╝") || trimmed.includes("╔═╝") || trimmed.includes("║")) continue;
+      // Strip trailing block characters and inline copy badges like █ or ⎘
+      const noBlocks = line.replace(/[█⎘\s]+$/, "").trim();
+      if (noBlocks === "") continue;
+      cleaned.push(noBlocks);
+    }
+    return cleaned;
+  }
+
+  /**
+   * Assistant-visible text accumulated so far (chrome-free). Used for both
+   * streaming deltas and the final extracted response.
+   */
+  visibleText() {
+    return this.cleanLines(this.collectedLines).join("\n");
+  }
+
   stop() {
     this.poll();
 
     const allText = this.collectedLines;
-    require("fs").writeFileSync("/tmp/collector_dump_final.log", allText.join("\n"));
-    
+
     let promptEndIndex;
     
     if (this.promptBoundary !== undefined) {
@@ -327,24 +382,10 @@ export class TerminalOutputCollector {
       }
     }
 
-    let responseLines = allText.slice(promptEndIndex + 1);
+    const responseLines = allText.slice(promptEndIndex + 1);
 
-    // Clean up responseLines: remove badges, banners, and empty lines
-    const cleaned = [];
-    for (const line of responseLines) {
-      const trimmed = line.trim();
-      if (trimmed === "") continue;
-      if (trimmed.includes("thinking...") || trimmed.includes("working...") || trimmed.includes("■ Esc") || trimmed.includes("0/25 Freebucks")) continue;
-      if (/^⎘\s*•.*•\s*[△▽]/.test(trimmed)) continue;
-      if (/^\s*\[\d{2}:\d{2}\s*(?:AM|PM)\]\s*$/.test(trimmed)) continue;
-      if (trimmed.includes("Freebuff will run commands") || trimmed.startsWith("Directory ")) continue;
-      if (trimmed.includes("✕ End session") || trimmed.includes("Solar Pro 4 ·")) continue;
-      if (trimmed.includes("██") || trimmed.includes("╚═╝") || trimmed.includes("╔═╝") || trimmed.includes("║")) continue;
-      // Strip trailing block characters and inline copy badges like █ or ⎘
-      const noBlocks = line.replace(/[█⎘\s]+$/, "").trim();
-      if (noBlocks === "") continue;
-      cleaned.push(noBlocks);
-    }
+    // Clean up responseLines: remove badges, banners, chrome and empty lines
+    const cleaned = this.cleanLines(responseLines);
 
     // The response lines might include the user's prompt (because Freebuff echoes it).
     // Let's strip the prompt if it appears exactly at the beginning.
@@ -356,6 +397,15 @@ export class TerminalOutputCollector {
     // Also remove the prepended space if we bypassed autocomplete
     if (promptTrimmed && responseString.startsWith(" " + promptTrimmed)) {
       responseString = responseString.slice(promptTrimmed.length + 1).trim();
+    }
+    // Freebuff renders the submitted turn above the reply as "User: <prompt>"
+    // (copy badge already stripped). Drop that echo so the assistant text is
+    // returned without the user's own prompt.
+    if (promptTrimmed) {
+      const escaped = promptTrimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      responseString = responseString
+        .replace(new RegExp(`^user\\s*:\\s*${escaped}\\s*\\n+`, "i"), "")
+        .trim();
     }
     
     // Also, if the prompt was "Reply exactly TOOLNET_FREEBUFF_OK" and the response ends up empty,

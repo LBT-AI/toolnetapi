@@ -94,6 +94,10 @@ export class FreebuffExecutor extends BaseExecutor {
         });
 
         const created = Math.floor(Date.now() / 1000);
+        // The Freebuff CLI reports no token accounting, so approximate from
+        // character counts (OpenAI clients expect a non-null usage block).
+        const promptTokens = Math.max(1, Math.ceil(prompt.length / 4));
+        const completionTokens = Math.max(1, Math.ceil(String(text || "").length / 4));
         const openAiResponse = {
           id: `chatcmpl-freebuff-${Date.now()}`,
           object: "chat.completion",
@@ -109,7 +113,11 @@ export class FreebuffExecutor extends BaseExecutor {
               finish_reason: "stop",
             },
           ],
-          usage: null,
+          usage: {
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            total_tokens: promptTokens + completionTokens,
+          },
         };
 
         return {
@@ -223,7 +231,7 @@ export class FreebuffExecutor extends BaseExecutor {
     let status = 502;
     if (msg.includes("401") || msg.includes("authentication required")) {
       status = 401;
-    } else if (msg.includes("429") || msg.includes("quota exhausted")) {
+    } else if (msg.includes("429") || msg.includes("quota exhausted") || msg.includes("Not enough Freebucks")) {
       status = 429;
     } else if (msg.includes("503") || msg.includes("unavailable")) {
       status = 503;

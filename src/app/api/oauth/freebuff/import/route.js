@@ -132,7 +132,9 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       connection,
-      user: userInfo,
+      // Whitelist non-secret profile fields — never echo the raw upstream
+      // payload back to the client.
+      user: { id: userId, email, name: userInfo?.name ?? null },
     });
   } catch (error) {
     console.error("[Freebuff Import] Error:", error);

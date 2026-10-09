@@ -11,6 +11,10 @@ import { normalizeFreebuffModelId, getTuiMatcherForModel } from "./modelCatalog.
 const STARTUP_TIMEOUT_MS = 30000;
 const READY_TIMEOUT_MS = 25000;
 const GENERATION_TIMEOUT_MS = 120000;
+// A response can finish before the parser ever reports GENERATING (the input
+// box reappears within the same frame). When we already have collected output
+// and the TUI is idle, stop waiting well before the generation timeout.
+const FAST_RESPONSE_FALLBACK_MS = 2500;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
 export class FreebuffPtyWorker {
@@ -62,10 +66,14 @@ export class FreebuffPtyWorker {
 
     this.ptyProcess.onData((data) => {
       this.lastActivityAt = Date.now();
-      this.parser.write(data, this.ptyProcess);
-      if (this.activeCollector) {
-        this.activeCollector.processChunk();
-      }
+      // xterm parses asynchronously: poll the collector only once the chunk has
+      // been applied, otherwise every read lags one chunk behind the real screen
+      // and the completion loop can never observe collected output.
+      this.parser.write(data, this.ptyProcess, () => {
+        if (this.activeCollector) {
+          this.activeCollector.processChunk();
+        }
+      });
     });
 
     this.ptyProcess.onExit(({ exitCode, signal }) => {
@@ -183,35 +191,47 @@ export class FreebuffPtyWorker {
     }
 
     this.log?.info?.("FREEBUFF_PTY", `selectModel state check: ${state}`);
-    if (state === TUI_STATES.READY) {
+
+    // Submit a slash command from READY (clears the prompt, pastes, submits).
+    const runSlashCommand = async (cmd) => {
       this.ptyProcess.write("\u001b"); // clear prompt
       await new Promise((r) => setTimeout(r, 100));
-      this.ptyProcess.write("\u001b[200~/end-session\u001b[201~");
+      this.ptyProcess.write(`\u001b[200~${cmd}\u001b[201~`);
       await new Promise((r) => setTimeout(r, 300));
-      this.ptyProcess.write("\r"); // select autocomplete if open
+      this.ptyProcess.write("\r"); // accept autocomplete if open
       await new Promise((r) => setTimeout(r, 200));
       this.ptyProcess.write("\r"); // submit
-      await new Promise((r) => setTimeout(r, 1500));
-    } else {
-      this.log?.warn?.("FREEBUFF_PTY", `Cannot trigger /end-session because state is ${state}`);
-    }
+    };
 
-    // Wait for MODEL_SELECTION state
-    const pickerMatcher = getTuiMatcherForModel(normalizedTarget);
-    let inSelection = false;
-    for (let i = 0; i < 20; i++) {
-      const s = this.parser.getState();
-      if (s === TUI_STATES.MODEL_SELECTION) {
-        inSelection = true;
-        break;
+    const waitForModelSelection = async (polls = 20) => {
+      for (let i = 0; i < polls; i++) {
+        if (this.parser.getState() === TUI_STATES.MODEL_SELECTION) return true;
+        await new Promise((r) => setTimeout(r, 300));
       }
-      await new Promise((r) => setTimeout(r, 300));
-    }
+      return false;
+    };
 
-    if (!inSelection) {
-      this.log?.warn?.("FREEBUFF_PTY", "Could not enter MODEL_SELECTION, proceeding with current model");
+    if (state === TUI_STATES.READY) {
+      // Newer CLIs open the picker via the `/model` slash command; older ones
+      // returned to the picker after `/end-session`. Try `/model` first, then
+      // fall back so the worker works across CLI versions.
+      await runSlashCommand("/model");
+      let inSelection = await waitForModelSelection(10);
+      if (!inSelection) {
+        this.log?.warn?.("FREEBUFF_PTY", "'/model' did not open the picker, falling back to '/end-session'");
+        await runSlashCommand("/end-session");
+        inSelection = await waitForModelSelection(20);
+      }
+      if (!inSelection) {
+        this.log?.warn?.("FREEBUFF_PTY", "Could not enter MODEL_SELECTION, proceeding with current model");
+        return;
+      }
+    } else {
+      this.log?.warn?.("FREEBUFF_PTY", `Cannot change model because state is ${state}`);
       return;
     }
+
+    const pickerMatcher = getTuiMatcherForModel(normalizedTarget);
 
     // Expand "See all models" if present
     const visibleText = this.parser.getLines().slice(-40).join("\n");
@@ -275,16 +295,21 @@ export class FreebuffPtyWorker {
       this.activeCollector = collector;
       collector.start(prompt);
 
-      // Clear any stuck autocomplete or text before pasting
+      // Clear any stuck autocomplete or text before pasting. PTY writes are
+      // ordered, so a short settle is enough for the TUI to drop the popup
+      // before the bracketed paste lands.
       this.ptyProcess.write("\u001b");
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 40));
 
       // BEFORE submitting, mark the EXACT length of the terminal history!
       collector.processChunk();
       collector.markPromptBoundary(false);
 
-      // Prepend a space to prevent special chars from triggering autocomplete
-      const safePrompt = " " + prompt;
+      // Guard against the TUI autocomplete popup only when the prompt begins
+      // with a trigger character (/ slash-commands, @ mentions, ! shells).
+      // A leading space would otherwise change the pasted payload verbatim.
+      const needsAutocompleteGuard = /^[/@!]/.test(prompt);
+      const safePrompt = needsAutocompleteGuard ? " " + prompt : prompt;
       
       // Submit prompt via bracketed paste to avoid newline mangling
       this.ptyProcess.write(`\u001b[200~${safePrompt}\u001b[201~`);
@@ -299,6 +324,9 @@ export class FreebuffPtyWorker {
       let hasSeenGenerating = false;
       let lastOutputTime = Date.now();
       let lastCollectedLength = 0;
+      let tookOverSession = false;
+      let dismissedSurvey = false;
+      let retriedTurn = false;
 
       // Small initial delay so we don't instantly read READY before the prompt is processed
       await new Promise((r) => setTimeout(r, 300));
@@ -308,6 +336,62 @@ export class FreebuffPtyWorker {
           this.ptyProcess.write("\u001b");
           collector.stop();
           throw new Error("Request aborted by client");
+        }
+
+        // Poll here as well as from the PTY data handler: the loop must not
+        // depend on that wiring to make progress (poll is idempotent).
+        collector.processChunk();
+
+        // Freebuff may answer the first message with a "take over" gate when a
+        // session is already active elsewhere. Accept it, then re-submit once.
+        if (this.parser.getState() === TUI_STATES.ALREADY_RUNNING && !tookOverSession) {
+          this.log?.warn?.("FREEBUFF_PTY", "Another session detected — taking over");
+          this.ptyProcess.write("\r");
+          await new Promise((r) => setTimeout(r, 1500));
+          tookOverSession = true;
+          this.ptyProcess.write(`\u001b[200~${safePrompt}\u001b[201~`);
+          await new Promise((r) => setTimeout(r, 200));
+          this.ptyProcess.write("\r");
+          continue;
+        }
+
+        const screenTail = this.parser.getLines().slice(-40).join("\n");
+
+        // The selected model can be unaffordable for this account. Freebuff
+        // renders "Not enough Freebucks for <model> … Choose another model with
+        // /model" and offers a retry that can never succeed — fail fast with a
+        // clear error instead of returning the raw TUI screen as a response.
+        if (screenTail.includes("Not enough Freebucks") || screenTail.includes("Choose another model with")) {
+          throw new Error("Freebuff quota insufficient for the selected model (Not enough Freebucks). Choose a cheaper model with /model.");
+        }
+
+        // Onboarding survey ("quick question 1/11 … esc not now") can pop over
+        // an active session and swallow the input box, so READY never returns.
+        // Dismiss it once with Esc (= "not now") and let the turn continue.
+        if (!dismissedSurvey && screenTail.includes("quick question") && screenTail.includes("esc not now")) {
+          this.log?.warn?.("FREEBUFF_PTY", "Onboarding survey overlaying session — dismissing (not now)");
+          this.ptyProcess.write("\u001b");
+          dismissedSurvey = true;
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+
+        // If the submitted turn failed, the TUI offers "Enter: retry". Retry
+        // once; if it fails again, fall through to the timeout so the streamed
+        // text is still returned via collector.stop().
+        if (screenTail.includes("Enter: retry")) {
+          if (!retriedTurn) {
+            this.log?.warn?.("FREEBUFF_PTY", "Turn failed, retrying once (Enter: retry)");
+            this.ptyProcess.write("\r");
+            retriedTurn = true;
+            await new Promise((r) => setTimeout(r, 600));
+            continue;
+          }
+          // Retry already attempted and the turn still failed — stop waiting so
+          // any streamed text can be returned instead of hanging to the timeout.
+          this.log?.warn?.("FREEBUFF_PTY", "Turn failed again (Enter: retry) — ending turn");
+          generationDone = true;
+          break;
         }
 
         const state = this.parser.getState();
@@ -322,9 +406,13 @@ export class FreebuffPtyWorker {
           lastOutputTime = Date.now();
         }
 
-        const currentText = collector.collectedLines.join("\n");
+        // Emit only assistant-visible text (chrome / echoed prompt filtered)
+        // so streamed deltas match the final extracted response.
+        const currentText = collector.visibleText();
         if (stream && onChunk && currentText.length > lastEmittedText.length) {
-          const delta = currentText.slice(lastEmittedText.length);
+          const delta = currentText.startsWith(lastEmittedText)
+            ? currentText.slice(lastEmittedText.length)
+            : currentText;
           lastEmittedText = currentText;
           onChunk(delta);
         }
@@ -336,7 +424,7 @@ export class FreebuffPtyWorker {
             await new Promise((r) => setTimeout(r, 200)); // drain
             generationDone = true;
             break;
-          } else if (elapsed > 5000 && currentLength > 0) {
+          } else if (elapsed > FAST_RESPONSE_FALLBACK_MS && currentLength > 0) {
             this.log?.warn?.("FREEBUFF_PTY", "Fast response fallback triggered (no GENERATING state seen)");
             await new Promise((r) => setTimeout(r, 200));
             collector.markPromptBoundary(true); // Fallback: try to guess boundary via text

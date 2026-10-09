@@ -5,6 +5,7 @@ import {
   updateProviderConnection,
   deleteProviderConnection,
 } from "@/models";
+import { redactProviderSecrets } from "@/lib/providerRedaction";
 
 function normalizeProxyConfig(body = {}) {
   const hasAnyProxyField =
@@ -75,6 +76,10 @@ export async function GET(request, { params }) {
     delete result.accessToken;
     delete result.refreshToken;
     delete result.idToken;
+    result.providerSpecificData = redactProviderSecrets(
+      result.provider,
+      result.providerSpecificData
+    );
 
     return NextResponse.json({ connection: result });
   } catch (error) {
@@ -163,6 +168,10 @@ export async function PUT(request, { params }) {
     delete result.accessToken;
     delete result.refreshToken;
     delete result.idToken;
+    result.providerSpecificData = redactProviderSecrets(
+      result.provider,
+      result.providerSpecificData
+    );
 
     return NextResponse.json({ connection: result });
   } catch (error) {

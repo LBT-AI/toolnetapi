@@ -996,6 +996,24 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         const valid = res.ok;
         return { valid, error: valid ? null : `Freebuff validation error (${res.status})` };
       }
+      case "kilo-gateway":
+      case "kilocode": {
+        const res = await fetchWithConnectionProxy("https://api.kilo.ai/api/gateway/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${connection.apiKey || connection.accessToken}`,
+          },
+          body: JSON.stringify({
+            model: "kilo-auto/free",
+            messages: [{ role: "user", content: "ping" }],
+            max_tokens: 1,
+            stream: false,
+          }),
+        }, effectiveProxy);
+        const valid = res.status !== 401 && res.status !== 403;
+        return { valid, error: valid ? null : "Invalid API key" };
+      }
       default:
         return { valid: false, error: "Provider test not supported" };
     }

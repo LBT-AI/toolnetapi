@@ -283,9 +283,9 @@ export default function ProviderDetailPage() {
     }
   }, []);
 
-  // Fetch free models from Kilo API for kilocode provider
+  // Fetch free models from Kilo API for kilocode and kilo-gateway providers
   useEffect(() => {
-    if (providerId !== "kilocode") return;
+    if (providerId !== "kilocode" && providerId !== "kilo-gateway" && providerId !== "kc" && providerId !== "kgw") return;
     fetch("/api/providers/kilo/free-models")
       .then((res) => res.json())
       .then((data) => { if (data.models?.length) setKiloFreeModels(data.models); })

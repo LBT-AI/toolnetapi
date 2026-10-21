@@ -1,23 +1,267 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const KILO_MODELS_URL = "https://api.kilo.ai/api/gateway/models";
+
+export const VERIFIED_KILO_STATIC_FREE_MODELS = [
+  {
+    id: "kilo-auto/free",
+    name: "Auto Free",
+    contextLength: 256000,
+    context_length: 256000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+    description: "Default free auto router model on Kilo Code.",
+  },
+  {
+    id: "reflection/beam-free",
+    name: "Reflection: Beam 1.0 (free)",
+    contextLength: 1048576,
+    context_length: 1048576,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "minimax/minimax-m3.1-flash:free",
+    name: "MiniMax: MiniMax M3.1 Flash (free)",
+    contextLength: 1000000,
+    context_length: 1000000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: false,
+  },
+  {
+    id: "nvidia/nemotron-3.5-super-vl:free",
+    name: "NVIDIA: Nemotron 3.5 Super VL (free)",
+    contextLength: 1000000,
+    context_length: 1000000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: false,
+  },
+  {
+    id: "stealth/glyph-cluster",
+    name: "Stealth: Glyph Cluster (free)",
+    contextLength: 256000,
+    context_length: 256000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "openrouter/free",
+    name: "OpenRouter Free Models Router",
+    contextLength: 200000,
+    context_length: 200000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: false,
+  },
+  {
+    id: "liquid/lfm-2.5-2.6b:free",
+    name: "LiquidAI: LFM2.5-2.6B (free)",
+    contextLength: 65536,
+    context_length: 65536,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "poolside/laguna-s-2.1:free",
+    name: "Poolside: Laguna S 2.1 (free)",
+    contextLength: 262144,
+    context_length: 262144,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "poolside/laguna-xs-2.1:free",
+    name: "Poolside: Laguna XS 2.1 (free)",
+    contextLength: 262144,
+    context_length: 262144,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "cohere/north-mini-code:free",
+    name: "Cohere: North Mini Code (free)",
+    contextLength: 256000,
+    context_length: 256000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "xingchen-agi/xing4.0-29b-a4b:free",
+    name: "XingChen: Xing4.0 29B A4B (free)",
+    contextLength: 262144,
+    context_length: 262144,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "nvidia/nemotron-3-ultra-550b-a55b:free",
+    name: "NVIDIA: Nemotron 3 Ultra (free)",
+    contextLength: 1000000,
+    context_length: 1000000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "nvidia/nemotron-3-super-120b-a12b:free",
+    name: "NVIDIA: Nemotron 3 Super (free)",
+    contextLength: 262144,
+    context_length: 262144,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "nvidia/nemotron-3.5-lightning:free",
+    name: "NVIDIA: Nemotron 3.5 Lightning (free)",
+    contextLength: 1000000,
+    context_length: 1000000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: false,
+    supportsAudio: false,
+  },
+  {
+    id: "dots-studio/dots-3-note-preview:free",
+    name: "Dots Studio: Dots3-Note Preview (free)",
+    contextLength: 512000,
+    context_length: 512000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: false,
+  },
+  {
+    id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    name: "NVIDIA: Nemotron 3 Nano Omni (free)",
+    contextLength: 256000,
+    context_length: 256000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: true,
+  },
+  {
+    id: "nvidia/nemotron-3.5-content-safety:free",
+    name: "NVIDIA: Nemotron 3.5 Content Safety (free)",
+    contextLength: 128000,
+    context_length: 128000,
+    isFree: true,
+    supportsTools: true,
+    supportsReasoning: true,
+    supportsVision: true,
+    supportsAudio: false,
+  },
+];
 
 // In-memory cache with TTL
 let cachedModels = null;
 let cacheTimestamp = 0;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
 
-export async function GET() {
+export function _resetKiloModelsCache() {
+  cachedModels = null;
+  cacheTimestamp = 0;
+}
+
+export function parseKiloFreeModels(allModels) {
+  if (!Array.isArray(allModels)) return [];
+  const seen = new Set();
+  const freeModels = [];
+
+  for (const m of allModels) {
+    if (!m?.id || seen.has(m.id)) continue;
+    const isFree =
+      m.isFree === true ||
+      (m.pricing?.prompt !== undefined &&
+        Number(m.pricing.prompt) === 0 &&
+        Number(m.pricing.completion) === 0);
+
+    if (isFree) {
+      seen.add(m.id);
+      const modalities = m.architecture?.input_modalities || [];
+      const supportedParams = m.supported_parameters || [];
+      const contextLen = m.context_length || 0;
+
+      freeModels.push({
+        id: m.id,
+        name: m.name || m.id,
+        isFree: true,
+        contextLength: contextLen,
+        context_length: contextLen,
+        description: m.description || "",
+        supportsTools: Boolean(supportedParams.includes("tools")),
+        supportsReasoning: Boolean(
+          supportedParams.includes("reasoning") ||
+          supportedParams.includes("include_reasoning")
+        ),
+        supportsVision: Boolean(modalities.includes("image")),
+        supportsAudio: Boolean(modalities.includes("audio")),
+      });
+    }
+  }
+
+  return freeModels;
+}
+
+export async function GET(request) {
+  const url = request ? new URL(request.url) : null;
+  const forceRefresh = url?.searchParams?.get("refresh") === "true" || url?.searchParams?.get("force") === "true";
   const now = Date.now();
 
-  // Return cached result if still valid
-  if (cachedModels && now - cacheTimestamp < CACHE_TTL_MS) {
-    return NextResponse.json({ models: cachedModels, cached: true });
+  // Return cached result if still valid and force refresh was not requested
+  if (!forceRefresh && cachedModels && now - cacheTimestamp < CACHE_TTL_MS) {
+    return NextResponse.json({
+      models: cachedModels,
+      cached: true,
+      count: cachedModels.length,
+    });
   }
 
   try {
     const res = await fetch(KILO_MODELS_URL, {
-      headers: { "Accept": "application/json" },
+      headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
     });
 
@@ -26,30 +270,54 @@ export async function GET() {
     }
 
     const json = await res.json();
-    const allModels = json.data || [];
+    const rawList = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+    const parsed = parseKiloFreeModels(rawList);
 
-    const freeModels = allModels
-      .filter((m) => m.isFree === true)
-      .map((m) => ({
-        id: m.id,
-        name: m.name,
-        isFree: true,
-        context_length: m.context_length || 0,
-      }));
-
-    cachedModels = freeModels;
-    cacheTimestamp = now;
-
-    return NextResponse.json({ models: freeModels, cached: false });
-  } catch (error) {
-    // Return cached data if available, even if expired
-    if (cachedModels) {
-      return NextResponse.json({ models: cachedModels, cached: true, warning: error.message });
+    if (parsed.length > 0) {
+      cachedModels = parsed;
+      cacheTimestamp = now;
+      return NextResponse.json({
+        models: parsed,
+        cached: false,
+        count: parsed.length,
+      });
     }
 
-    return NextResponse.json(
-      { models: [], error: `Failed to fetch Kilo models: ${error.message}` },
-      { status: 502 }
-    );
+    // If upstream returned empty array or 0 free models unexpectedly, fall back to last-known-good cache or static
+    if (cachedModels?.length) {
+      return NextResponse.json({
+        models: cachedModels,
+        cached: true,
+        warning: "Upstream returned no free models; using last-known-good cache",
+        count: cachedModels.length,
+      });
+    }
+
+    return NextResponse.json({
+      models: VERIFIED_KILO_STATIC_FREE_MODELS,
+      cached: false,
+      fallback: true,
+      warning: "Upstream returned no free models; using verified static list",
+      count: VERIFIED_KILO_STATIC_FREE_MODELS.length,
+    });
+  } catch (error) {
+    // Return cached data if available, even if expired (last-known-good)
+    if (cachedModels?.length) {
+      return NextResponse.json({
+        models: cachedModels,
+        cached: true,
+        warning: error.message,
+        count: cachedModels.length,
+      });
+    }
+
+    // Initial startup network issue fallback to verified static catalog
+    return NextResponse.json({
+      models: VERIFIED_KILO_STATIC_FREE_MODELS,
+      cached: false,
+      fallback: true,
+      warning: error.message,
+      count: VERIFIED_KILO_STATIC_FREE_MODELS.length,
+    });
   }
 }

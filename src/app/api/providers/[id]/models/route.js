@@ -277,6 +277,46 @@ const PROVIDER_MODELS_CONFIG = {
   chutes: createOpenAIModelsConfig("https://llm.chutes.ai/v1/models"),
   nvidia: createOpenAIModelsConfig("https://integrate.api.nvidia.com/v1/models"),
   sambanova: createOpenAIModelsConfig("https://api.sambanova.ai/v1/models"),
+  "kilo-gateway": {
+    url: "https://api.kilo.ai/api/gateway/models",
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    parseResponse: (data) => {
+      const list = Array.isArray(data) ? data : (data?.data || data?.models || []);
+      return list.map((m) => ({
+        id: m.id,
+        name: m.name || m.id,
+        isFree: m.isFree === true || (m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0),
+        contextLength: m.context_length || 0,
+        description: m.description,
+        supportsTools: Boolean(m.supported_parameters?.includes("tools")),
+        supportsReasoning: Boolean(m.supported_parameters?.includes("reasoning") || m.supported_parameters?.includes("include_reasoning")),
+        supportsVision: Boolean(m.architecture?.input_modalities?.includes("image")),
+      }));
+    },
+  },
+  kilocode: {
+    url: "https://api.kilo.ai/api/gateway/models",
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    authHeader: "Authorization",
+    authPrefix: "Bearer ",
+    parseResponse: (data) => {
+      const list = Array.isArray(data) ? data : (data?.data || data?.models || []);
+      return list.map((m) => ({
+        id: m.id,
+        name: m.name || m.id,
+        isFree: m.isFree === true || (m.pricing && Number(m.pricing.prompt) === 0 && Number(m.pricing.completion) === 0),
+        contextLength: m.context_length || 0,
+        description: m.description,
+        supportsTools: Boolean(m.supported_parameters?.includes("tools")),
+        supportsReasoning: Boolean(m.supported_parameters?.includes("reasoning") || m.supported_parameters?.includes("include_reasoning")),
+        supportsVision: Boolean(m.architecture?.input_modalities?.includes("image")),
+      }));
+    },
+  },
   bobide: {
     customResolver: async () => ({
       models: getStaticProviderModels("bobide"),

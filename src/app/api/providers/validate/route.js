@@ -434,6 +434,30 @@ export async function POST(request) {
           break;
         }
 
+        case "kilo-gateway":
+        case "kilocode": {
+          const res = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "kilo-auto/free",
+              messages: [{ role: "user", content: "ping" }],
+              max_tokens: 1,
+              stream: false,
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+          isValid = res.status !== 401 && res.status !== 403;
+          if (!isValid) {
+            const errJson = await res.json().catch(() => null);
+            error = errJson?.error?.message || "Invalid API key";
+          }
+          break;
+        }
+
         case "genspark": {
           const res = await fetch("https://www.genspark.ai/api/tool_cli/me", {
             headers: {

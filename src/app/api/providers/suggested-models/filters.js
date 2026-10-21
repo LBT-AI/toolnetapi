@@ -5,15 +5,42 @@ const EXCLUDED_OPENCODE_MODELS = new Set(["deepseek-v4-flash-free"]);
 
 export const FILTERS = {
   "openrouter-free": (models) =>
-    models
+    (Array.isArray(models) ? models : [])
       .filter(
         (m) =>
-          m.pricing?.prompt === "0" &&
-          m.pricing?.completion === "0" &&
+          (m.isFree === true ||
+            (m.pricing?.prompt !== undefined &&
+              Number(m.pricing.prompt) === 0 &&
+              Number(m.pricing.completion) === 0)) &&
           m.context_length >= 200000
       )
       .map((m) => ({ id: m.id, name: m.name, contextLength: m.context_length }))
       .sort((a, b) => b.contextLength - a.contextLength),
+
+  "kilo-gateway": (models) =>
+    (Array.isArray(models) ? models : [])
+      .filter(
+        (m) =>
+          m.isFree === true ||
+          (m.pricing?.prompt !== undefined &&
+            Number(m.pricing.prompt) === 0 &&
+            Number(m.pricing.completion) === 0)
+      )
+      .map((m) => ({
+        id: m.id,
+        name: m.name || m.id,
+        contextLength: m.context_length || 0,
+        isFree: true,
+        supportsTools: Boolean(m.supported_parameters?.includes("tools")),
+        supportsReasoning: Boolean(
+          m.supported_parameters?.includes("reasoning") ||
+          m.supported_parameters?.includes("include_reasoning")
+        ),
+        supportsVision: Boolean(m.architecture?.input_modalities?.includes("image")),
+      }))
+      .sort((a, b) => b.contextLength - a.contextLength),
+
+  "kilo-free": (models) => FILTERS["kilo-gateway"](models),
 
   "opencode-free": (models) =>
     models

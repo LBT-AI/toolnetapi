@@ -20,7 +20,7 @@ import { PROVIDER_MODELS as MODELS } from "open-sse/config/providerModels.js";
 const PASSTHROUGH_PROVIDERS = new Set(
   Object.entries(AI_PROVIDERS)
     .filter(([, p]) => p.passthroughModels)
-    .map(([key]) => key)
+    .flatMap(([key, p]) => [key, p.alias].filter(Boolean))
 );
 
 // Wrap isValidModel with passthrough providers

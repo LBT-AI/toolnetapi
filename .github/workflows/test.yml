@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
-        npm --prefix tests install
+        (cd tests && npm ci)
       
     - name: Run unit tests
       run: npm test

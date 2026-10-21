@@ -996,23 +996,25 @@ async function testApiKeyConnection(connection, effectiveProxy = null) {
         const valid = res.ok;
         return { valid, error: valid ? null : `Freebuff validation error (${res.status})` };
       }
-      case "kilo-gateway":
-      case "kilocode": {
-        const res = await fetchWithConnectionProxy("https://api.kilo.ai/api/gateway/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${connection.apiKey || connection.accessToken}`,
-          },
-          body: JSON.stringify({
-            model: "kilo-auto/free",
-            messages: [{ role: "user", content: "ping" }],
-            max_tokens: 1,
-            stream: false,
-          }),
-        }, effectiveProxy);
-        const valid = res.status !== 401 && res.status !== 403;
-        return { valid, error: valid ? null : "Invalid API key" };
+      case "kilo-gateway": {
+        try {
+          const res = await fetchWithConnectionProxy("https://api.kilo.ai/api/profile", {
+            headers: { Authorization: `Bearer ${connection.apiKey}` },
+          }, effectiveProxy);
+          if (res.status === 200) {
+            const data = await res.json().catch(() => null);
+            if (data?.user || data?.success !== false) {
+              return { valid: true, error: null };
+            }
+          }
+          if (res.status === 401) return { valid: false, error: "Invalid API key (401 Unauthorized)" };
+          if (res.status === 403) return { valid: false, error: "API key forbidden (403 Forbidden)" };
+          if (res.status === 429) return { valid: false, error: "Rate limit exceeded (429)" };
+          if (res.status >= 500) return { valid: false, error: `Kilo upstream error (${res.status})` };
+          return { valid: false, error: "UNVERIFIED: Key could not be verified by Kilo upstream" };
+        } catch (err) {
+          return { valid: false, error: `Connection error: ${err.message}` };
+        }
       }
       default:
         return { valid: false, error: "Provider test not supported" };

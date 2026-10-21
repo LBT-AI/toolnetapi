@@ -195,14 +195,17 @@ export const VERIFIED_KILO_STATIC_FREE_MODELS = [
   },
 ];
 
-// In-memory cache with TTL
+// NOTE: In-memory cache is maintained per Node.js process instance and resets
+// upon process restart. It is not shared across multiple cluster/serverless instances.
 let cachedModels = null;
 let cacheTimestamp = 0;
+let inFlightPromise = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 60 minutes
 
 export function _resetKiloModelsCache() {
   cachedModels = null;
   cacheTimestamp = 0;
+  inFlightPromise = null;
 }
 
 export function parseKiloFreeModels(allModels) {
@@ -245,6 +248,21 @@ export function parseKiloFreeModels(allModels) {
   return freeModels;
 }
 
+async function fetchKiloModelsUpstream() {
+  const res = await fetch(KILO_MODELS_URL, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Kilo API returned ${res.status}`);
+  }
+
+  const json = await res.json();
+  const rawList = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+  return parseKiloFreeModels(rawList);
+}
+
 export async function GET(request) {
   const url = request ? new URL(request.url) : null;
   const forceRefresh = url?.searchParams?.get("refresh") === "true" || url?.searchParams?.get("force") === "true";
@@ -253,71 +271,72 @@ export async function GET(request) {
   // Return cached result if still valid and force refresh was not requested
   if (!forceRefresh && cachedModels && now - cacheTimestamp < CACHE_TTL_MS) {
     return NextResponse.json({
+      source: "cached",
       models: cachedModels,
       cached: true,
+      stale: false,
+      fallback: false,
+      cachedAt: new Date(cacheTimestamp).toISOString(),
+      ttlMs: CACHE_TTL_MS,
       count: cachedModels.length,
     });
   }
 
+  // Deduplicate concurrent in-flight requests
+  let fetchError = null;
+  let parsed = null;
+
   try {
-    const res = await fetch(KILO_MODELS_URL, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Kilo API returned ${res.status}`);
+    if (!inFlightPromise) {
+      inFlightPromise = fetchKiloModelsUpstream();
     }
+    parsed = await inFlightPromise;
+  } catch (err) {
+    fetchError = err;
+  } finally {
+    inFlightPromise = null;
+  }
 
-    const json = await res.json();
-    const rawList = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-    const parsed = parseKiloFreeModels(rawList);
-
-    if (parsed.length > 0) {
-      cachedModels = parsed;
-      cacheTimestamp = now;
-      return NextResponse.json({
-        models: parsed,
-        cached: false,
-        count: parsed.length,
-      });
-    }
-
-    // If upstream returned empty array or 0 free models unexpectedly, fall back to last-known-good cache or static
-    if (cachedModels?.length) {
-      return NextResponse.json({
-        models: cachedModels,
-        cached: true,
-        warning: "Upstream returned no free models; using last-known-good cache",
-        count: cachedModels.length,
-      });
-    }
-
+  // Success path: upstream returned live models
+  if (parsed && parsed.length > 0) {
+    cachedModels = parsed;
+    cacheTimestamp = now;
     return NextResponse.json({
-      models: VERIFIED_KILO_STATIC_FREE_MODELS,
+      source: "live",
+      models: parsed,
       cached: false,
-      fallback: true,
-      warning: "Upstream returned no free models; using verified static list",
-      count: VERIFIED_KILO_STATIC_FREE_MODELS.length,
-    });
-  } catch (error) {
-    // Return cached data if available, even if expired (last-known-good)
-    if (cachedModels?.length) {
-      return NextResponse.json({
-        models: cachedModels,
-        cached: true,
-        warning: error.message,
-        count: cachedModels.length,
-      });
-    }
-
-    // Initial startup network issue fallback to verified static catalog
-    return NextResponse.json({
-      models: VERIFIED_KILO_STATIC_FREE_MODELS,
-      cached: false,
-      fallback: true,
-      warning: error.message,
-      count: VERIFIED_KILO_STATIC_FREE_MODELS.length,
+      stale: false,
+      fallback: false,
+      cachedAt: new Date(now).toISOString(),
+      ttlMs: CACHE_TTL_MS,
+      count: parsed.length,
     });
   }
+
+  // Fallback 1: Return last-known-good cache if available (even if expired)
+  if (cachedModels?.length) {
+    const isStale = now - cacheTimestamp >= CACHE_TTL_MS;
+    return NextResponse.json({
+      source: isStale ? "stale" : "cached",
+      models: cachedModels,
+      cached: true,
+      stale: isStale,
+      fallback: false,
+      cachedAt: new Date(cacheTimestamp).toISOString(),
+      ttlMs: CACHE_TTL_MS,
+      warning: fetchError?.message || "Upstream returned no free models; using last-known-good cache",
+      count: cachedModels.length,
+    });
+  }
+
+  // Fallback 2: Initial startup fallback to verified static catalog
+  return NextResponse.json({
+    source: "static_fallback",
+    models: VERIFIED_KILO_STATIC_FREE_MODELS,
+    cached: false,
+    stale: false,
+    fallback: true,
+    warning: fetchError?.message || "Upstream returned no free models; using verified static list",
+    count: VERIFIED_KILO_STATIC_FREE_MODELS.length,
+  });
 }

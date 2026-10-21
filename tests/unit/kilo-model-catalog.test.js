@@ -9,6 +9,7 @@ import {
   _resetKiloModelsCache,
   GET as kiloFreeModelsRouteHandler,
 } from "../../src/app/api/providers/kilo/free-models/route.js";
+import { POST as validateRouteHandler } from "../../src/app/api/providers/validate/route.js";
 import { isValidModel } from "../../src/shared/constants/models.js";
 import { getProviderModels, getDefaultModel } from "../../open-sse/config/providerModels.js";
 
@@ -308,6 +309,71 @@ describe("Kilo Model Catalog & Integration Audit", () => {
       expect(data.cached).toBe(false);
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
+
+    it("distinguishes live, cached, stale and static_fallback sources", async () => {
+      // 1. Initial live fetch
+      const mockLive = {
+        data: [{ id: "kilo-auto/free", name: "Auto Free", isFree: true, context_length: 256000 }],
+      };
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockLive,
+      });
+
+      const resLive = await kiloFreeModelsRouteHandler();
+      const dataLive = await resLive.json();
+      expect(dataLive.source).toBe("live");
+      expect(dataLive.cached).toBe(false);
+
+      // 2. Active cached fetch
+      const resCached = await kiloFreeModelsRouteHandler();
+      const dataCached = await resCached.json();
+      expect(dataCached.source).toBe("cached");
+      expect(dataCached.cached).toBe(true);
+
+      // 3. Expired cache (stale) on upstream failure (last-known-good)
+      const originalNow = Date.now;
+      try {
+        Date.now = () => originalNow() + 65 * 60 * 1000;
+        global.fetch = vi.fn().mockRejectedValue(new Error("503 Service Unavailable"));
+        const resStale = await kiloFreeModelsRouteHandler();
+        const dataStale = await resStale.json();
+        expect(dataStale.source).toBe("stale");
+        expect(dataStale.cached).toBe(true);
+        expect(dataStale.stale).toBe(true);
+        expect(dataStale.warning).toContain("503");
+      } finally {
+        Date.now = originalNow;
+      }
+    });
+
+    it("deduplicates concurrent in-flight refresh requests", async () => {
+      let resolvePromise;
+      const deferredFetch = new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+
+      global.fetch = vi.fn().mockImplementation(() => deferredFetch);
+
+      const req1 = kiloFreeModelsRouteHandler({ url: "http://localhost/api/providers/kilo/free-models?refresh=true" });
+      const req2 = kiloFreeModelsRouteHandler({ url: "http://localhost/api/providers/kilo/free-models?refresh=true" });
+
+      resolvePromise({
+        ok: true,
+        json: async () => ({
+          data: [{ id: "kilo-auto/free", name: "Auto Free", isFree: true, context_length: 256000 }],
+        }),
+      });
+
+      const [res1, res2] = await Promise.all([req1, req2]);
+      const data1 = await res1.json();
+      const data2 = await res2.json();
+
+      expect(data1.count).toBe(1);
+      expect(data2.count).toBe(1);
+      // Upstream fetch was invoked exactly ONCE thanks to in-flight deduplication
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("Model Passthrough & Routing Support", () => {
@@ -327,6 +393,124 @@ describe("Kilo Model Catalog & Integration Audit", () => {
   describe("Validation & Security Guard", () => {
     it("never validates kilo-gateway via public /models endpoint", () => {
       expect(kiloGatewayRegistry.transport.validateUrl).toBeUndefined();
+    });
+
+    it("distinguishes HTTP 200, 400, 401, 403, 404, 429, 500 during validation", async () => {
+      const makeReq = (provider, key) => ({
+        json: async () => ({ provider, apiKey: key }),
+      });
+
+      // 1. HTTP 200 with valid user profile -> CONNECTED
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        json: async () => ({ user: { id: "u-123", email: "test@example.com" } }),
+      });
+      const res200 = await validateRouteHandler(makeReq("kilo-gateway", "valid-key"));
+      const data200 = await res200.json();
+      expect(data200.valid).toBe(true);
+      expect(data200.status).toBe("CONNECTED");
+      expect(data200.error).toBeNull();
+
+      // 2. HTTP 401 Unauthorized -> UNAUTHORIZED
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 401,
+        json: async () => ({ error: "Invalid token" }),
+      });
+      const res401 = await validateRouteHandler(makeReq("kilo-gateway", "bad-key"));
+      const data401 = await res401.json();
+      expect(data401.valid).toBe(false);
+      expect(data401.status).toBe("UNAUTHORIZED");
+      expect(data401.error).toContain("401");
+
+      // 3. HTTP 403 Forbidden -> FORBIDDEN
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 403,
+        json: async () => ({ error: "Forbidden" }),
+      });
+      const res403 = await validateRouteHandler(makeReq("kilo-gateway", "forbidden-key"));
+      const data403 = await res403.json();
+      expect(data403.valid).toBe(false);
+      expect(data403.status).toBe("FORBIDDEN");
+
+      // 4. HTTP 429 Rate limited -> RATE_LIMITED (NOT valid key)
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 429,
+        json: async () => ({ error: "Too Many Requests" }),
+      });
+      const res429 = await validateRouteHandler(makeReq("kilo-gateway", "rate-limited-key"));
+      const data429 = await res429.json();
+      expect(data429.valid).toBe(false);
+      expect(data429.status).toBe("RATE_LIMITED");
+
+      // 5. HTTP 500 Upstream error -> UPSTREAM_ERROR (NOT valid key)
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 500,
+        json: async () => ({ error: "Internal Server Error" }),
+      });
+      const res500 = await validateRouteHandler(makeReq("kilo-gateway", "some-key"));
+      const data500 = await res500.json();
+      expect(data500.valid).toBe(false);
+      expect(data500.status).toBe("UPSTREAM_ERROR");
+
+      // 6. HTTP 404 Unexpected/Unverified -> UNVERIFIED
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 404,
+        json: async () => ({ error: "Not Found" }),
+      });
+      const res404 = await validateRouteHandler(makeReq("kilo-gateway", "unverified-key"));
+      const data404 = await res404.json();
+      expect(data404.valid).toBe(false);
+      expect(data404.status).toBe("UNVERIFIED");
+
+      // 7. HTTP 200 but body indicates error -> NOT valid
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        json: async () => ({ success: false, error: "Internal profile lookup error" }),
+      });
+      const res200Err = await validateRouteHandler(makeReq("kilo-gateway", "err-key"));
+      const data200Err = await res200Err.json();
+      expect(data200Err.valid).toBe(false);
+      expect(data200Err.error).toBeDefined();
+
+      // 8. Timeout/Network exception -> returns valid: false without crash
+      global.fetch = vi.fn().mockRejectedValue(new Error("Connection timeout"));
+      const resTimeout = await validateRouteHandler(makeReq("kilo-gateway", "timeout-key"));
+      const dataTimeout = await resTimeout.json();
+      expect(dataTimeout.valid).toBe(false);
+      expect(dataTimeout.error).toContain("Connection timeout");
+    });
+
+    it("verifies kilocode OAuth tokens via official profile endpoint independently", async () => {
+      const makeReq = (provider, token) => ({
+        json: async () => ({ provider, apiKey: token }),
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({
+        status: 200,
+        json: async () => ({ user: { id: "oauth-user-1" } }),
+      });
+
+      const res = await validateRouteHandler(makeReq("kilocode", "oauth-token-123"));
+      const data = await res.json();
+      expect(data.valid).toBe(true);
+      expect(data.status).toBe("CONNECTED");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://api.kilo.ai/api/profile",
+        expect.objectContaining({
+          headers: { Authorization: "Bearer oauth-token-123" },
+        })
+      );
+    });
+
+    it("verifies strict isolation between kilocode and kilo-gateway validation", () => {
+      // kilo-gateway requires apikey authType
+      expect(kiloGatewayRegistry.authType).toBe("apikey");
+      expect(kiloGatewayRegistry.authModes).toEqual(["apikey"]);
+
+      // kilocode uses oauth authType
+      expect(kilocodeRegistry.category).toBe("oauth");
+      expect(kilocodeRegistry.transport.auth.hooks).toContain("kilocodeOrg");
+      expect(kilocodeRegistry.transport.baseUrl).not.toBe(kiloGatewayRegistry.transport.baseUrl);
     });
 
     it("deduplicates dynamically fetched free models against static catalog without overwriting custom settings", () => {

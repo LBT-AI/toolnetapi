@@ -97,6 +97,7 @@ export async function POST(request) {
 
     let isValid = false;
     let error = null;
+    let status = null;
 
     // Validate with each provider
     try {
@@ -434,26 +435,71 @@ export async function POST(request) {
           break;
         }
 
-        case "kilo-gateway":
         case "kilocode": {
-          const res = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: "kilo-auto/free",
-              messages: [{ role: "user", content: "ping" }],
-              max_tokens: 1,
-              stream: false,
-            }),
-            signal: AbortSignal.timeout(10000),
+          const token = apiKey || body.accessToken;
+          const res = await fetch("https://api.kilo.ai/api/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(8000),
           });
-          isValid = res.status !== 401 && res.status !== 403;
-          if (!isValid) {
-            const errJson = await res.json().catch(() => null);
-            error = errJson?.error?.message || "Invalid API key";
+          if (res.status === 200) {
+            const data = await res.json().catch(() => null);
+            isValid = Boolean(data?.user || data?.success !== false);
+            status = isValid ? "CONNECTED" : "INVALID_TOKEN";
+            if (!isValid) error = "Profile response invalid";
+          } else if (res.status === 401) {
+            isValid = false;
+            status = "UNAUTHORIZED";
+            error = "Invalid or expired OAuth token (401)";
+          } else if (res.status === 403) {
+            isValid = false;
+            status = "FORBIDDEN";
+            error = "Access forbidden (403)";
+          } else if (res.status === 429) {
+            isValid = false;
+            status = "RATE_LIMITED";
+            error = "Rate limit exceeded (429)";
+          } else if (res.status >= 500) {
+            isValid = false;
+            status = "UPSTREAM_ERROR";
+            error = `Kilo upstream error (${res.status})`;
+          } else {
+            isValid = false;
+            status = "UNVERIFIED";
+            error = `UNVERIFIED: Unexpected status (${res.status})`;
+          }
+          break;
+        }
+
+        case "kilo-gateway": {
+          const res = await fetch("https://api.kilo.ai/api/profile", {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (res.status === 200) {
+            const data = await res.json().catch(() => null);
+            isValid = Boolean(data?.user || data?.success !== false);
+            status = isValid ? "CONNECTED" : "INVALID_KEY";
+            if (!isValid) error = "Profile response invalid";
+          } else if (res.status === 401) {
+            isValid = false;
+            status = "UNAUTHORIZED";
+            error = "Invalid API key (401)";
+          } else if (res.status === 403) {
+            isValid = false;
+            status = "FORBIDDEN";
+            error = "API key forbidden (403)";
+          } else if (res.status === 429) {
+            isValid = false;
+            status = "RATE_LIMITED";
+            error = "Rate limit exceeded (429)";
+          } else if (res.status >= 500) {
+            isValid = false;
+            status = "UPSTREAM_ERROR";
+            error = `Kilo upstream error (${res.status})`;
+          } else {
+            isValid = false;
+            status = "UNVERIFIED";
+            error = "UNVERIFIED: Key could not be verified by Kilo upstream";
           }
           break;
         }
@@ -704,6 +750,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       valid: isValid,
+      status: status || (isValid ? "CONNECTED" : "INVALID_KEY"),
       error: isValid ? null : (error || "Invalid API key"),
     });
   } catch (error) {

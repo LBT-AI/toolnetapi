@@ -25,6 +25,16 @@ function isAuthExpiredMessage(usage) {
   return AUTH_EXPIRED_PATTERNS.some((p) => msg.includes(p));
 }
 
+export function sanitizeErrorMessage(errorStr) {
+  if (typeof errorStr !== "string" || !errorStr.trim()) return null;
+  return errorStr
+    .replace(/bearer\s+[a-zA-Z0-9_\-.]+/gi, "Bearer [REDACTED]")
+    .replace(/sk-[a-zA-Z0-9_\-]{16,}/gi, "sk-[REDACTED]")
+    .replace(/gh[pousr]_[a-zA-Z0-9_]{16,}/gi, "[REDACTED]")
+    .replace(/(api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token)[:=]\s*([a-zA-Z0-9_\-.]+)/gi, "$1=[REDACTED]")
+    .replace(/[a-zA-Z0-9_\-.]{32,}/g, (m) => `${m.slice(0, 4)}***${m.slice(-4)}`);
+}
+
 /**
  * Refresh credentials using executor and update database
  * @param {boolean} force - Skip needsRefresh check and always attempt refresh
@@ -246,8 +256,8 @@ async function fetchConnectionUsage(connectionId, force) {
         quotaStatus: "STALE",
         source: "stale",
         lastSuccessfulFetch: staleCached.cachedAt,
-        message: usage?.message || "Quota API temporarily unavailable",
-        reason: usage?.reason || "Quota API temporarily unavailable",
+        message: sanitizeErrorMessage(usage?.message) || "Quota API temporarily unavailable",
+        reason: sanitizeErrorMessage(usage?.reason) || "Quota API temporarily unavailable",
         capability,
       },
     };
@@ -258,6 +268,8 @@ async function fetchConnectionUsage(connectionId, force) {
     status: 200,
     body: {
       ...usage,
+      message: sanitizeErrorMessage(usage?.message) || usage?.message,
+      reason: sanitizeErrorMessage(usage?.reason) || usage?.reason,
       status: usage.status || "UNAVAILABLE",
       quotaStatus: usage.quotaStatus || "UNAVAILABLE",
       source: "live",
@@ -290,12 +302,13 @@ export async function GET(request, { params }) {
       inFlightRequests.delete(connectionId);
     }
   } catch (error) {
+    const safeError = sanitizeErrorMessage(error?.message) || "Failed to fetch usage";
     return Response.json(
       {
         status: "FETCH_ERROR",
         quotaStatus: "FETCH_ERROR",
-        error: error.message || "Failed to fetch usage",
-        message: error.message || "Failed to fetch usage",
+        error: safeError,
+        message: safeError,
         quotas: {},
       },
       { status: 500 }

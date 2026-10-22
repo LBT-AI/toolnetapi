@@ -169,6 +169,7 @@ export function sanitizeErrorMessage(errorStr) {
     .replace(/bearer\s+[a-zA-Z0-9_\-.]+/gi, "Bearer [REDACTED]")
     .replace(/sk-[a-zA-Z0-9_\-]{16,}/gi, "sk-[REDACTED]")
     .replace(/gh[pousr]_[a-zA-Z0-9_]{16,}/gi, "[REDACTED]")
+    .replace(/(api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token)[:=]\s*([a-zA-Z0-9_\-.]+)/gi, "$1=[REDACTED]")
     .replace(/[a-zA-Z0-9_\-.]{32,}/g, (m) => `${m.slice(0, 4)}***${m.slice(-4)}`);
 }
 

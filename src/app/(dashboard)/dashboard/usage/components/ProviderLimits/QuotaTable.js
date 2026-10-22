@@ -81,6 +81,16 @@ function sortQuotas(quotas, sortMode) {
   return quotas;
 }
 
+function formatQuotaValue(value, unit) {
+  if (value === undefined || value === null) return "0";
+  if (unit === "USD" || unit === "$") {
+    const num = Number(value);
+    return Number.isFinite(num) ? `$${num.toFixed(2)}` : `$${value}`;
+  }
+  const formatted = typeof value === "number" ? value.toLocaleString() : String(value);
+  return unit ? `${formatted} ${unit}` : formatted;
+}
+
 /**
  * Quota Table Component - Table-based display for quota data
  */
@@ -188,7 +198,7 @@ export default function QuotaTable({
 
                       <div className={`flex items-center justify-between ${compact ? "text-[10px]" : "text-xs"}`}>
                         <span className="text-text-muted">
-                          {quota.used.toLocaleString()} / {quota.total > 0 ? quota.total.toLocaleString() : "∞"}
+                          {formatQuotaValue(quota.used, quota.unit)} / {quota.total > 0 ? formatQuotaValue(quota.total, quota.unit) : "∞"}
                         </span>
                         <span className={`font-medium ${colors.text}`}>
                           {quota.remaining}%

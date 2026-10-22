@@ -17,7 +17,9 @@ import { getGrokCliUsage } from "./usage/grok-cli.js";
 import { getOpenCodeGoUsage } from "./usage/opencode-go.js";
 import { getGroqUsage } from "./usage/groq.js";
 import { getZedUsage } from "./usage/zed.js";
+import { getOpenRouterUsage } from "./usage/openrouter.js";
 import { resolveQoderCredentials } from "./qoderModels.js";
+import { getProviderCapability } from "./usageCapabilities.js";
 import {
   getQwenUsage,
   getIflowUsage,
@@ -42,6 +44,7 @@ const USAGE_HANDLERS = {
   kiro: (c) => getKiroUsage(c.accessToken, c.providerSpecificData, c.proxyOptions),
   kimi: (c) => getKimiUsage(c.accessToken, c.apiKey, c.proxyOptions, c.providerSpecificData),
   deepseek: (c) => getDeepseekUsage(c.apiKey, c.proxyOptions),
+  openrouter: (c) => getOpenRouterUsage(c.apiKey, c.proxyOptions),
   qoder: async (c) => {
     // PAT (pt-...) connections must be exchanged to a job token before the
     // quota endpoint accepts them.

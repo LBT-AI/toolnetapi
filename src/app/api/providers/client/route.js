@@ -7,7 +7,7 @@ const SAFE_FIELDS = [
   "id", "provider", "authType", "name", "email", "displayName",
   "priority", "globalPriority", "isActive", "defaultModel",
   "testStatus", "lastError", "lastErrorAt", "errorCode",
-  "expiresAt", "lastUsedAt", "consecutiveUseCount",
+  "expiresAt", "tokenExpiresAt", "lastRefreshAt", "lastUsedAt", "consecutiveUseCount",
   "createdAt", "updatedAt",
 ];
 
@@ -43,12 +43,6 @@ function sanitize(c) {
   return safe;
 }
 
-function isUsageEligible(connection) {
-  return USAGE_SUPPORTED_PROVIDERS.includes(connection.provider) && (
-    connection.authType === "oauth" || USAGE_APIKEY_PROVIDERS.includes(connection.provider)
-  );
-}
-
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -61,8 +55,10 @@ function sortConnections(connections, sort) {
     return list.sort((a, b) => {
       const orderA = USAGE_SUPPORTED_PROVIDERS.indexOf(a.provider);
       const orderB = USAGE_SUPPORTED_PROVIDERS.indexOf(b.provider);
-      if (orderA !== orderB) return orderA - orderB;
-      return a.provider.localeCompare(b.provider);
+      if (orderA !== -1 && orderB !== -1 && orderA !== orderB) return orderA - orderB;
+      if (orderA !== -1 && orderB === -1) return -1;
+      if (orderA === -1 && orderB !== -1) return 1;
+      return (a.provider || "").localeCompare(b.provider || "");
     });
   }
 
@@ -84,18 +80,43 @@ export async function GET(request) {
     const sort = searchParams.get("sort") || "priority";
     const page = parsePositiveInt(searchParams.get("page"), 1);
     const pageSize = Math.min(parsePositiveInt(searchParams.get("pageSize"), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+    const legacyOnly = searchParams.get("legacyOnly") === "true";
 
     const allConnections = await getProviderConnections();
-    const eligibleConnections = allConnections.filter(isUsageEligible);
-    const providerOptions = Array.from(new Set(eligibleConnections.map((conn) => conn.provider))).sort();
+
+    // In Quota Tracker V2, all connections from database are eligible,
+    // unless legacyOnly explicitly requested
+    const eligibleConnections = legacyOnly
+      ? allConnections.filter((c) => (
+          USAGE_SUPPORTED_PROVIDERS.includes(c.provider) &&
+          (c.authType === "oauth" || USAGE_APIKEY_PROVIDERS.includes(c.provider))
+        ))
+      : allConnections;
+
+    const providerOptions = Array.from(new Set(allConnections.map((conn) => conn.provider))).sort();
 
     const providerFilteredConnections = eligibleConnections.filter((conn) => (
       provider === "all" || conn.provider === provider
     ));
 
     const accountFilteredConnections = providerFilteredConnections.filter((conn) => {
-      if (accountStatus === "active") return conn.isActive ?? true;
-      if (accountStatus === "inactive") return !(conn.isActive ?? true);
+      const isEnabled = conn.isActive ?? true;
+      if (accountStatus === "active" || accountStatus === "enabled") return isEnabled;
+      if (accountStatus === "inactive" || accountStatus === "disabled") return !isEnabled;
+      if (accountStatus === "working") {
+        return isEnabled && (conn.testStatus === "active" || conn.testStatus === "success");
+      }
+      if (accountStatus === "auth-error") {
+        const errorText = String(conn.lastError || "").toLowerCase();
+        return (
+          conn.testStatus === "error" ||
+          conn.testStatus === "expired" ||
+          errorText.includes("401") ||
+          errorText.includes("unauthorized") ||
+          errorText.includes("expired") ||
+          errorText.includes("token expired")
+        );
+      }
       return true;
     });
 

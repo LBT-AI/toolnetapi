@@ -5,6 +5,7 @@ export const QUOTA_CACHE_KEY = "quotaCacheData";
 export const REFRESH_INTERVAL_MS = 60000;
 // Claude usage/quota endpoint rate-limits; poll it less often than other providers
 export const CLAUDE_REFRESH_INTERVAL_MS = 180000;
+export const KIRO_REFRESH_INTERVAL_MS = 120000;
 export const DEPLETED_QUOTA_THRESHOLD = 5;
 export const AUTO_REFRESH_STORAGE_KEY = "quotaAutoRefresh";
 export const CONNECTIONS_PAGE_SIZE = 20;
@@ -12,13 +13,20 @@ export const ACCOUNT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 export const ACCOUNT_PAGE_SIZE_MAX = 500;
 export const ACCOUNT_FILTER_OPTIONS = [
   { value: "all", label: "All accounts" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Turned off" },
+  { value: "active", label: "Enabled" },
+  { value: "inactive", label: "Disabled" },
+  { value: "working", label: "Working" },
+  { value: "auth-error", label: "Auth Error" },
+  { value: "quota-available", label: "Quota Available" },
+  { value: "quota-unavailable", label: "Quota Unavailable" },
+  { value: "quota-unsupported", label: "Quota Unsupported" },
 ];
 export const QUOTA_SORT_OPTIONS = [
-  { value: "default", label: "Default quota order" },
-  { value: "remaining-asc", label: "% quota: low to high" },
-  { value: "remaining-desc", label: "% quota: high to low" },
+  { value: "default", label: "Default order" },
+  { value: "remaining-asc", label: "% Quota: Low to High" },
+  { value: "remaining-desc", label: "% Quota: High to Low" },
+  { value: "reset-earliest", label: "Reset: Earliest First" },
+  { value: "error-first", label: "Status: Errors First" },
 ];
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -29,11 +37,195 @@ export function getConnectionLabel(connection) {
     || null;
 }
 
+export function getConnectionStatus(connection) {
+  return (connection.isActive ?? true) ? "ENABLED" : "DISABLED";
+}
+
+export function getAuthenticationStatus(connection, quotaEntry) {
+  if (connection.isActive === false) {
+    return "DISABLED";
+  }
+
+  if (quotaEntry?.authStatus) {
+    return quotaEntry.authStatus;
+  }
+
+  const expiryTime = connection.expiresAt || connection.tokenExpiresAt;
+  if (expiryTime) {
+    const expiresMs = new Date(expiryTime).getTime();
+    if (Number.isFinite(expiresMs) && expiresMs < Date.now()) {
+      return "EXPIRED";
+    }
+  }
+
+  const errorText = String(connection.lastError || "").toLowerCase();
+  const errorCode = connection.errorCode;
+
+  if (
+    errorCode === 401 ||
+    errorText.includes("401") ||
+    errorText.includes("unauthorized") ||
+    errorText.includes("token expired") ||
+    errorText.includes("invalid_grant") ||
+    errorText.includes("re-authorize")
+  ) {
+    return "INVALID";
+  }
+
+  if (connection.testStatus === "active" || connection.testStatus === "success") {
+    return "VALID";
+  }
+
+  if (quotaEntry?.quotas?.length > 0 && quotaEntry?.source === "live") {
+    return "VALID";
+  }
+
+  return "UNKNOWN";
+}
+
+export function getInferenceStatus(connection, quotaEntry) {
+  const errorText = String(connection.lastError || "").toLowerCase();
+  const errorCode = connection.errorCode;
+
+  if (
+    errorCode === 429 ||
+    errorText.includes("429") ||
+    errorText.includes("rate limit") ||
+    errorText.includes("too many requests") ||
+    quotaEntry?.quotaStatus === "RATE_LIMITED"
+  ) {
+    return "RATE_LIMITED";
+  }
+
+  if (
+    connection.testStatus === "error" ||
+    connection.testStatus === "unavailable" ||
+    (errorCode && errorCode >= 500) ||
+    errorText.includes("500") ||
+    errorText.includes("502") ||
+    errorText.includes("503") ||
+    errorText.includes("internal server error")
+  ) {
+    return "FAILED";
+  }
+
+  if (connection.testStatus === "active" || connection.testStatus === "success") {
+    return "WORKING";
+  }
+
+  if (connection.consecutiveUseCount > 0 && !connection.lastError) {
+    return "WORKING";
+  }
+
+  if (connection.testStatus === "unknown" || !connection.testStatus) {
+    return "NOT_TESTED";
+  }
+
+  return "UNKNOWN";
+}
+
+export function getQuotaStatus(connection, quotaEntry, isLoading = false, error = null) {
+  if (isLoading) {
+    return "LOADING";
+  }
+
+  if (error) {
+    if (quotaEntry?.source === "stale") {
+      return "STALE";
+    }
+    return "FETCH_ERROR";
+  }
+
+  if (quotaEntry?.quotaStatus) {
+    return quotaEntry.quotaStatus;
+  }
+
+  if (quotaEntry?.status === "UNSUPPORTED") {
+    return "UNSUPPORTED";
+  }
+
+  if (quotaEntry?.source === "stale") {
+    return "STALE";
+  }
+
+  if (quotaEntry?.quotas?.length > 0) {
+    return "AVAILABLE";
+  }
+
+  if (quotaEntry?.message) {
+    const msg = quotaEntry.message.toLowerCase();
+    if (msg.includes("not supported") || msg.includes("not implemented")) {
+      return "UNSUPPORTED";
+    }
+    return "UNAVAILABLE";
+  }
+
+  return "UNAVAILABLE";
+}
+
+export function sanitizeErrorMessage(errorStr) {
+  if (typeof errorStr !== "string" || !errorStr.trim()) return null;
+  return errorStr
+    .replace(/bearer\s+[a-zA-Z0-9_\-.]+/gi, "Bearer [REDACTED]")
+    .replace(/sk-[a-zA-Z0-9_\-]{16,}/gi, "sk-[REDACTED]")
+    .replace(/gh[pousr]_[a-zA-Z0-9_]{16,}/gi, "[REDACTED]")
+    .replace(/[a-zA-Z0-9_\-.]{32,}/g, (m) => `${m.slice(0, 4)}***${m.slice(-4)}`);
+}
+
+export function formatTimeAgo(dateValue) {
+  if (!dateValue) return null;
+  const timeMs = new Date(dateValue).getTime();
+  if (!Number.isFinite(timeMs)) return null;
+
+  const diffSec = Math.max(0, Math.floor((Date.now() - timeMs) / 1000));
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 export function getConnectionQuotaRemaining(connection, quotaData) {
   const quota = quotaData[connection.id]?.quotas?.[0];
   if (!quota) return Number.POSITIVE_INFINITY;
+  if (typeof quota.remainingPercentage === "number") return quota.remainingPercentage;
   if (typeof quota.remaining === "number") return quota.remaining;
+  if (quota.total && typeof quota.used === "number") {
+    return calculatePercentage(quota.used, quota.total);
+  }
   return Number.POSITIVE_INFINITY;
+}
+
+export function filterConnectionsByAccountStatus(connections, quotaData, filter) {
+  if (!filter || filter === "all") return connections;
+
+  return connections.filter((conn) => {
+    const isEnabled = conn.isActive !== false;
+    const quota = quotaData[conn.id];
+
+    if (filter === "active" || filter === "enabled") return isEnabled;
+    if (filter === "inactive" || filter === "disabled") return !isEnabled;
+    if (filter === "working") {
+      return getInferenceStatus(conn, quota) === "WORKING";
+    }
+    if (filter === "auth-error") {
+      const auth = getAuthenticationStatus(conn, quota);
+      return auth === "EXPIRED" || auth === "INVALID";
+    }
+    if (filter === "quota-available") {
+      return getQuotaStatus(conn, quota) === "AVAILABLE";
+    }
+    if (filter === "quota-unavailable") {
+      const qStatus = getQuotaStatus(conn, quota);
+      return qStatus === "UNAVAILABLE" || qStatus === "FETCH_ERROR";
+    }
+    if (filter === "quota-unsupported") {
+      return getQuotaStatus(conn, quota) === "UNSUPPORTED";
+    }
+    return true;
+  });
 }
 
 export function sortVisibleConnections(
@@ -43,7 +235,7 @@ export function sortVisibleConnections(
   providerFilter,
   quotaSortMode,
 ) {
-  if (providerFilter === "codex" && quotaSortMode !== "default") {
+  if (quotaSortMode === "remaining-asc" || quotaSortMode === "remaining-desc") {
     return [...connections].sort((a, b) => {
       const remainingA = getConnectionQuotaRemaining(a, quotaData);
       const remainingB = getConnectionQuotaRemaining(b, quotaData);
@@ -58,29 +250,54 @@ export function sortVisibleConnections(
     });
   }
 
-  if (!expiringFirst) return connections;
+  if (quotaSortMode === "reset-earliest" || expiringFirst) {
+    const getEarliestResetTime = (connection) => {
+      const resetTimes = (quotaData[connection.id]?.quotas || [])
+        .map((quota) =>
+          quota.resetAt
+            ? new Date(quota.resetAt).getTime()
+            : Number.POSITIVE_INFINITY,
+        )
+        .filter((time) => Number.isFinite(time));
+      return resetTimes.length > 0
+        ? Math.min(...resetTimes)
+        : Number.POSITIVE_INFINITY;
+    };
 
-  const getEarliestResetTime = (connection) => {
-    const resetTimes = (quotaData[connection.id]?.quotas || [])
-      .map((quota) =>
-        quota.resetAt
-          ? new Date(quota.resetAt).getTime()
-          : Number.POSITIVE_INFINITY,
-      )
-      .filter((time) => Number.isFinite(time));
-    return resetTimes.length > 0
-      ? Math.min(...resetTimes)
-      : Number.POSITIVE_INFINITY;
-  };
+    return [...connections].sort((a, b) => {
+      const expiryDiff = getEarliestResetTime(a) - getEarliestResetTime(b);
+      if (expiryDiff !== 0) return expiryDiff;
+      return (
+        (a.provider || "").localeCompare(b.provider || "") ||
+        (getConnectionLabel(a) || "").localeCompare(getConnectionLabel(b) || "")
+      );
+    });
+  }
 
-  return [...connections].sort((a, b) => {
-    const expiryDiff = getEarliestResetTime(a) - getEarliestResetTime(b);
-    if (expiryDiff !== 0) return expiryDiff;
-    return (
-      (a.provider || "").localeCompare(b.provider || "") ||
-      (getConnectionLabel(a) || "").localeCompare(getConnectionLabel(b) || "")
-    );
-  });
+  if (quotaSortMode === "error-first") {
+    const hasError = (c) => {
+      const q = quotaData[c.id];
+      const auth = getAuthenticationStatus(c, q);
+      const inf = getInferenceStatus(c, q);
+      const quotaSt = getQuotaStatus(c, q);
+      return (
+        auth === "EXPIRED" ||
+        auth === "INVALID" ||
+        inf === "FAILED" ||
+        quotaSt === "FETCH_ERROR" ||
+        quotaSt === "UNAVAILABLE"
+      );
+    };
+
+    return [...connections].sort((a, b) => {
+      const errA = hasError(a) ? 0 : 1;
+      const errB = hasError(b) ? 0 : 1;
+      if (errA !== errB) return errA - errB;
+      return (a.provider || "").localeCompare(b.provider || "");
+    });
+  }
+
+  return connections;
 }
 
 export function buildLoadingState(connections) {
@@ -578,6 +795,22 @@ export function parseQuotaData(provider, data) {
         }
         break;
 
+      case "openrouter":
+        if (data.quotas) {
+          Object.entries(data.quotas).forEach(([name, quota]) => {
+            normalizedQuotas.push({
+              name: quota.name || name,
+              used: quota.used || 0,
+              total: quota.total || 0,
+              remaining: quota.remaining,
+              remainingPercentage: quota.remainingPercentage,
+              unit: quota.unit || "USD",
+              resetAt: quota.resetAt || null,
+            });
+          });
+        }
+        break;
+
       case "grok-cli":
         // Grok Build credits (on-demand window + prepaid balance).
         // Do NOT forward absolute `remaining` — getRemainingPercentage treats
@@ -600,9 +833,12 @@ export function parseQuotaData(provider, data) {
         if (data.quotas) {
           Object.entries(data.quotas).forEach(([name, quota]) => {
             normalizedQuotas.push({
-              name,
+              name: quota.name || name,
               used: quota.used || 0,
               total: quota.total || 0,
+              remaining: quota.remaining,
+              remainingPercentage: quota.remainingPercentage,
+              unit: quota.unit,
               resetAt: quota.resetAt || null,
             });
           });

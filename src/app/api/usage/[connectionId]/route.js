@@ -5,7 +5,17 @@ import { getProviderConnectionById, updateProviderConnection } from "@/lib/local
 import { getUsageForProvider } from "open-sse/services/usage.js";
 import { getExecutor } from "open-sse/executors/index.js";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
-import { USAGE_APIKEY_PROVIDERS } from "@/shared/constants/providers";
+import {
+  getProviderCapability,
+  hasQuotaSupport,
+  getProviderRefreshInterval,
+} from "open-sse/services/usageCapabilities.js";
+
+// Server-side in-flight promise deduplication map: connectionId -> Promise<Response>
+const inFlightRequests = new Map();
+
+// Server-side quota cache: connectionId -> { data, timestamp, cachedAt }
+const serverQuotaCache = new Map();
 
 // Detect auth-expired messages returned by usage providers instead of throwing
 const AUTH_EXPIRED_PATTERNS = ["expired", "authentication", "unauthorized", "401", "re-authorize"];
@@ -23,7 +33,6 @@ function isAuthExpiredMessage(usage) {
 export async function refreshAndUpdateCredentials(connection, force = false, proxyOptions = null) {
   const executor = getExecutor(connection.provider);
 
-  // Build credentials object from connection
   const credentials = {
     accessToken: connection.accessToken,
     refreshToken: connection.refreshToken,
@@ -32,54 +41,40 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
     lastRefreshAt: connection.lastRefreshAt,
     connectionId: connection.id,
     providerSpecificData: connection.providerSpecificData,
-    // For GitHub
     copilotToken: connection.providerSpecificData?.copilotToken,
     copilotTokenExpiresAt: connection.providerSpecificData?.copilotTokenExpiresAt,
   };
 
-  // Check if refresh is needed (skip when force=true)
   const needsRefresh = force || executor.needsRefresh(credentials);
-
   if (!needsRefresh) {
     return { connection, refreshed: false };
   }
 
-  // Use executor's refreshCredentials method (with optional proxy)
   const refreshResult = await executor.refreshCredentials(credentials, console, proxyOptions);
-
   if (!refreshResult) {
-    // Refresh failed but we still have an accessToken — try with existing token
     if (connection.accessToken) {
       return { connection, refreshed: false };
     }
     throw new Error("Failed to refresh credentials. Please re-authorize the connection.");
   }
 
-  // Build update object
   const now = new Date().toISOString();
   const updateData = {
     updatedAt: now,
   };
 
-  // Update accessToken if present
   if (refreshResult.accessToken) {
     updateData.accessToken = refreshResult.accessToken;
   }
-
-  // Update refreshToken if present
   if (refreshResult.refreshToken) {
     updateData.refreshToken = refreshResult.refreshToken;
   }
-
   if (refreshResult.idToken) {
     updateData.idToken = refreshResult.idToken;
   }
-
   if (refreshResult.lastRefreshAt) {
     updateData.lastRefreshAt = refreshResult.lastRefreshAt;
   }
-
-  // Update token expiry
   if (refreshResult.expiresIn) {
     updateData.expiresAt = new Date(Date.now() + refreshResult.expiresIn * 1000).toISOString();
     updateData.expiresIn = refreshResult.expiresIn;
@@ -87,7 +82,6 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
     updateData.expiresAt = refreshResult.expiresAt;
   }
 
-  // Handle provider-specific data (copilotToken for GitHub, etc.)
   const providerSpecificUpdates = {
     ...(refreshResult.providerSpecificData || {}),
     ...(refreshResult.copilotToken ? { copilotToken: refreshResult.copilotToken } : {}),
@@ -100,10 +94,8 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
     };
   }
 
-  // Update database
   await updateProviderConnection(connection.id, updateData);
 
-  // Return updated connection
   const updatedConnection = {
     ...connection,
     ...updateData,
@@ -117,75 +109,196 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
 }
 
 /**
+ * Core usage fetch implementation
+ */
+async function fetchConnectionUsage(connectionId, force) {
+  const connection = await getProviderConnectionById(connectionId);
+  if (!connection) {
+    return {
+      status: 404,
+      body: { error: "Connection not found" },
+    };
+  }
+
+  const provider = connection.provider;
+  const capability = getProviderCapability(provider);
+  const cacheTtlMs = Math.min(getProviderRefreshInterval(provider), 60000);
+
+  // Return server cache if fresh and not forced
+  if (!force) {
+    const cached = serverQuotaCache.get(connectionId);
+    if (cached && Date.now() - cached.timestamp < cacheTtlMs) {
+      return {
+        status: 200,
+        body: {
+          ...cached.data,
+          source: "cached",
+          cachedAt: cached.cachedAt,
+          capability,
+        },
+      };
+    }
+  }
+
+  // If provider has no quota/balance/rate-limit capability, return UNSUPPORTED
+  if (!hasQuotaSupport(provider)) {
+    return {
+      status: 200,
+      body: {
+        status: "UNSUPPORTED",
+        quotaStatus: "UNSUPPORTED",
+        authStatus: connection.isActive === false ? "UNKNOWN" : (connection.testStatus === "active" ? "VALID" : "UNKNOWN"),
+        source: "unsupported",
+        message: `Quota API not supported for ${provider}`,
+        capability,
+        quotas: {},
+      },
+    };
+  }
+
+  const isOAuth = connection.authType === "oauth";
+
+  // Resolve connection proxy config
+  const proxyConfig = await resolveConnectionProxyConfig(connection.providerSpecificData);
+  const proxyOptions = {
+    connectionProxyEnabled: proxyConfig.connectionProxyEnabled === true,
+    connectionProxyUrl: proxyConfig.connectionProxyUrl || "",
+    connectionNoProxy: proxyConfig.connectionNoProxy || "",
+    vercelRelayUrl: proxyConfig.vercelRelayUrl || "",
+    strictProxy: false,
+  };
+
+  let activeConnection = connection;
+
+  // Refresh credentials only for OAuth connections with refresh token
+  if (isOAuth && connection.refreshToken) {
+    try {
+      const result = await refreshAndUpdateCredentials(activeConnection, false, proxyOptions);
+      activeConnection = result.connection;
+    } catch (refreshError) {
+      return {
+        status: 401,
+        body: {
+          status: "UNAVAILABLE",
+          quotaStatus: "UNAVAILABLE",
+          authStatus: "EXPIRED",
+          source: "live",
+          error: `Credential refresh failed: ${refreshError.message}`,
+          message: `Credential refresh failed: ${refreshError.message}`,
+          capability,
+          quotas: {},
+        },
+      };
+    }
+  }
+
+  // Fetch usage from provider
+  let usage = await getUsageForProvider(activeConnection, proxyOptions, { force });
+
+  // If provider returned an auth-expired message instead of throwing, force refresh once
+  if (isOAuth && isAuthExpiredMessage(usage) && activeConnection.refreshToken) {
+    try {
+      const retryResult = await refreshAndUpdateCredentials(activeConnection, true, proxyOptions);
+      activeConnection = retryResult.connection;
+      usage = await getUsageForProvider(activeConnection, proxyOptions, { force });
+    } catch {
+      // Ignore retry failure, usage will reflect original auth error
+    }
+  }
+
+  const hasValidQuotas = usage && typeof usage === "object" && (
+    (usage.quotas && Object.keys(usage.quotas).length > 0) ||
+    usage.status === "AVAILABLE" ||
+    usage.quotaStatus === "AVAILABLE"
+  );
+
+  const nowIso = new Date().toISOString();
+
+  // If fetch succeeded, update cache
+  if (hasValidQuotas) {
+    const successData = {
+      ...usage,
+      status: usage.status || "AVAILABLE",
+      quotaStatus: usage.quotaStatus || "AVAILABLE",
+      source: "live",
+      lastSuccessfulFetch: nowIso,
+      capability,
+    };
+    serverQuotaCache.set(connectionId, {
+      data: successData,
+      timestamp: Date.now(),
+      cachedAt: nowIso,
+    });
+    return {
+      status: 200,
+      body: successData,
+    };
+  }
+
+  // If fetch failed but we have a last-known-good cached quota, return STALE
+  const staleCached = serverQuotaCache.get(connectionId);
+  if (staleCached?.data?.quotas && Object.keys(staleCached.data.quotas).length > 0) {
+    return {
+      status: 200,
+      body: {
+        ...staleCached.data,
+        status: "STALE",
+        quotaStatus: "STALE",
+        source: "stale",
+        lastSuccessfulFetch: staleCached.cachedAt,
+        message: usage?.message || "Quota API temporarily unavailable",
+        reason: usage?.reason || "Quota API temporarily unavailable",
+        capability,
+      },
+    };
+  }
+
+  // Return live error/unavailable result
+  return {
+    status: 200,
+    body: {
+      ...usage,
+      status: usage.status || "UNAVAILABLE",
+      quotaStatus: usage.quotaStatus || "UNAVAILABLE",
+      source: "live",
+      capability,
+    },
+  };
+}
+
+/**
  * GET /api/usage/[connectionId] - Get usage data for a specific connection
  */
 export async function GET(request, { params }) {
-  let connection;
   try {
     const { connectionId } = await params;
     const force = new URL(request.url).searchParams.get("force") === "1";
 
-    // Get connection from database
-    connection = await getProviderConnectionById(connectionId);
-    if (!connection) {
-      return Response.json({ error: "Connection not found" }, { status: 404 });
+    // Request deduplication: return existing in-flight promise if one is already running
+    if (inFlightRequests.has(connectionId)) {
+      const existing = await inFlightRequests.get(connectionId);
+      return Response.json(existing.body, { status: existing.status });
     }
 
-    // Allow OAuth connections, plus whitelisted apikey providers (glm/minimax/kiro/...)
-    // Kiro's headless api-key flow persists authType "api_key" (underscore) while
-    // generic apikey providers persist "apikey" — accept both spellings here.
-    const isOAuth = connection.authType === "oauth";
-    const isApikeyAuth =
-      connection.authType === "apikey" || connection.authType === "api_key";
-    const isApikeyEligible =
-      isApikeyAuth && USAGE_APIKEY_PROVIDERS.includes(connection.provider);
+    const fetchPromise = fetchConnectionUsage(connectionId, force);
+    inFlightRequests.set(connectionId, fetchPromise);
 
-    if (!isOAuth && !isApikeyEligible) {
-      return Response.json({ message: "Usage not available for this connection" });
+    try {
+      const result = await fetchPromise;
+      return Response.json(result.body, { status: result.status });
+    } finally {
+      inFlightRequests.delete(connectionId);
     }
-
-    // Resolve connection proxy config; force strictProxy=false so quota/refresh fall back to direct on failure
-    const proxyConfig = await resolveConnectionProxyConfig(connection.providerSpecificData);
-    const proxyOptions = {
-      connectionProxyEnabled: proxyConfig.connectionProxyEnabled === true,
-      connectionProxyUrl: proxyConfig.connectionProxyUrl || "",
-      connectionNoProxy: proxyConfig.connectionNoProxy || "",
-      vercelRelayUrl: proxyConfig.vercelRelayUrl || "",
-      strictProxy: false,
-    };
-
-    // Refresh credentials only for OAuth connections (apikey has no token refresh)
-    if (isOAuth) {
-      try {
-        const result = await refreshAndUpdateCredentials(connection, false, proxyOptions);
-        connection = result.connection;
-      } catch (refreshError) {
-        console.error("[Usage API] Credential refresh failed:", refreshError);
-        return Response.json({
-          error: `Credential refresh failed: ${refreshError.message}`
-        }, { status: 401 });
-      }
-    }
-
-    // Fetch usage from provider API
-    let usage = await getUsageForProvider(connection, proxyOptions, { force });
-
-    // If provider returned an auth-expired message instead of throwing,
-    // force-refresh token and retry once (OAuth only)
-    if (isOAuth && isAuthExpiredMessage(usage) && connection.refreshToken) {
-      try {
-        const retryResult = await refreshAndUpdateCredentials(connection, true, proxyOptions);
-        connection = retryResult.connection;
-        usage = await getUsageForProvider(connection, proxyOptions, { force });
-      } catch (retryError) {
-        console.warn(`[Usage] ${connection.provider}: force refresh failed: ${retryError.message}`);
-      }
-    }
-
-    return Response.json(usage);
   } catch (error) {
-    const provider = connection?.provider ?? "unknown";
-    console.warn(`[Usage] ${provider}: ${error.message}`);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json(
+      {
+        status: "FETCH_ERROR",
+        quotaStatus: "FETCH_ERROR",
+        error: error.message || "Failed to fetch usage",
+        message: error.message || "Failed to fetch usage",
+        quotas: {},
+      },
+      { status: 500 }
+    );
   }
 }

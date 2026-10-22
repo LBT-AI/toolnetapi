@@ -108,7 +108,38 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
         return;
       }
 
-      await new Promise((r) => setTimeout(r, interval * 1000));
+      // Sleep for interval seconds or wake up immediately if user returns to this tab (iPhone/mobile tab switch)
+      await new Promise((resolve) => {
+        let timer = null;
+        let cleaned = false;
+        const cleanup = () => {
+          if (cleaned) return;
+          cleaned = true;
+          if (timer) clearTimeout(timer);
+          if (typeof document !== "undefined") {
+            document.removeEventListener("visibilitychange", onVis);
+          }
+          if (typeof window !== "undefined") {
+            window.removeEventListener("focus", wake);
+          }
+        };
+        const wake = () => {
+          cleanup();
+          resolve();
+        };
+        const onVis = () => {
+          if (document.visibilityState === "visible") {
+            wake();
+          }
+        };
+        timer = setTimeout(wake, interval * 1000);
+        if (typeof document !== "undefined") {
+          document.addEventListener("visibilitychange", onVis);
+        }
+        if (typeof window !== "undefined") {
+          window.addEventListener("focus", wake);
+        }
+      });
 
       // Check again after sleep
       if (pollingAbortRef.current) {
@@ -140,6 +171,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
           }
           setStep("success");
           setPolling(false);
+          onSuccess?.();
           return;
         }
 
@@ -723,7 +755,7 @@ export default function OAuthModal({ isOpen, provider, providerInfo, onSuccess, 
             </h3>
             <p className="text-sm text-text-muted mb-4">
               {duplicateInfo
-                ? `Account already connected: ${duplicateInfo.displayName || duplicateInfo.email || "This account"} is already configured as ${providerInfo?.name || "Kiro"} connection #${duplicateInfo.priority || ""}. Credentials were refreshed instead of creating a duplicate.`
+                ? `Account already connected: ${duplicateInfo.displayName || duplicateInfo.email || "This account"} is already configured as ${providerInfo?.name || provider || "Provider"} connection #${duplicateInfo.priority || ""}. Credentials were refreshed instead of creating a duplicate.`
                 : `Your ${providerInfo?.name || "account"} has been connected.`}
             </p>
             <Button onClick={handleClose} fullWidth>

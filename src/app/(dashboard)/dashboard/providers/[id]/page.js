@@ -485,6 +485,24 @@ export default function ProviderDetailPage() {
     fetchDisabledModels();
   }, [fetchConnections, fetchAliases, fetchCustomModels, fetchDisabledModels]);
 
+  // Auto-refresh connections when window refocuses or tab becomes visible (iPhone/Safari/desktop OAuth return)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchConnections();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchConnections();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchConnections]);
+
   // Cursor, Kiro, and Codex model availability is account-specific and changes frequently.
   // Load the active account's live catalog for the dashboard; the static
   // registry remains the fallback while the request is pending or unavailable.
@@ -863,6 +881,7 @@ export default function ProviderDetailPage() {
           body: JSON.stringify({ priority: index2 }),
         }),
       ]);
+      await fetchConnections();
     } catch (error) {
       console.log("Error swapping priority:", error);
       await fetchConnections();
@@ -968,7 +987,7 @@ export default function ProviderDetailPage() {
   const isSelected = (connectionId) => selectedConnectionIds.includes(connectionId);
 
   const connectionsList = (
-    <div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03] max-h-[500px] overflow-y-auto pr-1">
+    <div className="flex min-w-0 flex-col divide-y divide-black/[0.03] dark:divide-white/[0.03]">
       {connections
         .map((conn, index) => (
           <div key={conn.id} className="flex min-w-0 items-stretch">
@@ -1814,29 +1833,41 @@ export default function ProviderDetailPage() {
         <KiroOAuthWrapper
           isOpen={showOAuthModal}
           providerInfo={providerInfo}
-          onSuccess={handleOAuthSuccess}
-          onClose={() => setShowOAuthModal(false)}
+          onSuccess={fetchConnections}
+          onClose={() => {
+            fetchConnections();
+            setShowOAuthModal(false);
+          }}
         />
       ) : providerId === "cursor" ? (
         <CursorAuthModal
           isOpen={showOAuthModal}
-          onSuccess={handleOAuthSuccess}
-          onClose={() => setShowOAuthModal(false)}
+          onSuccess={fetchConnections}
+          onClose={() => {
+            fetchConnections();
+            setShowOAuthModal(false);
+          }}
         />
       ) : providerId === "gitlab" ? (
         <GitLabAuthModal
           isOpen={showOAuthModal}
           providerInfo={providerInfo}
-          onSuccess={handleOAuthSuccess}
-          onClose={() => setShowOAuthModal(false)}
+          onSuccess={fetchConnections}
+          onClose={() => {
+            fetchConnections();
+            setShowOAuthModal(false);
+          }}
         />
       ) : (
         <OAuthModal
           isOpen={showOAuthModal}
           provider={providerId}
           providerInfo={providerInfo}
-          onSuccess={handleOAuthSuccess}
-          onClose={() => setShowOAuthModal(false)}
+          onSuccess={fetchConnections}
+          onClose={() => {
+            fetchConnections();
+            setShowOAuthModal(false);
+          }}
         />
       )}
       {providerId === "iflow" && (

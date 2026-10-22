@@ -4,38 +4,24 @@ import { getExecutor } from "../../open-sse/executors/index.js";
 
 const CHAT_COMPLETIONS_MODELS = [
   "big-pickle",
-  "x-preview-f-free",
-  "hy3-free",
-  "nemotron-3-ultra-free",
+  "beam-free",
+  "flint-40b-free",
+  "mimo-v2.6-flash-free",
+  "nemotron-3.5-super-vl-free",
   "nemotron-3.5-lightning-free",
-  "mimo-v2.5-free",
+  "jev-1.13-free",
+  "deepseek-v4.1-flash-free",
+  "glm-5.3-flash-free",
 ];
 
-const RESPONSES_MODELS = ["muse-spark-1.2-contributor-free"];
-
 describe("OpenCode Free model catalog", () => {
-  it("contains all 7 expected models", () => {
+  it("contains all 9 expected models", () => {
     const ids = (PROVIDER_MODELS.opencode || []).map((m) => m.id);
-    expect(ids).toEqual([
-      "big-pickle",
-      "x-preview-f-free",
-      "hy3-free",
-      "nemotron-3-ultra-free",
-      "nemotron-3.5-lightning-free",
-      "laguna-s-2.1-free",
-      "mimo-v2.5-free",
-      "muse-spark-1.2-contributor-free",
-    ]);
+    expect(ids).toEqual(CHAT_COMPLETIONS_MODELS);
   });
 });
 
 describe("OpenCode Free per-model targetFormat", () => {
-  it("muse-spark-1.2-contributor-free targets openai-responses", () => {
-    for (const m of RESPONSES_MODELS) {
-      expect(getModelTargetFormat("opencode", m)).toBe("openai-responses");
-    }
-  });
-
   it("chat completion models have no targetFormat (defaults to openai)", () => {
     for (const m of CHAT_COMPLETIONS_MODELS) {
       expect(getModelTargetFormat("opencode", m)).toBeNull();
@@ -46,20 +32,10 @@ describe("OpenCode Free per-model targetFormat", () => {
 describe("OpenCode Free executor URL routing", () => {
   const executor = getExecutor("opencode");
 
-  it("routes muse-spark-1.2-contributor-free to /zen/v1/responses", () => {
-    for (const m of RESPONSES_MODELS) {
-      expect(executor.buildUrl(m)).toBe("https://opencode.ai/zen/v1/responses");
-    }
-  });
-
   it("routes chat completion models to /zen/v1/chat/completions", () => {
     for (const m of CHAT_COMPLETIONS_MODELS) {
       expect(executor.buildUrl(m)).toBe("https://opencode.ai/zen/v1/chat/completions");
     }
-  });
-
-  it("laguna-s-2.1-free also routes to chat completions (not in either special list)", () => {
-    expect(executor.buildUrl("laguna-s-2.1-free")).toBe("https://opencode.ai/zen/v1/chat/completions");
   });
 });
 

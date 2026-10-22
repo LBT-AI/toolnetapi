@@ -54,14 +54,34 @@ export const FILTERS = {
 
   "kilo-free": (models) => FILTERS["kilo-gateway"](models),
 
-  "opencode-free": (models) =>
-    models
+  "opencode-free": (models) => {
+    const metaMap = {
+      "big-pickle": { name: "Big Pickle (MiMo v2.5)", contextLength: 200000, supportsTools: true, supportsReasoning: true },
+      "beam-free": { name: "Beam Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true },
+      "flint-40b-free": { name: "Flint 40B Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
+      "mimo-v2.6-flash-free": { name: "MiMo-V2.6-Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "nemotron-3.5-super-vl-free": { name: "Nemotron 3.5 Super VL Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "nemotron-3.5-lightning-free": { name: "Nemotron 3.5 Lightning Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
+      "jev-1.13-free": { name: "JEV 1.13 Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
+      "deepseek-v4.1-flash-free": { name: "DeepSeek V4.1 Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "glm-5.3-flash-free": { name: "GLM-5.3-Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
+    };
+    return (Array.isArray(models) ? models : [])
       .filter(
         (m) =>
           !EXCLUDED_OPENCODE_MODELS.has(m.id) &&
           (m.id?.endsWith("-free") || KNOWN_FREE_OPENCODE_MODELS.includes(m.id))
       )
-      .map((m) => ({ id: m.id, name: m.id })),
+      .map((m) => ({
+        id: m.id,
+        name: metaMap[m.id]?.name || m.name || m.id,
+        contextLength: metaMap[m.id]?.contextLength || m.context_length || 0,
+        isFree: true,
+        supportsTools: metaMap[m.id]?.supportsTools ?? true,
+        supportsReasoning: metaMap[m.id]?.supportsReasoning ?? true,
+        supportsVision: metaMap[m.id]?.supportsVision ?? false,
+      }));
+  },
 
   // models.dev returns a large catalog; keep only mimo models
   "mimo-free": (models) =>

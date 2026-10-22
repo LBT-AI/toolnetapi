@@ -1293,7 +1293,7 @@ export default function ProviderDetailPage() {
             if (notAdded.length === 0) return null;
             return (
               <div className="w-full mt-2">
-                <p className="text-xs text-text-muted mb-2">Suggested free models (≥200k context):</p>
+                <p className="text-xs text-text-muted mb-2">Suggested free models:</p>
                 <div className="flex flex-wrap gap-2">
                   {notAdded.map((m) => (
                     <button

@@ -197,6 +197,41 @@ Respond ONLY with the JSON object, no other text.`);
   return result;
 }
 
+// OpenAI tool responses can include image_url parts. Claude tool_result accepts
+// Claude image blocks, not OpenAI image_url blocks (upstream #5125).
+// Leave plain string results untouched for backwards compatibility.
+function convertToolResultContent(content) {
+  if (!Array.isArray(content)) return content;
+
+  const parts = [];
+  for (const part of content) {
+    if (part?.type === OPENAI_BLOCK.TEXT && part.text) {
+      parts.push({ type: CLAUDE_BLOCK.TEXT, text: part.text });
+      continue;
+    }
+    if (part?.type === OPENAI_BLOCK.IMAGE_URL) {
+      const url = part.image_url?.url;
+      if (typeof url !== "string") continue;
+      const parsed = parseDataUri(url);
+      if (parsed) {
+        parts.push({
+          type: CLAUDE_BLOCK.IMAGE,
+          source: { type: "base64", media_type: parsed.mimeType, data: parsed.base64 }
+        });
+        continue;
+      }
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        parts.push({ type: CLAUDE_BLOCK.IMAGE, source: { type: "url", url } });
+      }
+      continue;
+    }
+    if (part?.type === CLAUDE_BLOCK.IMAGE && part.source) {
+      parts.push({ type: CLAUDE_BLOCK.IMAGE, source: part.source });
+    }
+  }
+  return parts.length > 0 ? parts : content;
+}
+
 // Get content blocks from single message
 function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
   const blocks = [];
@@ -205,7 +240,7 @@ function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
     blocks.push({
       type: CLAUDE_BLOCK.TOOL_RESULT,
       tool_use_id: msg.tool_call_id,
-      content: msg.content
+      content: convertToolResultContent(msg.content)
     });
   } else if (msg.role === ROLE.USER) {
     if (typeof msg.content === "string") {

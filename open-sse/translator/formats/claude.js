@@ -103,7 +103,7 @@ export function fixToolUseOrdering(messages) {
 // Unversioned "haiku" retains the conservative downgrade.
 function isAdaptiveThinkingUnsupported(model = "") {
   if (!/haiku/i.test(model)) return false;
-  const match = String(model).match(/haiku[-._]?(\\d+)|(?<![\\d.])(\\d+)(?:[-._]\\d+)?[-._]?haiku/i);
+  const match = String(model).match(/haiku[-._]?(\d+)|(?<![\d.])(\d+)(?:[-._]\d+)?[-._]?haiku/i);
   return match ? Number(match[1] || match[2]) < 5 : true;
 }
 

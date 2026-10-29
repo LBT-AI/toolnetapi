@@ -111,3 +111,27 @@ describe("planBulkAdd: robustness", () => {
     expect(out[0].name).toBe("Key 1");
   });
 });
+
+
+describe("planBulkAdd: opaque LLM|id|secret tokens (9router v0.5.112)", () => {
+  it("preserves the complete Muse token without splitting its fields", () => {
+    const token = "LLM|12345|synthetic-secret";
+    const [entry] = planBulkAdd([token], []);
+    expect(entry.name).toBe("LLM 1");
+    expect(entry.apiKey).toBe(token);
+  });
+
+  it("supports lowercase prefix and collision-free numbering", () => {
+    const token = "llm|67890|synthetic-secret";
+    const [entry] = planBulkAdd([token], ["LLM 1"]);
+    expect(entry.name).toBe("LLM 2");
+    expect(entry.apiKey).toBe(token);
+  });
+
+  it("keeps Cloudflare name|key|accountId behavior unchanged", () => {
+    const [entry] = planBulkAdd(["main|synthetic-key|account-1"], [], { isCloudflareAi: true });
+    expect(entry.name).toBe("main 1");
+    expect(entry.apiKey).toBe("synthetic-key");
+    expect(entry.providerSpecificData).toEqual({ accountId: "account-1" });
+  });
+});

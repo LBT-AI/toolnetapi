@@ -4,6 +4,7 @@ runtime/
 
 # Next.js
 .next/
+.next-*/
 .next-cli-build/
 out/
 build/

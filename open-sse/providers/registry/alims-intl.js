@@ -51,6 +51,22 @@ export default {
     authHeader: "bearer",
   },
   models: [
+    // ── Active Working Models (Live Verified) ───────────────────────────────
+    { id: "qwen3.8-flash", name: "Qwen 3.8 Flash" },
+    { id: "qwen3.8-27b", name: "Qwen 3.8 27B" },
+    { id: "qwen3.8-max-0902", name: "Qwen 3.8 Max (0902)" },
+    { id: "qwen3.8-omni-flash", name: "Qwen 3.8 Omni Flash" },
+    { id: "qwen3.8-2.4t-a95b", name: "Qwen 3.8 2.4T A95B" },
+    { id: "qwen-plus-2025-01-25", name: "Qwen Plus (2025-01-25)" },
+    { id: "qwen-plus-2025-12-01", name: "Qwen Plus (2025-12-01)" },
+    { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash" },
+    { id: "deepseek-v4.1-flash-1017", name: "DeepSeek V4.1 Flash (1017)" },
+    { id: "deepseek-v4-pro-0813", name: "DeepSeek V4 Pro (0813)" },
+    { id: "glm-5.3", name: "GLM 5.3" },
+    { id: "glm-5.3-prime", name: "GLM 5.3 Prime" },
+    { id: "glm-5.2-fast-preview", name: "GLM 5.2 Fast Preview" },
+    { id: "kimi-k3", name: "Kimi K3" },
+    { id: "qwen3.7-text-embedding", name: "Qwen 3.7 Text Embedding", kind: "embedding" },
     // ── LLM ───────────────────────────────────────────────────────────────────
     { id: "qwen-vl-ocr-2025-11-20", name: "qwen vl ocr 2025 11 20" },
     { id: "qwen3.5-122b-a10b", name: "qwen3.5 122b a10b" },

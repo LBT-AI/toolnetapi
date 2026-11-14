@@ -72,28 +72,27 @@ describe("Kilo Model Catalog & Integration Audit", () => {
   describe("Static Model Catalog Verification", () => {
     const EXPECTED_FREE_MODEL_IDS = [
       "kilo-auto/free",
-      "reflection/beam-free",
-      "minimax/minimax-m3.1-flash:free",
-      "nvidia/nemotron-3.5-super-vl:free",
-      "stealth/glyph-cluster",
       "openrouter/free",
-      "liquid/lfm-2.5-2.6b:free",
-      "poolside/laguna-s-2.1:free",
-      "poolside/laguna-xs-2.1:free",
+      "reflection/beam-free",
+      "liquid/lfm-3-1.7b:free",
       "cohere/north-mini-code:free",
-      "xingchen-agi/xing4.0-29b-a4b:free",
+      "particle-ai/particle-1:free",
+      "inclusionai/ling-3.2-flash:free",
       "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
       "nvidia/nemotron-3.5-lightning:free",
+      "baidu/ernie-5.5-flash-preview:free",
       "dots-studio/dots-3-note-preview:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-3.5-super-vl:free",
     ];
 
     it("does NOT contain deprecated or dead models", () => {
       const deprecatedModels = [
         "stepfun/step-3.7-flash:free",
         "minimax/minimax-m3:free",
+        "minimax/minimax-m3.1-flash:free",
+        "liquid/lfm-2.5-2.6b:free",
+        "poolside/laguna-s-2.1:free",
         "kwaipilot/kat-coder-pro-v2.5:free",
       ];
 
@@ -104,7 +103,7 @@ describe("Kilo Model Catalog & Integration Audit", () => {
       }
     });
 
-    it("includes all 17 verified active free models in kilocode and kilo-gateway", () => {
+    it("includes all 13 verified active free models in kilocode and kilo-gateway", () => {
       const kcIds = new Set(kilocodeRegistry.models.map((m) => m.id));
       const kgwIds = new Set(kiloGatewayRegistry.models.map((m) => m.id));
 
@@ -115,10 +114,10 @@ describe("Kilo Model Catalog & Integration Audit", () => {
     });
 
     it("assigns accurate capability flags to multimodal models", () => {
-      const mm31 = kilocodeRegistry.models.find((m) => m.id === "minimax/minimax-m3.1-flash:free");
-      expect(mm31.supportsVision).toBe(true);
-      expect(mm31.supportsTools).toBe(true);
-      expect(mm31.supportsReasoning).toBe(true);
+      const particle = kilocodeRegistry.models.find((m) => m.id === "particle-ai/particle-1:free");
+      expect(particle.supportsVision).toBe(true);
+      expect(particle.supportsTools).toBe(true);
+      expect(particle.supportsReasoning).toBe(true);
 
       const nemotronVl = kiloGatewayRegistry.models.find((m) => m.id === "nvidia/nemotron-3.5-super-vl:free");
       expect(nemotronVl.supportsVision).toBe(true);
@@ -130,8 +129,8 @@ describe("Kilo Model Catalog & Integration Audit", () => {
       expect(nemotronOmni.supportsVision).toBe(true);
       expect(nemotronOmni.supportsAudio).toBe(true);
 
-      const lfm = kilocodeRegistry.models.find((m) => m.id === "liquid/lfm-2.5-2.6b:free");
-      expect(lfm.contextLength).toBe(65536);
+      const lfm = kilocodeRegistry.models.find((m) => m.id === "liquid/lfm-3-1.7b:free");
+      expect(lfm.contextLength).toBe(262144);
       expect(lfm.supportsVision).toBeUndefined(); // no vision
     });
 
@@ -141,8 +140,8 @@ describe("Kilo Model Catalog & Integration Audit", () => {
 
       const kcModels = getProviderModels("kc");
       const kgwModels = getProviderModels("kgw");
-      expect(kcModels.length).toBeGreaterThanOrEqual(20);
-      expect(kgwModels.length).toBeGreaterThanOrEqual(18);
+      expect(kcModels.length).toBe(13);
+      expect(kgwModels.length).toBeGreaterThanOrEqual(15);
     });
   });
 

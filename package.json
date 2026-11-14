@@ -4,7 +4,7 @@
   "description": "ToolNet API web dashboard",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 20127",
+    "dev": "NEXT_DIST_DIR=.next-dev next dev --port 20127",
     "dev:webpack": "next dev --webpack --port 20127",
     "build": "next build --webpack",
     "postbuild": "node scripts/copy-standalone-assets.mjs && node scripts/check-standalone.mjs",

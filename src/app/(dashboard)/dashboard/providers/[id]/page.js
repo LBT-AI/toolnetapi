@@ -184,7 +184,9 @@ export default function ProviderDetailPage() {
       if (lv) lv.forEach((l) => { if (l !== "none") set.add(l); });
     };
     for (const m of models) addLevels(m.id);
-    for (const m of kiloFreeModels) addLevels(m.id);
+    if (providerId !== "kilocode" && providerId !== "kc") {
+      for (const m of kiloFreeModels) addLevels(m.id);
+    }
     for (const entry of customModels) {
       if (entry.providerAlias !== providerStorageAlias) continue;
       if ((entry.kind || entry.type || "llm") !== "llm") continue;
@@ -283,9 +285,9 @@ export default function ProviderDetailPage() {
     }
   }, []);
 
-  // Fetch free models from Kilo API for kilocode and kilo-gateway providers
+  // Fetch free models from Kilo API for kilo-gateway provider
   useEffect(() => {
-    if (providerId !== "kilocode" && providerId !== "kilo-gateway" && providerId !== "kc" && providerId !== "kgw") return;
+    if (providerId !== "kilo-gateway" && providerId !== "kgw") return;
     fetch("/api/providers/kilo/free-models")
       .then((res) => res.json())
       .then((data) => { if (data.models?.length) setKiloFreeModels(data.models); })
@@ -1137,10 +1139,12 @@ export default function ProviderDetailPage() {
     }
 
     // Combine hardcoded models with Kilo free models (deduplicated)
-    const allModels = [
-      ...models,
-      ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
-    ];
+    const allModels = (providerId === "kilocode" || providerId === "kc")
+      ? models
+      : [
+          ...models,
+          ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
+        ];
 
     const counts = {
       all: allModels.length,
@@ -1789,10 +1793,13 @@ export default function ProviderDetailPage() {
             )}
           </div>
           {!isCompatible && (() => {
-            const allIds = [
-              ...models,
-              ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
-            ].map((m) => m.id);
+            const allIds = ((providerId === "kilocode" || providerId === "kc")
+              ? models
+              : [
+                  ...models,
+                  ...kiloFreeModels.filter((fm) => !models.some((m) => m.id === fm.id)),
+                ]
+            ).map((m) => m.id);
             const activeIds = allIds.filter((id) => !disabledModelIds.includes(id));
             return (
               <div className="flex gap-2">

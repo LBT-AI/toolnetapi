@@ -25,6 +25,10 @@
  */
 function parseLine(line, opts = {}) {
   const { isCloudflareAi = false } = opts;
+  // Muse tokens are opaque: preserve the entire LLM|id|secret string.
+  if (!isCloudflareAi && /^LLM\|/i.test(line.trim())) {
+    return { baseName: "LLM", apiKey: line.trim() };
+  }
   const parts = line.split("|");
 
   if (isCloudflareAi && parts.length >= 3) {

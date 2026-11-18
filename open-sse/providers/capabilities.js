@@ -66,11 +66,26 @@ export function capabilitiesFromServiceKind(kind) {
   return SERVICE_KIND_CAPABILITIES[kind] || null;
 }
 
+export const OPENCODE_FREE_CAPABILITIES = {
+  "beam-free": { contextWindow: 1048576, maxOutput: 131072, tools: true, reasoning: true, vision: false },
+  "iceman-free": { contextWindow: 262144, maxOutput: 131072, tools: true, reasoning: true, vision: false },
+  "hy4-flash-free": { contextWindow: 1048576, maxOutput: 65536, tools: true, reasoning: true, vision: true },
+  "flint-40b-free": { contextWindow: 262144, maxOutput: 65536, tools: true, reasoning: true, vision: false },
+  "longcat-2.5-free": { contextWindow: 1000000, maxOutput: 262144, tools: true, reasoning: true, vision: true },
+  "glm-5.3-flash-free": { tools: true, reasoning: true, vision: true },
+  "inkling-2-small-free": { contextWindow: 1048576, maxOutput: 131072, tools: true, reasoning: true, vision: true },
+  "mimo-v2.6-flash-free": { contextWindow: 200000, maxOutput: 32000, tools: true, reasoning: true, vision: true, audioInput: true },
+  "deepseek-v4.1-flash-free": { contextWindow: 200000, maxOutput: 32000, tools: true, reasoning: true, vision: true },
+  "nemotron-3.5-super-vl-free": { contextWindow: 1048576, maxOutput: 131072, tools: true, reasoning: true, vision: true },
+  "nemotron-3.5-lightning-free": { contextWindow: 262144, maxOutput: 262144, tools: true, reasoning: true, vision: false },
+};
+
 /**
  * Canonical exact-id overrides — used for exceptions that patterns would
  * otherwise mis-match. Only declare deltas vs DEFAULT.
  */
 export const MODEL_CAPABILITIES = {
+  ...OPENCODE_FREE_CAPABILITIES,
   // Claude Fable 5.1, Opus 5, 4.6/4.7/4.8, and Kiro Sonnet 5 have 1M context + adaptive thinking (override generic claude pattern)
   "claude-fable-5-1": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 128000 },
   "claude-opus-5":     { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
@@ -140,6 +155,8 @@ for (const m of FREEBUFF_CATALOG) {
 }
 
 export const PROVIDER_CAPABILITIES = {
+  opencode: OPENCODE_FREE_CAPABILITIES,
+  oc: OPENCODE_FREE_CAPABILITIES,
   freebuff: FREEBUFF_CAPS,
 
   // NVIDIA NIM is OpenAI-compatible → rejects MiniMax/GLM native `thinking` field.

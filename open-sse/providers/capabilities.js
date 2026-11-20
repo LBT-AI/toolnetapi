@@ -179,6 +179,8 @@ export const PROVIDER_CAPABILITIES = {
     "nvidia/nemotron-3-super-120b-a12b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    // Hosted endpoint accepted 1,000,057 prompt tokens and the streamed Read/Edit/Read fixture (2026-11-13).
+    "nvidia/nemotron-3-ultra-550b-a55b": { tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 8192 },
     "nvidia/riva-translate-4b-instruct-v2": { tools: false, reasoning: false, contextWindow: 8192, maxOutput: 4096 },
     "nvidia/riva-translate-1.6b": { tools: false, reasoning: false, contextWindow: 4096, maxOutput: 4096 },
   },

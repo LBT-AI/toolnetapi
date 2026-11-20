@@ -171,17 +171,20 @@ export const PROVIDER_CAPABILITIES = {
     "meta-llama/llama-prompt-guard-2-22m": { vision: false, tools: false, reasoning: false, contextWindow: 512, maxOutput: 512 },
   },
   "nvidia": {
-    "minimaxai/minimax-m3": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
+    "minimaxai/minimax-m3": { tools: false, vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
     "z-ai/glm-5.2": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
     "deepseek-ai/deepseek-v4-pro-0813": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
     "deepseek-ai/deepseek-v4-flash-0731": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
     "nvidia/nemotron-3.5-lightning-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/nemotron-3.5-bolt-e4b": { tools: true, contextWindow: 128000, maxOutput: 8192 },
     "nvidia/nemotron-3-super-120b-a12b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     // Hosted endpoint accepted 1,000,057 prompt tokens and the streamed Read/Edit/Read fixture (2026-11-13).
     "nvidia/nemotron-3-ultra-550b-a55b": { tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 8192 },
+    "poolside/laguna-xs-2.1": { tools: true, contextWindow: 200000, maxOutput: 32000 },
     "nvidia/riva-translate-4b-instruct-v2": { tools: false, reasoning: false, contextWindow: 8192, maxOutput: 4096 },
+    "meta/llama-3.3-70b-instruct": { tools: true, contextWindow: 128000, maxOutput: 4096 },
     "nvidia/riva-translate-1.6b": { tools: false, reasoning: false, contextWindow: 4096, maxOutput: 4096 },
   },
   "sambanova": {

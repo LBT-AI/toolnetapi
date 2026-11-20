@@ -70,6 +70,9 @@ export const ERROR_RULES = [
   { text: "ip limit",                 backoff: true },
   { text: "capacity",                 backoff: true },
   { text: "overloaded",               backoff: true },
+  // NVIDIA NIM returns 400 with "degraded" when specific model cluster is unhealthy.
+  // Lock only the degraded model (modelScoped: true) without locking the API key.
+  { provider: "nvidia", text: "degraded", cooldownMs: 15 * 60 * 1000, modelScoped: true },
   // --- Alibaba DashScope free-tier / balance exhausted (HTTP 400, must override status rule) ---
   { text: "has been used up",         cooldownMs: COOLDOWN.long },  // "Free quota for model X has been used up"
   { text: "has run out",              cooldownMs: COOLDOWN.long },  // "Free quota has run out"

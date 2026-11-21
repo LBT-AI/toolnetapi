@@ -27,7 +27,12 @@ export const UNSUPPORTED_SCHEMA_CONSTRAINTS = [
   "title", "optional", "deprecated", "if", "then", "else", "contentMediaType", "contentEncoding",
   // UI/Styling properties (from Cursor tools - NOT JSON Schema standard)
   "cornerRadius", "fillColor", "fontFamily", "fontSize", "fontWeight",
-  "gap", "padding", "strokeColor", "strokeThickness", "textColor"
+  "gap", "padding", "strokeColor", "strokeThickness", "textColor",
+  // Non-standard MCP schema annotations rejected by Gemini/Antigravity.
+  "errorMessage", "errorMessages", "x-errorMessage", "x-errorMessages",
+  "markdownDescription", "x-intellij-html-description",
+  "x-taplo-info", "x-taplo", "doNotSuggest", "suggestSortText",
+  "minProperties", "maxProperties", "~optional"
 ];
 
 // Default safety settings

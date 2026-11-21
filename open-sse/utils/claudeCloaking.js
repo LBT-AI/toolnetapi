@@ -61,12 +61,24 @@ export function cloakClaudeTools(body) {
   // Client tools first, then CC decoy tools (no overlap: client tools all have _cc suffix)
   const allTools = [...clientDeclarations, ...CC_DECOY_TOOLS];
 
-  // Rename tool_use in message history (all client tools get suffix)
+  // Deferred tool references inside tool_result must use the same cloaked
+  // name as the matching declaration in tools[], otherwise Claude rejects them.
+  const renameToolReferences = (content) => content.map(part =>
+    part?.type === "tool_reference" && clientToolNames.has(part.tool_name)
+      ? { ...part, tool_name: suffix(part.tool_name) }
+      : part
+  );
+
+  // Rename tool_use and nested tool_reference blocks in message history.
   const renamedMessages = body.messages?.map(msg => {
     if (!Array.isArray(msg.content)) return msg;
-    const renamedContent = msg.content.map(block =>
-      block.type === "tool_use" ? { ...block, name: suffix(block.name) } : block
-    );
+    const renamedContent = msg.content.map(block => {
+      if (block.type === "tool_use") return { ...block, name: suffix(block.name) };
+      if (block.type === "tool_result" && Array.isArray(block.content)) {
+        return { ...block, content: renameToolReferences(block.content) };
+      }
+      return block;
+    });
     return { ...msg, content: renamedContent };
   });
 

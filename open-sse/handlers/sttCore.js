@@ -2,6 +2,18 @@ import { Buffer } from "node:buffer";
 import { createErrorResult } from "../utils/error.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
 
+// Next.js may provide a FormData implementation that is not compatible with
+// the undici fetch implementation used by this server. Use undici's matching
+// FormData for multipart requests, with a global fallback for lightweight tests.
+let FormDataImpl = globalThis.FormData;
+try {
+  const undici = await import("undici");
+  if (undici?.FormData) FormDataImpl = undici.FormData;
+} catch {
+  // Keep the platform FormData when undici is not installed in a test harness.
+}
+const FormData = FormDataImpl;
+
 // Build auth headers from sttConfig + token
 function buildAuthHeaders(cfg, token) {
   if (!token) return {};

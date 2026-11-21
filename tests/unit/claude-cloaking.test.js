@@ -67,6 +67,27 @@ describe("cloakClaudeTools", () => {
     expect(block.name).toBe(`todo_write${CLAUDE_TOOL_SUFFIX}`);
   });
 
+  it("renames deferred tool_reference blocks inside tool_result content", () => {
+    const { body } = cloakClaudeTools({
+      ...baseBody,
+      messages: [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "t1",
+              content: [{ type: "tool_reference", tool_name: "todo_write", tool_use_id: "t1" }]
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(body.messages[0].content[0].content[0].tool_name)
+      .toBe(`todo_write${CLAUDE_TOOL_SUFFIX}`);
+  });
+
   it("returns the body unchanged when there are no tools", () => {
     const input = { messages: [{ role: "user", content: "hi" }], tool_choice: { type: "tool", name: "x" } };
     const { body, toolNameMap } = cloakClaudeTools(input);

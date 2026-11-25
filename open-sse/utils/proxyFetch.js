@@ -2,7 +2,12 @@ import { Readable } from "stream";
 import { MEMORY_CONFIG } from "../config/runtimeConfig.js";
 import { dbg } from "./debugLog.js";
 
-const originalFetch = globalThis.fetch;
+// The module patches globalThis.fetch at the bottom. Under vi.resetModules()
+// (or any re-import) a fresh evaluation would otherwise capture the *patched*
+// fetch as `originalFetch`, so a proxied call re-enters proxyAwareFetch
+// without its proxyOptions and the directFetch branch fires on the direct
+// path. Keep the true native fetch on the patched function and reuse it.
+const originalFetch = globalThis.fetch?.__proxyFetchOriginal ?? globalThis.fetch;
 const proxyDispatchers = new Map();
 
 // ─── TLS fingerprinting via got-scraping (browser-like JA3) ───────────────
@@ -330,6 +335,22 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
   const envProxyUrl = connectionProxyUrl ? null : normalizeProxyUrl(getEnvProxyUrl(targetUrl));
   const proxyUrl = connectionProxyUrl || envProxyUrl;
 
+  // Port of upstream 9router (fix(opencode): carry the selected proxy through
+  // the wreq-js transport): protocol adapters that own their transport
+  // (wreq-js TLS impersonation) cannot use an undici dispatcher: they must
+  // drive the proxy themselves. Only adapters that declare `proxyCapable`
+  // opt in — any other adapter keeps the undici path below.
+  if (proxyUrl && options?.directFetch?.proxyCapable === true) {
+    try {
+      return await options.directFetch(url, { ...options, proxyUrl }, proxyUrl);
+    } catch (err) {
+      if (proxyOptions?.strictProxy === true) {
+        throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${err.message}`);
+      }
+      throw err;
+    }
+  }
+
   // MITM DNS bypass: for known MITM-intercepted hosts, resolve real IP to avoid DNS spoof
   if (shouldBypassMitmDns(targetUrl)) {
     if (proxyUrl) {
@@ -368,6 +389,13 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
     }
   }
 
+  // Direct path for protocol adapters (upstream fetchWithTlsFallback):
+  // when no proxy resolved, the adapter carries the request itself instead
+  // of falling through to the undici/global fetch.
+  if (!proxyUrl && options.directFetch) {
+    return await options.directFetch(url, options);
+  }
+
   try {
     const parsed = new URL(targetUrl);
     if (!proxyUrl && parsed.hostname === "api.anthropic.com") {
@@ -390,7 +418,10 @@ async function patchedFetch(url, options = {}) {
   return proxyAwareFetch(url, options, null);
 }
 
-// Idempotency guard — only patch once to avoid wrapping multiple times
+// Idempotency guard — only patch once to avoid wrapping multiple times.
+// Tag the patched fetch with the native one so re-evaluations (resetModules)
+// recover the real fetch instead of chaining through the patch.
+patchedFetch.__proxyFetchOriginal = originalFetch;
 if (globalThis.fetch !== patchedFetch) {
   globalThis.fetch = patchedFetch;
 }

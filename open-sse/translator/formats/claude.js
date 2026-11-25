@@ -7,6 +7,7 @@ import { resolveSessionId } from "../../utils/sessionManager.js";
 import { isValidClaudeSignature } from "../../utils/claudeSignature.js";
 import { PROVIDERS } from "../../providers/index.js";
 import { getCapabilitiesForModel } from "../../providers/capabilities.js";
+import { isDeepSeekModel } from "../../providers/models/helpers.js";
 import { DEFAULT_MAX_TOKENS } from "../../config/runtimeConfig.js";
 
 const CACHE_CONTROL_5M = { type: "ephemeral" };
@@ -111,7 +112,7 @@ function handlesThinkingBlocks(provider) {
   return provider === "claude" || provider?.startsWith("anthropic-compatible") || provider === "deepseek";
 }
 
-function buildThinkingPlaceholder(provider) {
+function buildThinkingPlaceholder(provider, unsigned = false) {
   const block = {
     type: CLAUDE_BLOCK.THINKING,
     thinking: ".",
@@ -119,7 +120,9 @@ function buildThinkingPlaceholder(provider) {
 
   // DeepSeek's Anthropic-compatible endpoint requires a thinking block in
   // thinking mode, but it does not need Anthropic's signed-thinking fallback.
-  if (provider !== "deepseek") {
+  // The same applies to DeepSeek models served through other providers'
+  // Claude transports (opencode-go /messages).
+  if (provider !== "deepseek" && !unsigned) {
     block.signature = DEFAULT_THINKING_CLAUDE_SIGNATURE;
   }
 
@@ -248,7 +251,8 @@ export function normalizeClaudePassthrough(body, model = "") {
       if (typeof msg.content === "string") return msg.content.trim().length > 0;
       if (!Array.isArray(msg.content)) return true;
       msg.content = msg.content.filter(block =>
-        !(block?.type === CLAUDE_BLOCK.TEXT && !String(block.text ?? "").trim()));
+        !(block?.type === CLAUDE_BLOCK.TEXT && !String(block.text ?? "").trim())
+        && !(block?.type === CLAUDE_BLOCK.THINKING && !String(block.thinking ?? "").trim()));
       return msg.content.length > 0;
     });
   }
@@ -332,6 +336,16 @@ export function prepareClaudeRequest(body, provider = null, apiKey = null, conne
     delete body.output_config;
   }
 
+  // Claude Code puts a `context_management` block (context-editing strategy) in
+  // every request; only Anthropic accepts it — gateways fronting other engines
+  // answer 400 "context_management: Extra inputs are not permitted". Same-format
+  // claude→claude requests skip body rebuilding in the translator, so the field
+  // rides through to every non-Anthropic provider on the Claude transport.
+  const isAnthropicServing = provider === "claude" || provider?.startsWith?.("anthropic-compatible-");
+  if (!isAnthropicServing) {
+    delete body.context_management;
+  }
+
   // Clamp max_tokens to the model's real output ceiling. Models whose caps
   // declare a higher maxOutput (e.g. Opus 4.8 / Sonnet 4.6 = 128000) are allowed
   // up to it, so max-effort thinking gets full budget; others fall back to the
@@ -398,7 +412,18 @@ export function prepareClaudeRequest(body, provider = null, apiKey = null, conne
     // Check if thinking is enabled AND last message is from user
     const lastMessage = filtered[filtered.length - 1];
     const lastMessageIsUser = lastMessage?.role === "user";
-    const thinkingEnabled = body.thinking?.type === "enabled" && lastMessageIsUser;
+
+    // DeepSeek models also arrive behind OpenCode Go's /messages transport.
+    // They carry the same thinking pass-back constraint as the official
+    // DeepSeek provider (verified live 2026-08-15, PR #3332 discussion), so
+    // they get the identical keep/placeholder handling below.
+    const deepSeekServed =
+      provider === "deepseek" ||
+      (provider === "opencode-go" && isDeepSeekModel(body?.model));
+    const thinkingEnabled = lastMessageIsUser && (
+      body.thinking?.type === "enabled" ||
+      (deepSeekServed && body.thinking?.type === "adaptive")
+    );
 
     // Pass 2 (reverse): add cache_control to last assistant + handle thinking for Anthropic
     let lastAssistantProcessed = false;
@@ -420,25 +445,29 @@ export function prepareClaudeRequest(body, provider = null, apiKey = null, conne
         }
 
         // Handle thinking blocks for Anthropic-compatible endpoints.
-        if (handlesThinkingBlocks(provider)) {
+        if (handlesThinkingBlocks(provider) || deepSeekServed) {
           let hasToolUse = false;
           let hasKeptThinking = false;
 
           // Claude native: preserve valid signatures, drop invalid blocks.
           // anthropic-compatible: replace with default (safe fallback for lenient upstreams).
-          // DeepSeek: keep existing thinking as-is; add an unsigned placeholder only if missing.
+          // DeepSeek (official + opencode-go models): keep existing thinking as-is;
+          // add an unsigned placeholder only if missing.
+          // Every branch: a block with no visible thinking text goes — the upstream
+          // Messages API rejects it outright (400 "each thinking block must contain
+          // non-whitespace thinking"), and a valid signature does not save it.
           const isClaudeNative = provider === "claude";
-          const isDeepSeek = provider === "deepseek";
           const kept = [];
           for (const block of msg.content) {
             const isThinking = block.type === CLAUDE_BLOCK.THINKING || block.type === CLAUDE_BLOCK.REDACTED_THINKING;
             if (isThinking) {
+              if (!String(block.thinking ?? "").trim()) continue;
               if (isClaudeNative) {
                 if (isValidClaudeSignature(block.signature)) {
                   hasKeptThinking = true;
                   kept.push(block);
                 }
-              } else if (isDeepSeek) {
+              } else if (deepSeekServed) {
                 hasKeptThinking = true;
                 kept.push(block);
               } else {
@@ -455,7 +484,7 @@ export function prepareClaudeRequest(body, provider = null, apiKey = null, conne
 
           // Add thinking block if thinking enabled + has tool_use but no thinking
           if (thinkingEnabled && !hasKeptThinking && hasToolUse) {
-            msg.content.unshift(buildThinkingPlaceholder(provider));
+            msg.content.unshift(buildThinkingPlaceholder(provider, deepSeekServed));
           }
         }
       }

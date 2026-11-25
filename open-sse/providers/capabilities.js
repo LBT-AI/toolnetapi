@@ -120,6 +120,12 @@ export const MODEL_CAPABILITIES = {
   // (probed live 2026-10-18 on /inference/v1 and /zen/v1).
   "glm-5.3-flash-free": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 128000 },
   "muse-spark-1.3-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
+  // Haiku 5.5 is adaptive-only, like the rest of the 5.x line; the *claude*haiku-5*
+  // pattern below still describes the extended-thinking shape and would 400 on the
+  // Claude API ("thinking.type.enabled" is not supported for this model).
+  "claude-haiku-5-5": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+  // OpenCode Free Union Alpha — multimodal (text+vision), 262K context, 131K max output
+  "union-alpha": { vision: true, contextWindow: 262144, maxOutput: 131072 },
 };
 
 const KIRO_GPT_5_6_CAPABILITIES = { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 };
@@ -249,6 +255,21 @@ export const PROVIDER_CAPABILITIES = {
     "kimi-k3-1":          { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 32000 },
     "deepseek-v4-pro":    { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 50000 },
     "deepseek-v4-flash":  { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 50000 },
+  },
+  // glm-5.3-flash on OpenCode Go is served by a backend that rejects the z.ai
+  // `thinking` object (400: unknown field "thinking") and wants reasoning_effort.
+  // Overrides the global entry, whose z.ai shape is correct for z.ai itself.
+  "opencode-go": {
+    "glm-5.3-flash": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 131072 },
+    // OpenCode Go's claude-haiku-5-5 rejects `thinking.type.enabled` — the shape the
+    // global *claude*haiku* → claude-budget pattern sends — with 400: `"thinking.type.enabled"
+    // is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort".
+    // claude-adaptive emits exactly that (adaptive switch + output_config.effort), so override
+    // the global haiku pattern for this provider only. Limits follow the model, not the
+    // pattern: the upstream catalog reports context_length 1000000 and the synced catalog
+    // maxOutput 128000 for this id (the provider override short-circuits before the
+    // catalog overlay, so maxOutput must be stated here too).
+    "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
   },
   // Qoder — upstream exposes opaque internal ids (dfmodel, kmodel, …); the
   // registry `name` is display-only and capability lookup matches on the raw

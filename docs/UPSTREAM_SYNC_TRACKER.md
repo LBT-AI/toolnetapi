@@ -134,6 +134,8 @@ Tất cả các commit dưới đây đều chưa được port, theo yêu cầu
   không phải regression.
 - **Lint (`npm run lint`): 0 error**, 38 warning có sẵn (không file nào trong
   số file sync này bị lỗi; eslint bỏ qua `open-sse/` và `tests/`).
+  Lint trên CI cũng **pass**.
+- **CI job test: FAIL** — 24 test lỗi / 2,531 pass (xem mục PR/CI).
 - **Build (`npm run build`): `next build` biên dịch thành công**
   (`.next/BUILD_ID` đã tạo). Bước `postbuild` (`copy-standalone-assets.mjs`)
   lỗi `ERR_FS_CP_EINVAL` (src và dest trùng nhau tại
@@ -152,18 +154,47 @@ Tất cả các commit dưới đây đều chưa được port, theo yêu cầu
   45/45.
 - `/v1/models`: chưa kiểm tra live; registry nvidia mới (8 embedding model,
   ultra 1M) đã qua test `nvidia-params` 9/9 và ultra-caps 1/1.
-- OpenCode Free/Go/Zen: không đổi trong sync này (đã port ở 27 commit nền);
-  test opencode cũ vẫn pass trong full suite.
+- OpenCode Free/Go/Zen: không đổi trong sync này (đã port ở 27 commit nền).
+  Test tập trung: `opencode-go-session`, `opencode-session`,
+  `opencode-go-models`, `opencode-zen-models`, `opencode-zen-free-tier`,
+  `opencode-free-routing` — 6 file, 82 test, **pass hết**; thêm 4 file
+  opencode fingerprint/proxy — 51 test pass.
 - Streaming / tool calling: ultra tools:true + strip `stream_options`
-  non-stream đã qua test đơn vị; chưa kiểm tra live.
-- Provider cũ: full suite không regression mới (20 lỗi = đúng baseline).
+  non-stream đã qua test đơn vị (`nvidia-params` 9/9, `DefaultExecutor`
+  transformRequest); chưa kiểm tra live.
+- Provider cũ: full suite không regression mới (20 lỗi = đúng baseline);
+  `provider-validation` pass.
 - OAuth refresh / API key cũ / database / dashboard UI / CLI config cũ:
   không đụng tới trong sync này, không có thay đổi tương ứng.
 
 ## Trạng thái PR / CI / merge
 
-- (Điền sau khi push + mở PR — xem phần dưới.)
-- **Chưa merge.** Chỉ merge khi CI xanh, không conflict, không rủi ro rõ ràng.
+- **PR: https://github.com/LBT-AI/toolnetapi/pull/9** (mở 2026-11-26, base `main`,
+  head `sync/9router-v0.5.123-20261126`). Trạng thái: OPEN, MERGEABLE (không
+  conflict).
+- **CI: lint PASS, GitGuardian PASS, test FAIL — KHÔNG MERGE.**
+  - Job test trên CI: 24 test lỗi / 2,531 pass (18 file lỗi). Trong đó 20 test
+    lỗi giống hệt baseline của nhánh (đã có từ trước sync này, xem dưới), 4
+    test chỉ lỗi trên CI:
+    - `golden-url-header` cline/clinepass/kimi headers (3): snapshot ghi
+      `X-PLATFORM-VERSION: v22.23.1` (Node 22, máy tạo snapshot) nhưng CI chạy
+      Node 20 → `v20.20.2`. Lệch phiên bản Node giữa snapshot và CI, có sẵn
+      từ 27 commit nền (snapshot được tạo lại trên VPS Node 22).
+    - `devin-cli-executor` XDG_CONFIG_HOME (1): test yêu cầu env
+      `XDG_CONFIG_HOME` không được set, nhưng runner GitHub set sẵn
+      `/home/runner/.config`. Lỗi môi trường CI, code devin không hề đụng tới.
+  - Cả 4 lỗi CI-only đều không liên quan tới 3 commit này (không file nào
+    trong diff chạm tới header builder, devin executor hay snapshot).
+  - 20 test lỗi còn lại (golden-request Kiro, golden-url-header claude +
+    freebuff, cursor, headroom, hermes, jina, kiro-terminal, kiro-usage ×7,
+    mimo-free.live ×2, cộng các file lỗi mức file: saml,
+    custom-server-peer-headers, db-benchmark, embeddings.cloud, kimchi,
+    kimchi-strip-reasoning) đã lỗi y hệt ở baseline `0b4b01a8` trước sync này
+    và lỗi y hệt trên CI — không phải regression mới.
+  - Vì job test đỏ nên **không merge** theo quy tắc (chỉ merge khi CI xanh).
+    Muốn CI xanh phải sửa 20 lỗi có sẵn + 4 lỗi môi trường — nằm ngoài phạm vi
+    sync opencode+nvidia này, cần quyết định riêng.
+- **Chưa merge.**
 
 ## Production `/root/ToolnetAPI`
 

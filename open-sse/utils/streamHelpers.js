@@ -4,9 +4,9 @@ import { FORMATS } from "../translator/formats.js";
 export function parseSSELine(line, format = null) {
   if (!line) return null;
 
-  // NDJSON format (Ollama): raw JSON lines without "data:" prefix
-  if (format === FORMATS.OLLAMA) {
-    const trimmed = line.trim();
+  // NDJSON format (Ollama) or raw JSON lines: raw JSON lines without "data:" prefix
+  const trimmed = line.trim();
+  if (format === FORMATS.OLLAMA || (line.charCodeAt(0) !== 100 && trimmed.startsWith("{") && trimmed.endsWith("}"))) {
     if (trimmed.startsWith("{")) {
       try {
         return JSON.parse(trimmed);

@@ -288,6 +288,13 @@ function getContentBlocksFromMessage(msg, toolNameMap = new Map()) {
       }
     }
   } else if (msg.role === ROLE.ASSISTANT) {
+    const reasoningText = msg.reasoning_content || msg.reasoning;
+    if (reasoningText && typeof reasoningText === "string") {
+      blocks.push({
+        type: CLAUDE_BLOCK.THINKING,
+        thinking: reasoningText,
+      });
+    }
     if (Array.isArray(msg.content)) {
       for (const part of msg.content) {
         if (part.type === OPENAI_BLOCK.TEXT && part.text) {

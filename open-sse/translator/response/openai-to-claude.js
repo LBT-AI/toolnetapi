@@ -213,9 +213,24 @@ export function openaiToClaudeResponse(chunk, state) {
       if (tc.function?.arguments) {
         const toolInfo = state.toolCalls.get(idx);
         if (toolInfo) {
-          // Buffer args instead of streaming — sanitize at finish to fix bad params
-          if (!state.toolArgBuffers) state.toolArgBuffers = new Map();
-          state.toolArgBuffers.set(idx, (state.toolArgBuffers.get(idx) || "") + tc.function.arguments);
+          let isCompleteJson = false;
+          try {
+            JSON.parse(tc.function.arguments);
+            isCompleteJson = true;
+          } catch {}
+
+          if (isCompleteJson) {
+            const sanitized = sanitizeToolArgs(toolInfo.name, tc.function.arguments);
+            results.push({
+              type: "content_block_delta",
+              index: toolInfo.blockIndex,
+              delta: { type: "input_json_delta", partial_json: sanitized }
+            });
+          } else {
+            // Buffer args instead of streaming — sanitize at finish to fix bad params
+            if (!state.toolArgBuffers) state.toolArgBuffers = new Map();
+            state.toolArgBuffers.set(idx, (state.toolArgBuffers.get(idx) || "") + tc.function.arguments);
+          }
         }
       }
     }
@@ -236,6 +251,7 @@ export function openaiToClaudeResponse(chunk, state) {
           index: toolInfo.blockIndex,
           delta: { type: "input_json_delta", partial_json: sanitized }
         });
+        state.toolArgBuffers.delete(idx);
       }
       results.push({
         type: "content_block_stop",

@@ -54,6 +54,11 @@ export function filterToOpenAIFormat(body, opts = {}) {
         filteredContent.push({ type: OPENAI_BLOCK.TEXT, text: "" });
       }
       
+      const allText = filteredContent.every(b => b.type === OPENAI_BLOCK.TEXT && !(keepCache && b.cache_control));
+      if (allText) {
+        return { ...msg, content: filteredContent.map(b => b.text || "").join("\n") };
+      }
+
       return { ...msg, content: filteredContent };
     }
     

@@ -3,7 +3,7 @@
  *
  * Mirrors the behaviour of `internal/translator/kiro/common/constants.go` and
  * `internal/translator/kiro/claude/kiro_claude_request.go` from the
- * CLIProxyAPIPlus reference implementation, scoped down to what toolnetapi needs:
+ * CLIProxyAPIPlus reference implementation, scoped down to what 9router needs:
  *
  *   - `-agentic` model suffix detection + chunked-write system prompt
  *   - reasoning / thinking trigger detection (Anthropic-Beta header,
@@ -11,15 +11,24 @@
  *   - schema-specific native effort fields for supported GPT and Claude models
  *   - legacy `<thinking_mode>` system-prompt injection for other models
  *
- * Kiro upstream does not advertise `-agentic` model IDs; they are a toolnetapi
+ * Kiro upstream does not advertise `-agentic` model IDs; they are a 9router
  * fiction. The suffix is stripped before the request leaves this process.
  */
 
-import { extractThinking } from "../translator/concerns/thinkingUnified.js";
+import { extractThinking, parseSuffix } from "../translator/concerns/thinkingUnified.js";
 import { effortToBudget } from "../translator/concerns/thinking.js";
 
 export const KIRO_AGENTIC_SUFFIX = "-agentic";
 export const KIRO_THINKING_SUFFIX = "-thinking";
+export const KIRO_TOOL_NAME_MAX_LENGTH = 64;
+export const KIRO_TOOL_DESCRIPTION_MAX_LENGTH = 10237;
+export const KIRO_TOOL_ID_MAX_LENGTH = 64;
+export const KIRO_CODEWHISPERER_TARGET =
+  "AmazonCodeWhispererStreamingService.GenerateAssistantResponse";
+export const KIRO_ENDPOINT_FALLBACK_STATUSES = new Set([401, 403, 404]);
+// Regions the Kiro runtime data plane serves. Only one of these may be spliced
+// into the hostname that receives the bearer token.
+export const KIRO_RUNTIME_REGIONS = new Set(["us-east-1", "eu-central-1"]);
 
 // Public default CodeWhisperer profile ARNs (us-east-1), keyed by auth method.
 // Used when an account cannot resolve its own profileArn. Builder ID and social
@@ -39,6 +48,107 @@ export function resolveDefaultProfileArn(authMethod) {
 }
 
 export const KIRO_THINKING_BUDGET_DEFAULT = 16000;
+
+/**
+ * Anthropic date-suffixed snapshot id, e.g. `claude-sonnet-4-5-20250929`.
+ * Kiro's data plane only accepts the dotted alias (`claude-sonnet-4.5`).
+ */
+const ANTHROPIC_SNAPSHOT_SUFFIX = /-\d{8}$/;
+
+/**
+ * Fold an Anthropic model id onto the Kiro upstream alias.
+ *
+ * Anthropic and Kiro disagree on id spelling: Anthropic ships
+ * `claude-sonnet-4-5-20250929` / `claude-opus-4-5`, while Kiro's
+ * `GenerateAssistantResponse` only accepts `claude-sonnet-4.5` and answers
+ * anything else with `400 INVALID_MODEL_ID`.
+ *
+ * Clients that speak the Anthropic Messages API (Claude Code, cc-switch, …)
+ * send the Anthropic spelling, so the raw id has to be folded onto the Kiro
+ * alias before the request leaves this process. Matching is keyword-based
+ * rather than an exact-id table: snapshot suffixes and future minor revisions
+ * would otherwise fall through and 400 upstream.
+ *
+ * Unknown ids are returned untouched so operators can still pass through
+ * models Kiro adds ahead of this list.
+ *
+ * @param {string} model
+ * @returns {string}
+ */
+export function normalizeKiroUpstreamModelId(model) {
+  if (typeof model !== "string" || model === "") return model;
+
+  const id = model.toLowerCase().replace(ANTHROPIC_SNAPSHOT_SUFFIX, "");
+
+  if (id.includes("sonnet")) {
+    if (id.includes("5.5") || id.includes("5-5")) return "claude-sonnet-5.5";
+    if (id.includes("4.6") || id.includes("4-6")) return "claude-sonnet-4.6";
+    if (id.includes("sonnet-5") || id.includes("sonnet.5")) return "claude-sonnet-5";
+    if (id.includes("4.5") || id.includes("4-5")) return "claude-sonnet-4.5";
+    if (id.includes("sonnet-4") || id.includes("sonnet.4")) return "claude-sonnet-4";
+    return "claude-sonnet-4.5";
+  }
+  if (id.includes("fable")) return "claude-fable-5";
+  if (id.includes("opus")) {
+    if (id.includes("5.5") || id.includes("5-5")) return "claude-opus-5.5";
+    if (id.includes("opus-5") || id.includes("opus.5") || id.includes("opus 5")) return "claude-opus-5";
+    if (id.includes("4.8") || id.includes("4-8")) return "claude-opus-4.8";
+    if (id.includes("4.7") || id.includes("4-7")) return "claude-opus-4.7";
+    if (id.includes("4.5") || id.includes("4-5")) return "claude-opus-4.5";
+    return "claude-opus-4.6";
+  }
+  if (id.includes("haiku")) {
+    return id.includes("5.5") || id.includes("5-5") ? "claude-haiku-5.5" : "claude-haiku-4.5";
+  }
+  if (id === "auto") return "auto";
+  if (id.includes("deepseek")) return "deepseek-3.2";
+  if (id.includes("glm")) return "glm-5";
+  if (id.includes("minimax")) {
+    return id.includes("2.5") || id.includes("2-5") ? "minimax-m2.5" : "minimax-m2.1";
+  }
+  if (id.includes("qwen")) return "qwen3-coder-next";
+  if (id.includes("kimi")) return "kimi-k3";
+  if (id.includes("gpt")) {
+    if (id.includes("terra")) return "gpt-5.6-terra";
+    if (id.includes("luna")) return "gpt-5.6-luna";
+    if (id.includes("sol") || id.includes("5.6") || id.includes("5-6")) return "gpt-5.6-sol";
+    return model;
+  }
+  return model;
+}
+
+/**
+ * Resolve a Kiro model after consuming the generic model(level) suffix.
+ * The suffix is a 9router request override, not part of Kiro's upstream model id.
+ */
+export function resolveKiroModelIntent(model) {
+  const { cleanModel, override } = parseSuffix(model);
+  return {
+    model: cleanModel,
+    ...resolveKiroModel(cleanModel),
+    thinkingOverride: override,
+  };
+}
+
+/** Apply a parsed model(level) override without mutating the caller's body. */
+export function applyKiroThinkingOverride(body, override) {
+  if (!override) return body;
+
+  const next = { ...body };
+  if (override.mode === "budget") {
+    delete next.output_config;
+    delete next.reasoning_effort;
+    delete next.reasoning;
+    next.thinking = { type: "enabled", budget_tokens: override.budget };
+    return next;
+  }
+
+  next.output_config = {
+    ...(body.output_config || {}),
+    effort: override.mode === "level" ? override.level : override.mode,
+  };
+  return next;
+}
 
 export const KIRO_AGENTIC_SYSTEM_PROMPT = `
 # CRITICAL: CHUNKED WRITE PROTOCOL (MANDATORY)
@@ -132,7 +242,22 @@ export function resolveKiroThinkingBudget(body, headers, model) {
   return null;
 }
 
-export function extractKiroEffortLevel(body) {
+function parseClaudeVersion(model) {
+  if (typeof model !== "string") return null;
+  const normalized = model.toLowerCase().replace(/-/g, ".");
+  const match = normalized.match(/(?:^|[/.])claude(?:[/.][a-z]+)*[/.](\d+)(?:[/.](\d+))?(?:[/.]|$)/);
+  if (!match) return null;
+  return { major: Number(match[1]), minor: match[2] === undefined ? null : Number(match[2]) };
+}
+
+// Kiro effort tiers per model (kiro.dev docs + live additionalModelRequestFieldsSchema):
+// 4.6 Claude models cap at low|medium|high|max; 4.7+ add xhigh. Unknown models stay conservative.
+function kiroModelLacksXhigh(model) {
+  const v = parseClaudeVersion(model);
+  return !v || (v.major === 4 && v.minor !== null && v.minor <= 6);
+}
+
+export function extractKiroEffortLevel(body, model) {
   const effort =
     body?.output_config?.effort ??
     body?.reasoning_effort ??
@@ -140,7 +265,8 @@ export function extractKiroEffortLevel(body) {
   if (typeof effort !== "string") return null;
   const normalized = effort.toLowerCase();
   if (normalized === "none" || normalized === "off" || normalized === "disabled") return null;
-  if (normalized === "xhigh" || normalized === "max") return "high";
+  if (normalized === "xhigh") return kiroModelLacksXhigh(model) ? "high" : "xhigh";
+  if (normalized === "max") return "max";
   if (["low", "medium", "high"].includes(normalized)) return normalized;
   return null;
 }
@@ -160,10 +286,10 @@ function extractKiroGptEffortLevel(body) {
   return null;
 }
 
-export function buildKiroAdditionalModelRequestFields(body, effortPath = "output_config", modelEffort = null) {
+export function buildKiroAdditionalModelRequestFields(body, effortPath = "output_config", model) {
   const effort = effortPath === "reasoning"
-    ? (extractKiroGptEffortLevel(body) || (modelEffort === "max" ? "xhigh" : (["low", "medium", "high", "xhigh"].includes(modelEffort) ? modelEffort : null)))
-    : (extractKiroEffortLevel(body) || (modelEffort === "xhigh" || modelEffort === "max" ? "high" : (["low", "medium", "high"].includes(modelEffort) ? modelEffort : null)));
+    ? extractKiroGptEffortLevel(body)
+    : extractKiroEffortLevel(body, model);
   if (!effort) return undefined;
   if (effortPath === "reasoning") {
     // Mirrors Kiro CLI/KAS buildEffortRequestFields("reasoning") for GPT.
@@ -183,11 +309,9 @@ export function resolveKiroEffortPath(model) {
     return "reasoning";
   }
   if (!normalized.includes("claude")) return null;
-  const match = normalized.match(/(?:^|[/.])claude(?:[/.][a-z]+)*[/.](\d+)(?:[/.](\d+))?(?:[/.]|$)/);
-  if (!match) return null;
-  const [, majorText, minorText] = match;
-  const major = Number(majorText);
-  const minor = minorText === undefined ? null : Number(minorText);
+  const v = parseClaudeVersion(model);
+  if (!v) return null;
+  const { major, minor } = v;
   const dateSuffixMinor = minor !== null && minor >= 1000;
   // Kiro rejected additionalModelRequestFields on legacy 4.5 models in live smoke.
   // Default future Claude/Kiro models to supported so new model releases do not
@@ -201,15 +325,15 @@ export function supportsKiroAdditionalModelRequestFields(model) {
   return resolveKiroEffortPath(model) !== null;
 }
 
-export function usesKiroNativeGptEffort(body, model, modelEffort = null) {
+export function usesKiroNativeGptEffort(body, model) {
   return resolveKiroEffortPath(model) === "reasoning"
-    && (extractKiroGptEffortLevel(body) !== null || (modelEffort && ["low", "medium", "high", "xhigh", "max"].includes(modelEffort)));
+    && extractKiroGptEffortLevel(body) !== null;
 }
 
-export function buildKiroAdditionalModelRequestFieldsForModel(body, model, modelEffort = null) {
+export function buildKiroAdditionalModelRequestFieldsForModel(body, model) {
   const effortPath = resolveKiroEffortPath(model);
   if (!effortPath) return undefined;
-  return buildKiroAdditionalModelRequestFields(body, effortPath, modelEffort);
+  return buildKiroAdditionalModelRequestFields(body, effortPath, model);
 }
 
 /**
@@ -226,7 +350,7 @@ export function isThinkingEnabled(body, headers, model) {
 }
 
 /**
- * Detect whether a model id refers to a toolnetapi synthetic agentic variant.
+ * Detect whether a model id refers to a 9router synthetic agentic variant.
  * Agentic variants share the same upstream model as the base; the only
  * difference is the chunked-write system prompt this module injects.
  *
@@ -249,7 +373,7 @@ export function stripAgenticSuffix(model) {
 }
 
 /**
- * Detect whether a model id is a toolnetapi synthetic thinking variant
+ * Detect whether a model id is a 9router synthetic thinking variant
  * (e.g. `claude-sonnet-4.5-thinking`). Same upstream model as the base; the
  * only difference is `<thinking_mode>enabled</thinking_mode>` injection.
  *
@@ -276,7 +400,7 @@ export function stripThinkingSuffix(model) {
 }
 
 /**
- * Resolve a toolnetapi model id to the real upstream Kiro model id, plus flags
+ * Resolve a 9router model id to the real upstream Kiro model id, plus flags
  * describing which behaviours the suffixes implied.
  *
  *   resolveKiroModel("claude-sonnet-4.5-thinking-agentic")
@@ -295,14 +419,6 @@ export function resolveKiroModel(model) {
   let upstream = model;
   let agentic = false;
   let thinking = false;
-  let effort = null;
-  if (typeof upstream === "string") {
-    const intensityMatch = upstream.match(/\((low|medium|high|xhigh|max)\)$/i);
-    if (intensityMatch) {
-      effort = intensityMatch[1].toLowerCase();
-      upstream = upstream.slice(0, -intensityMatch[0].length);
-    }
-  }
   if (isAgenticModel(upstream)) {
     agentic = true;
     upstream = stripAgenticSuffix(upstream);
@@ -311,7 +427,7 @@ export function resolveKiroModel(model) {
     thinking = true;
     upstream = stripThinkingSuffix(upstream);
   }
-  return { upstream, agentic, thinking, effort };
+  return { upstream: normalizeKiroUpstreamModelId(upstream), agentic, thinking };
 }
 
 /**

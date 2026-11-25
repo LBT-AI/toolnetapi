@@ -28,10 +28,10 @@ async function getObservabilityConfig() {
       cachedConfigTs = Date.now();
       return cachedConfig;
     }
-    const uiFlag = typeof settings.enableObservability === "boolean";
-    const enabled = uiFlag
-      ? settings.enableObservability
-      : false;
+    const uiFlag = typeof settings.enableObservability2 === "boolean"
+      ? settings.enableObservability2
+      : (typeof settings.enableObservability === "boolean" ? settings.enableObservability : false);
+    const enabled = uiFlag;
     cachedConfig = {
       enabled,
       maxRecords: settings.observabilityMaxRecords || parseInt(process.env.OBSERVABILITY_MAX_RECORDS || String(DEFAULT_MAX_RECORDS), 10),

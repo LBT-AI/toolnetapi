@@ -41,3 +41,4 @@ Thumbs.db
 
 # Test runner deps (installed locally, never committed)
 tests/node_modules/
+tests/node_modules

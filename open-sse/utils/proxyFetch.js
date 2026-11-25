@@ -6,9 +6,6 @@ const originalFetch = globalThis.fetch;
 const proxyDispatchers = new Map();
 
 // ─── TLS fingerprinting via got-scraping (browser-like JA3) ───────────────
-// Disabled: not in use. Kept commented for future re-enable.
-// Restore the original block to re-enable per-host JA3 spoofing.
-/*
 let _gotScraping = null;
 let _gotScrapingChecked = false;
 const _gotScrapingLoggedHosts = new Set();
@@ -36,6 +33,30 @@ async function gotScrapingFetch(url, options) {
   const headers = headersInit instanceof Headers
     ? Object.fromEntries(headersInit.entries())
     : { ...headersInit };
+
+  const isStream = headers["accept"] === "text/event-stream" || headers["Accept"] === "text/event-stream";
+  if (!isStream && typeof gs === "function") {
+    const res = await gs({
+      url,
+      method,
+      headers,
+      body: method === "GET" || method === "HEAD" ? undefined : options.body,
+      throwHttpErrors: false,
+      retry: { limit: 0 },
+      followRedirect: false,
+    });
+    const resHeaders = new Headers();
+    for (const [k, v] of Object.entries(res.headers || {})) {
+      if (Array.isArray(v)) v.forEach((x) => resHeaders.append(k, String(x)));
+      else if (v != null) resHeaders.set(k, String(v));
+    }
+    const bodyContent = res.rawBody ? res.rawBody : (res.body ? res.body : "");
+    return new Response(bodyContent, {
+      status: res.statusCode,
+      statusText: res.statusMessage || "",
+      headers: resHeaders,
+    });
+  }
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -95,7 +116,6 @@ async function tryGotScrapingFetch(url, options) {
     return null;
   }
 }
-*/
 
 // DNS cache — use Map to avoid prototype pollution via malformed hostnames
 const DNS_CACHE = new Map();
@@ -348,8 +368,18 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
     }
   }
 
-  // got-scraping disabled — use native fetch directly
-  // (Re-enable per-host by wrapping with tryGotScrapingFetch when needed)
+  try {
+    const parsed = new URL(targetUrl);
+    if (!proxyUrl && parsed.hostname === "api.anthropic.com") {
+      const isEventStream = options.headers?.["Accept"] === "text/event-stream" ||
+                            options.headers?.["accept"] === "text/event-stream";
+      if (!isEventStream) {
+        const res = await tryGotScrapingFetch(targetUrl, options);
+        if (res) return res;
+      }
+    }
+  } catch {}
+
   return originalFetch(url, options);
 }
 

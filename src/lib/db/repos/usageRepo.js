@@ -271,10 +271,8 @@ export async function saveRequestUsage(entry) {
         ]
       );
 
-      if (existing) {
-        if (!existing.endpoint && entry.endpoint) {
-          db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
-        }
+      if (existing && !existing.endpoint && entry.endpoint) {
+        db.run(`UPDATE usageHistory SET endpoint = ? WHERE id = ?`, [entry.endpoint, existing.id]);
         return;
       }
 

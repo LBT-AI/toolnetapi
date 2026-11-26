@@ -1,7 +1,20 @@
-// Free OpenCode models that don't use the "-free" id suffix
-const KNOWN_FREE_OPENCODE_MODELS = ["big-pickle"];
+// Free OpenCode models that don't use the "-free" id suffix (none in current catalog)
+const KNOWN_FREE_OPENCODE_MODELS = [];
 // Dead or unavailable models to exclude
-const EXCLUDED_OPENCODE_MODELS = new Set(["deepseek-v4-flash-free"]);
+const EXCLUDED_OPENCODE_MODELS = new Set(["deepseek-v4-flash-free", "big-pickle", "jev-1.13-free"]);
+
+const ALLOWED_OPENCODE_FREE_MODELS = new Set([
+  "seaglass-alpha-free",
+  "tidepool-alpha-free",
+  "hy4-flash-free",
+  "iceman-free",
+  "flint-40b-free",
+  "deepseek-v4.1-flash-free",
+  "nemotron-3.5-super-vl-free",
+  "beam-free",
+  "mimo-v2.6-flash-free",
+  "nemotron-3.5-lightning-free",
+]);
 
 export const FILTERS = {
   "openrouter-free": (models) =>
@@ -56,22 +69,19 @@ export const FILTERS = {
 
   "opencode-free": (models) => {
     const metaMap = {
-      "big-pickle": { name: "Big Pickle (MiMo v2.5)", contextLength: 200000, supportsTools: true, supportsReasoning: true },
-      "beam-free": { name: "Beam Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true },
-      "flint-40b-free": { name: "Flint 40B Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
-      "mimo-v2.6-flash-free": { name: "MiMo-V2.6-Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "seaglass-alpha-free": { name: "Seaglass Alpha Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: false },
+      "tidepool-alpha-free": { name: "Tidepool Alpha Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: false },
+      "hy4-flash-free": { name: "Hy4 flash Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "iceman-free": { name: "Iceman Free", contextLength: 262144, supportsTools: true, supportsReasoning: true, supportsVision: false },
+      "flint-40b-free": { name: "Flint 40B Free", contextLength: 262144, supportsTools: true, supportsReasoning: true, supportsVision: false },
+      "deepseek-v4.1-flash-free": { name: "DeepSeek V4.1 Flash Free", contextLength: 330000, supportsTools: true, supportsReasoning: true, supportsVision: true },
       "nemotron-3.5-super-vl-free": { name: "Nemotron 3.5 Super VL Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: true },
-      "nemotron-3.5-lightning-free": { name: "Nemotron 3.5 Lightning Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
-      "jev-1.13-free": { name: "JEV 1.13 Free", contextLength: 262144, supportsTools: true, supportsReasoning: true },
-      "deepseek-v4.1-flash-free": { name: "DeepSeek V4.1 Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
-      "glm-5.3-flash-free": { name: "GLM-5.3-Flash Free", contextLength: 200000, supportsTools: true, supportsReasoning: true, supportsVision: true },
+      "beam-free": { name: "Beam Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: false },
+      "mimo-v2.6-flash-free": { name: "MiMo-V2.6-Flash Free", contextLength: 1048576, supportsTools: true, supportsReasoning: true, supportsVision: true, supportsAudio: true },
+      "nemotron-3.5-lightning-free": { name: "Nemotron 3.5 Lightning Free", contextLength: 262144, supportsTools: true, supportsReasoning: true, supportsVision: false },
     };
     return (Array.isArray(models) ? models : [])
-      .filter(
-        (m) =>
-          !EXCLUDED_OPENCODE_MODELS.has(m.id) &&
-          (m.id?.endsWith("-free") || KNOWN_FREE_OPENCODE_MODELS.includes(m.id))
-      )
+      .filter((m) => ALLOWED_OPENCODE_FREE_MODELS.has(m.id) && !EXCLUDED_OPENCODE_MODELS.has(m.id))
       .map((m) => ({
         id: m.id,
         name: metaMap[m.id]?.name || m.name || m.id,
@@ -80,6 +90,7 @@ export const FILTERS = {
         supportsTools: metaMap[m.id]?.supportsTools ?? true,
         supportsReasoning: metaMap[m.id]?.supportsReasoning ?? true,
         supportsVision: metaMap[m.id]?.supportsVision ?? false,
+        supportsAudio: metaMap[m.id]?.supportsAudio ?? false,
       }));
   },
 

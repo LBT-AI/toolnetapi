@@ -30,6 +30,13 @@ const BUILTIN_MODEL_ALIASES = {
   "muse-spark-1.3-contributor-free": "opencode/muse-spark-1.3-contributor-free",
   "beam-free": "opencode/beam-free",
   "flint-40b-free": "opencode/flint-40b-free",
+  "seaglass-alpha-free": "opencode/seaglass-alpha-free",
+  "tidepool-alpha-free": "opencode/tidepool-alpha-free",
+  "hy4-flash-free": "opencode/hy4-flash-free",
+  "iceman-free": "opencode/iceman-free",
+  "deepseek-v4.1-flash-free": "opencode/deepseek-v4.1-flash-free",
+  "nemotron-3.5-super-vl-free": "opencode/nemotron-3.5-super-vl-free",
+  "mimo-v2.6-flash-free": "opencode/mimo-v2.6-flash-free",
   "riva-translate-4b-instruct-v2": "nvidia/nvidia/riva-translate-4b-instruct-v2",
   "riva-translate-1.6b": "nvidia/nvidia/riva-translate-1.6b",
 };

@@ -1,41 +1,76 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDER_MODELS, getModelTargetFormat, getModelSupportedFormats } from "../../open-sse/config/providerModels.js";
+import { PROVIDER_MODELS, getModelTargetFormat } from "../../open-sse/config/providerModels.js";
 import { getExecutor } from "../../open-sse/executors/index.js";
+import { getCapabilitiesForModel } from "../../open-sse/providers/capabilities.js";
+import { FILTERS } from "../../src/app/api/providers/suggested-models/filters.js";
 
-// NOTE (2026-11-26): an earlier draft of this file pinned the pre-#4842
-// layout (9 models, /zen/v1). Upstream 9router moved the free tier to
-// /inference/v1 with the v2 client fingerprint (#4842) and the catalog has
-// since grown to 12 models, so the expectations below track upstream master:
-// - Muse Spark contributor models are Responses models (openai-responses,
-//   /inference/v1/responses).
-// - Union Alpha is a Messages model (claude targetFormat,
-//   /inference/v1/messages).
-// - The rest are plain Chat Completions models.
-const CHAT_COMPLETIONS_MODELS = [
-  "jev-1.13-free",
-  "big-pickle",
-  "beam-free",
-  "flint-40b-free",
-  "mimo-v2.6-flash-free",
-  "nemotron-3.5-super-vl-free",
-  "nemotron-3.5-lightning-free",
-  "deepseek-v4.1-flash-free",
-  "glm-5.3-flash-free",
+const EXPECTED_MODELS = [
+  { id: "seaglass-alpha-free", name: "Seaglass Alpha Free", contextLength: 1048576, tools: true, reasoning: true, vision: false },
+  { id: "tidepool-alpha-free", name: "Tidepool Alpha Free", contextLength: 1048576, tools: true, reasoning: true, vision: false },
+  { id: "hy4-flash-free", name: "Hy4 flash Free", contextLength: 1048576, tools: true, reasoning: true, vision: true },
+  { id: "iceman-free", name: "Iceman Free", contextLength: 262144, tools: true, reasoning: true, vision: false },
+  { id: "flint-40b-free", name: "Flint 40B Free", contextLength: 262144, tools: true, reasoning: true, vision: false },
+  { id: "deepseek-v4.1-flash-free", name: "DeepSeek V4.1 Flash Free", contextLength: 330000, tools: true, reasoning: true, vision: true },
+  { id: "nemotron-3.5-super-vl-free", name: "Nemotron 3.5 Super VL Free", contextLength: 1048576, tools: true, reasoning: true, vision: true },
+  { id: "beam-free", name: "Beam Free", contextLength: 1048576, tools: true, reasoning: true, vision: false },
+  { id: "mimo-v2.6-flash-free", name: "MiMo-V2.6-Flash Free", contextLength: 1048576, tools: true, reasoning: true, vision: true },
+  { id: "nemotron-3.5-lightning-free", name: "Nemotron 3.5 Lightning Free", contextLength: 262144, tools: true, reasoning: true, vision: false },
 ];
 
-const RESPONSES_MODELS = [
-  "muse-spark-1.2-contributor-free",
-  "muse-spark-1.3-contributor-free",
-];
-
-const MESSAGES_MODELS = ["union-alpha"];
-
-const ALL_MODELS = [...RESPONSES_MODELS, ...MESSAGES_MODELS, ...CHAT_COMPLETIONS_MODELS];
+const CHAT_COMPLETIONS_MODELS = EXPECTED_MODELS.map((m) => m.id);
 
 describe("OpenCode Free model catalog", () => {
-  it("contains all 12 expected models", () => {
+  it("contains all 10 expected models in exact order", () => {
     const ids = (PROVIDER_MODELS.opencode || []).map((m) => m.id);
-    expect(ids).toEqual(ALL_MODELS);
+    expect(ids).toEqual(CHAT_COMPLETIONS_MODELS);
+    expect(ids.length).toBe(10);
+  });
+
+  it("contains no duplicate model IDs", () => {
+    const ids = (PROVIDER_MODELS.opencode || []).map((m) => m.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
+  });
+
+  it("matches model display names and IDs", () => {
+    const models = PROVIDER_MODELS.opencode || [];
+    for (const exp of EXPECTED_MODELS) {
+      const found = models.find((m) => m.id === exp.id);
+      expect(found).toBeDefined();
+      expect(found.name).toBe(exp.name);
+      if (exp.contextLength) expect(found.contextLength).toBe(exp.contextLength);
+      expect(found.supportsTools).toBe(exp.tools);
+      expect(found.supportsReasoning).toBe(exp.reasoning);
+      if (exp.vision) expect(found.supportsVision).toBe(true);
+    }
+  });
+
+  it("resolves capabilities correctly via getCapabilitiesForModel", () => {
+    for (const exp of EXPECTED_MODELS) {
+      const caps = getCapabilitiesForModel("opencode", exp.id);
+      expect(caps.tools).toBe(exp.tools);
+      expect(caps.reasoning).toBe(exp.reasoning);
+      expect(caps.vision).toBe(exp.vision);
+      if (exp.contextLength) expect(caps.contextWindow).toBe(exp.contextLength);
+    }
+  });
+});
+
+describe("OpenCode Free dynamic model filter", () => {
+  it("blocks out-of-catalog models from appearing via modelsFetcher", () => {
+    const input = [
+      { id: "beam-free", name: "Beam Free" },
+      { id: "big-pickle", name: "Big Pickle" },
+      { id: "jev-1.13-free", name: "JEV 1.13 Free" },
+      { id: "random-unauthorized-free", name: "Random Free" },
+      { id: "hy4-flash-free", name: "Hy4 flash Free" },
+    ];
+    const filtered = FILTERS["opencode-free"](input);
+    const filteredIds = filtered.map((m) => m.id);
+    expect(filteredIds).toEqual(["beam-free", "hy4-flash-free"]);
+    expect(filteredIds).not.toContain("big-pickle");
+    expect(filteredIds).not.toContain("jev-1.13-free");
+    expect(filteredIds).not.toContain("random-unauthorized-free");
   });
 });
 
@@ -43,18 +78,6 @@ describe("OpenCode Free per-model targetFormat", () => {
   it("chat completion models have no targetFormat (defaults to openai)", () => {
     for (const m of CHAT_COMPLETIONS_MODELS) {
       expect(getModelTargetFormat("opencode", m)).toBeNull();
-    }
-  });
-
-  it("Muse Spark contributor models use the openai-responses targetFormat", () => {
-    for (const m of RESPONSES_MODELS) {
-      expect(getModelTargetFormat("opencode", m)).toBe("openai-responses");
-    }
-  });
-
-  it("Union Alpha uses the claude targetFormat", () => {
-    for (const m of MESSAGES_MODELS) {
-      expect(getModelTargetFormat("opencode", m)).toBe("claude");
     }
   });
 });
@@ -65,18 +88,6 @@ describe("OpenCode Free executor URL routing", () => {
   it("routes chat completion models to /inference/v1/chat/completions", () => {
     for (const m of CHAT_COMPLETIONS_MODELS) {
       expect(executor.buildUrl(m)).toBe("https://opencode.ai/inference/v1/chat/completions");
-    }
-  });
-
-  it("routes Muse Spark contributor models to /inference/v1/responses", () => {
-    for (const m of RESPONSES_MODELS) {
-      expect(executor.buildUrl(m)).toBe("https://opencode.ai/inference/v1/responses");
-    }
-  });
-
-  it("routes Union Alpha to /inference/v1/messages", () => {
-    for (const m of MESSAGES_MODELS) {
-      expect(executor.buildUrl(m)).toBe("https://opencode.ai/inference/v1/messages");
     }
   });
 });

@@ -8,6 +8,9 @@ import { planBulkAdd } from "@/shared/utils/bulkAdd";
 
 const BULK_PLACEHOLDER = `name1|sk-key1\nname2|sk-key2\nsk-key-only-auto-named`;
 
+import { parseProxyString } from "@/shared/utils/proxy";
+export { parseProxyString };
+
 export default function AddApiKeyModal({ isOpen, provider, providerName, isCompatible, isAnthropic, authType, authHint, website, proxyPools, error, existingNames, onSave, onBulkDone, onClose }) {
   const NONE_PROXY_POOL_VALUE = "__none__";
   const isNoAuth = !!AI_PROVIDERS?.[provider]?.noAuth;
@@ -30,6 +33,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     defaultModel: "",
     priority: 1,
     proxyPoolId: NONE_PROXY_POOL_VALUE,
+    directProxyUrl: "",
     ollamaHostUrl: "",
   });
   const [azureData, setAzureData] = useState({
@@ -92,12 +96,50 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   const handleSubmit = async () => {
     if (!provider) return;
     if (!isOllamaLocal && !isNoAuth && !formData.apiKey) return;
-    if (!isOllamaLocal && !formData.name) return;
+    if (!isOllamaLocal && !isNoAuth && !formData.name) return;
     if (isCompatible && !formData.defaultModel.trim()) return;
 
     setSaving(true);
     try {
       let isValid = false;
+      let finalPoolId = formData.proxyPoolId === NONE_PROXY_POOL_VALUE ? null : formData.proxyPoolId;
+      let finalProxyUrl = "";
+      let finalProxyEnabled = false;
+
+      if (formData.directProxyUrl.trim()) {
+        const parsed = parseProxyString(formData.directProxyUrl);
+        if (parsed) {
+          finalProxyUrl = parsed.proxyUrl;
+          finalProxyEnabled = true;
+
+          const existingPool = (proxyPools || []).find((p) => p.proxyUrl === parsed.proxyUrl);
+          if (existingPool) {
+            finalPoolId = existingPool.id;
+          } else {
+            try {
+              const pRes = await fetch("/api/proxy-pools", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: parsed.name,
+                  proxyUrl: parsed.proxyUrl,
+                  isActive: true,
+                  type: "http",
+                }),
+              });
+              if (pRes.ok) {
+                const pData = await pRes.json();
+                if (pData.proxyPool?.id) finalPoolId = pData.proxyPool.id;
+              }
+            } catch (e) {
+              console.error("Failed to create proxy pool on the fly:", e);
+            }
+          }
+        }
+      } else if (finalPoolId) {
+        finalProxyEnabled = true;
+      }
+
       if (!isNoAuth) {
         try {
           setValidating(true);
@@ -119,14 +161,23 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         isValid = true;
       }
 
+      const connectionName = formData.name || (isOllamaLocal ? "Ollama Local" : (isNoAuth ? (formData.directProxyUrl ? `Connection (${parseProxyString(formData.directProxyUrl)?.name || "Proxy"})` : "Connection") : "Connection"));
+
       await onSave({
-        name: formData.name || (isOllamaLocal ? "Ollama Local" : "Connection"),
+        name: connectionName,
         apiKey: isNoAuth ? "public" : formData.apiKey,
         defaultModel: isCompatible ? formData.defaultModel.trim() : undefined,
         priority: formData.priority,
-        proxyPoolId: formData.proxyPoolId === NONE_PROXY_POOL_VALUE ? null : formData.proxyPoolId,
+        proxyPoolId: finalPoolId,
+        connectionProxyEnabled: finalProxyEnabled || undefined,
+        connectionProxyUrl: finalProxyUrl || undefined,
         testStatus: isNoAuth ? "active" : (isValid ? "active" : "unknown"),
-        providerSpecificData: buildProviderSpecificData()
+        providerSpecificData: {
+          ...buildProviderSpecificData(),
+          ...(finalProxyEnabled ? { connectionProxyEnabled: true } : {}),
+          ...(finalProxyUrl ? { connectionProxyUrl: finalProxyUrl } : {}),
+          ...(finalPoolId ? { proxyPoolId: finalPoolId } : {}),
+        },
       });
     } finally {
       setSaving(false);
@@ -134,11 +185,74 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
   };
 
   const handleBulkSubmit = async () => {
+    if (isNoAuth) {
+      setSaving(true);
+      setBulkResult(null);
+      let success = 0;
+      let failed = 0;
+      const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const parsed = parseProxyString(line);
+        if (!parsed) {
+          failed++;
+          continue;
+        }
+
+        let poolId = null;
+        try {
+          const poolRes = await fetch("/api/proxy-pools", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: parsed.name,
+              proxyUrl: parsed.proxyUrl,
+              isActive: true,
+              type: "http",
+            }),
+          });
+          if (poolRes.ok) {
+            const pData = await poolRes.json();
+            poolId = pData.proxyPool?.id || null;
+          }
+        } catch {
+          // Continue even if proxy pool creation fails
+        }
+
+        try {
+          const res = await fetch("/api/providers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              provider,
+              apiKey: "public",
+              name: parsed.name.startsWith("Proxy ") ? `Connection #${i + 1} (${parsed.name})` : parsed.name,
+              priority: i + 1,
+              testStatus: "active",
+              proxyPoolId: poolId,
+              connectionProxyEnabled: true,
+              connectionProxyUrl: parsed.proxyUrl,
+              providerSpecificData: {
+                connectionProxyEnabled: true,
+                connectionProxyUrl: parsed.proxyUrl,
+                ...(poolId ? { proxyPoolId: poolId } : {}),
+              },
+            }),
+          });
+          if (res.ok) success++;
+          else failed++;
+        } catch {
+          failed++;
+        }
+      }
+      setSaving(false);
+      setBulkResult({ success, failed });
+      if (success > 0 && onBulkDone) onBulkDone();
+      return;
+    }
+
     const lines = bulkText.split("\n");
     if (!lines.length) return;
-    // Plan collision-free names against existing connections so a generated
-    // "Key N" never matches a saved name (which the backend would upsert /
-    // overwrite instead of inserting). See bulkAdd.js for the full rationale.
     const plan = planBulkAdd(lines, existingNames, { isCloudflareAi });
     if (!plan.length) return;
     setSaving(true);
@@ -176,24 +290,25 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     <Modal isOpen={isOpen} title={isNoAuth ? `Add ${providerName || provider} Connection` : `Add ${providerName || provider} ${credentialLabel}`} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {/* Mode switcher */}
-        {!isNoAuth && (
-          <div className="flex gap-2">
-            <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
-            <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Button size="sm" variant={mode === "single" ? "primary" : "ghost"} onClick={() => { setMode("single"); setBulkResult(null); }}>Single</Button>
+          <Button size="sm" variant={mode === "bulk" ? "primary" : "ghost"} onClick={() => { setMode("bulk"); setBulkResult(null); }}>Bulk Add</Button>
+        </div>
 
-        {mode === "bulk" && !isNoAuth && (
+        {mode === "bulk" && (
           <div className="flex flex-col gap-3">
             <p className="text-xs text-text-muted">
-              {isCloudflareAi
-                ? <>One key per line. Format: <code>name|apiKey|accountId</code> or just <code>apiKey</code> (auto-named by index).</>
-                : <>One key per line. Format: <code>name|apiKey</code> or just <code>apiKey</code> (auto-named by index).</>
-              }
+              {isNoAuth ? (
+                <>One proxy per line. Formats: <code>user:pass@host:port</code>, <code>host:port:user:pass</code>, or <code>http://user:pass@host:port</code>. Proxies will automatically be added to Proxy Pools and created as active connections.</>
+              ) : isCloudflareAi ? (
+                <>One key per line. Format: <code>name|apiKey|accountId</code> or just <code>apiKey</code> (auto-named by index).</>
+              ) : (
+                <>One key per line. Format: <code>name|apiKey</code> or just <code>apiKey</code> (auto-named by index).</>
+              )}
             </p>
             <textarea
               className="w-full rounded border border-accent/30 bg-sidebar p-2 text-sm font-mono resize-y min-h-[140px] focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder={bulkPlaceholder}
+              placeholder={isNoAuth ? `user:pass@65.111.7.97:3129\n104.207.37.28:3129:user:pass\nhttp://user:pass@45.3.54.110:3129` : bulkPlaceholder}
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
             />
@@ -204,14 +319,14 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             )}
             <div className="flex gap-2">
               <Button onClick={handleBulkSubmit} fullWidth disabled={saving || !bulkText.trim()}>
-                {saving ? "Adding..." : "Add All Keys"}
+                {saving ? "Adding..." : (isNoAuth ? "Add All Proxies" : "Add All Keys")}
               </Button>
               <Button onClick={onClose} variant="ghost" fullWidth>Cancel</Button>
             </div>
           </div>
         )}
 
-        {(mode === "single" || isNoAuth) && (<>
+        {mode === "single" && (<>
         <Input
           label="Name"
           value={formData.name}
@@ -223,7 +338,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">verified_user</span>
             <div>
               <p className="font-medium">No upstream API key required (OpenCode Free)</p>
-              <p className="text-text-muted mt-0.5">This connection routes requests via the selected Proxy Pool with automatic rate-limit failover.</p>
+              <p className="text-text-muted mt-0.5">This connection routes requests via the specified Proxy (or Proxy Pool) with automatic rate-limit failover.</p>
             </div>
           </div>
         ) : isOllamaLocal ? (
@@ -357,10 +472,11 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         )}
 
         <Input
-          label="Priority"
-          type="number"
-          value={formData.priority}
-          onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) || 1 })}
+          label="Direct Proxy URL (Optional)"
+          value={formData.directProxyUrl}
+          onChange={(e) => setFormData({ ...formData, directProxyUrl: e.target.value })}
+          placeholder="e.g. user:pass@ip:port or http://ip:port"
+          hint="Paste proxy directly here, or select an existing Proxy Pool below."
         />
 
         <Select
@@ -374,18 +490,15 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           placeholder="None"
         />
 
-        {(proxyPools || []).length === 0 && (
-          <p className="text-xs text-text-muted">
-            No active proxy pools available. Create one in Proxy Pools page first.
-          </p>
-        )}
-
-        <p className="text-xs text-text-muted">
-          Legacy manual proxy fields are still accepted by API for backward compatibility.
-        </p>
+        <Input
+          label="Priority"
+          type="number"
+          value={formData.priority}
+          onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value, 10) || 1 })}
+        />
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && !isNoAuth && !formData.apiKey) || (!isOllamaLocal && !formData.name) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && !isNoAuth && !formData.apiKey) || (!isOllamaLocal && !isNoAuth && !formData.name) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>
@@ -397,6 +510,26 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     </Modal>
   );
 }
+
+AddApiKeyModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  provider: PropTypes.string,
+  providerName: PropTypes.string,
+  isCompatible: PropTypes.bool,
+  isAnthropic: PropTypes.bool,
+  authType: PropTypes.string,
+  authHint: PropTypes.string,
+  website: PropTypes.string,
+  proxyPools: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string,
+    name: PropTypes.string,
+  })),
+  error: PropTypes.string,
+  existingNames: PropTypes.arrayOf(PropTypes.string),
+  onSave: PropTypes.func.isRequired,
+  onBulkDone: PropTypes.func,
+  onClose: PropTypes.func.isRequired,
+};
 
 AddApiKeyModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,

@@ -8,13 +8,17 @@ import Button from "@/shared/components/Button";
 import Badge from "@/shared/components/Badge";
 import { isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
 import Select from "@/shared/components/Select";
+import { parseProxyString } from "@/shared/utils/proxy";
 
 export default function EditConnectionModal({ isOpen, connection, proxyPools, onSave, onClose }) {
+  const NONE_PROXY_POOL_VALUE = "__none__";
   const [formData, setFormData] = useState({
     name: "",
     priority: 1,
     weight: 1,
     apiKey: "",
+    proxyPoolId: NONE_PROXY_POOL_VALUE,
+    directProxyUrl: "",
   });
   const [azureData, setAzureData] = useState({
     azureEndpoint: "",
@@ -37,6 +41,8 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
         priority: connection.priority || 1,
         weight: connection.weight || 1,
         apiKey: "",
+        proxyPoolId: connection.providerSpecificData?.proxyPoolId || NONE_PROXY_POOL_VALUE,
+        directProxyUrl: connection.providerSpecificData?.connectionProxyUrl || "",
       });
       // Load Azure-specific data if present
       if (connection.provider === "azure" && connection.providerSpecificData) {
@@ -174,7 +180,59 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
       if (providerRegions && region) {
         updates.providerSpecificData = buildRegionSpecificData();
       }
-      
+
+      // Handle proxy configuration
+      let finalPoolId = formData.proxyPoolId === NONE_PROXY_POOL_VALUE ? null : formData.proxyPoolId;
+      let finalProxyUrl = "";
+      let finalProxyEnabled = false;
+
+      if (formData.directProxyUrl.trim()) {
+        const parsed = parseProxyString(formData.directProxyUrl);
+        if (parsed) {
+          finalProxyUrl = parsed.proxyUrl;
+          finalProxyEnabled = true;
+
+          const existingPool = (proxyPools || []).find((p) => p.proxyUrl === parsed.proxyUrl);
+          if (existingPool) {
+            finalPoolId = existingPool.id;
+          } else {
+            try {
+              const pRes = await fetch("/api/proxy-pools", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: parsed.name,
+                  proxyUrl: parsed.proxyUrl,
+                  isActive: true,
+                  type: "http",
+                }),
+              });
+              if (pRes.ok) {
+                const pData = await pRes.json();
+                if (pData.proxyPool?.id) finalPoolId = pData.proxyPool.id;
+              }
+            } catch (e) {
+              console.error("Failed to create proxy pool:", e);
+            }
+          }
+        }
+      } else if (finalPoolId) {
+        finalProxyEnabled = true;
+      }
+
+      // Apply proxy fields to updates
+      updates.proxyPoolId = finalPoolId;
+      updates.connectionProxyEnabled = finalProxyEnabled;
+      updates.connectionProxyUrl = finalProxyUrl || undefined;
+
+      // Merge proxy into providerSpecificData
+      updates.providerSpecificData = {
+        ...(updates.providerSpecificData || connection.providerSpecificData || {}),
+        ...(finalProxyEnabled ? { connectionProxyEnabled: true } : { connectionProxyEnabled: false }),
+        ...(finalProxyUrl ? { connectionProxyUrl: finalProxyUrl } : {}),
+        ...(finalPoolId ? { proxyPoolId: finalPoolId } : {}),
+      };
+
       await onSave(updates);
     } finally {
       setSaving(false);
@@ -300,6 +358,29 @@ export default function EditConnectionModal({ isOpen, connection, proxyPools, on
             )}
           </div>
         )}
+
+        {/* Proxy Configuration */}
+        <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
+          <h3 className="font-semibold mb-3 text-sm">Proxy Configuration (Optional)</h3>
+          <div className="flex flex-col gap-3">
+            <Input
+              label="Direct Proxy URL"
+              value={formData.directProxyUrl}
+              onChange={(e) => setFormData({ ...formData, directProxyUrl: e.target.value })}
+              placeholder="e.g. user:pass@ip:port or http://ip:port"
+              hint="Enter proxy directly here, or select an existing Proxy Pool below."
+            />
+            <Select
+              label="Proxy Pool"
+              value={formData.proxyPoolId}
+              onChange={(e) => setFormData({ ...formData, proxyPoolId: e.target.value })}
+              options={[
+                { value: NONE_PROXY_POOL_VALUE, label: "None" },
+                ...(proxyPools || []).map((pool) => ({ value: pool.id, label: pool.name })),
+              ]}
+            />
+          </div>
+        </div>
 
         <div className="flex gap-2">
           <Button onClick={handleSubmit} fullWidth disabled={saving}>{saving ? "Saving..." : "Save"}</Button>

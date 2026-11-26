@@ -327,7 +327,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Dangerous-Direct-Browser-Access": "true",
     "Anthropic-Version": "2023-06-01",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -345,7 +345,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Dangerous-Direct-Browser-Access": "true",
     "Anthropic-Version": "2023-06-01",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -365,7 +365,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Version": "2023-06-01",
     "Authorization": "Bearer <TOK>",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -1814,8 +1814,8 @@ exports[`GOLDEN buildUrl (default executor providers) > fireworks → url (strea
 
 exports[`GOLDEN buildUrl (default executor providers) > freebuff → url (stream + non-stream) 1`] = `
 {
-  "nonStream": "https://www.codebuff.com/api/v1/chat/completions",
-  "stream": "https://www.codebuff.com/api/v1/chat/completions",
+  "nonStream": "freebuff://pty/worker",
+  "stream": "freebuff://pty/worker",
 }
 `;
 

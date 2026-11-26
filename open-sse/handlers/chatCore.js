@@ -269,7 +269,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   }
 
   // Per-request opt-out: client can bypass all token savers via header
-  const tokenSaverEnabled = clientRawRequest?.headers?.[TOKEN_SAVER_HEADER]?.toLowerCase() !== "off";
+  const saverHeaderVal =
+    clientRawRequest?.headers?.[TOKEN_SAVER_HEADER] ??
+    clientRawRequest?.headers?.["x-9router-token-saver"] ??
+    clientRawRequest?.headers?.["x-toolnet-token-saver"];
+  const tokenSaverEnabled = saverHeaderVal?.toLowerCase() !== "off";
 
   // RTK: compress tool_result content
   const rtkStats = compressMessages(translatedBody, tokenSaverEnabled && rtkEnabled);

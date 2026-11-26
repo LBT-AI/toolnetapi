@@ -3,7 +3,12 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
-const { WebSocketServer } = require("ws");
+let WebSocketServer;
+try {
+  ({ WebSocketServer } = require("ws"));
+} catch {
+  // ws is optional when running in test runners or environments without agent WebSocket server
+}
 
 let agentRepoPromise = null;
 function getAgentRepo() {
@@ -78,6 +83,7 @@ function startBackgroundTokenRefreshFromCustomServer() {
 
 // Create a function to handle WebSocket upgrade
 function handleWebSocketUpgrade(req, socket, head) {
+  if (!WebSocketServer) return false;
   const url = new URL(req.url || "", `http://${req.headers.host}`);
   if (url.pathname !== "/api/agents/connect") return false;
 
@@ -135,7 +141,7 @@ http.createServer = (...args) => {
     startBackgroundTokenRefreshFromCustomServer();
 
     // Initialize WebSocket server for agent connections
-    if (!wss) {
+    if (!wss && WebSocketServer) {
       wss = new WebSocketServer({ noServer: true });
       wss.on("connection", async (ws, req) => {
         const url = new URL(req.url || "", `http://${req.headers.host}`);

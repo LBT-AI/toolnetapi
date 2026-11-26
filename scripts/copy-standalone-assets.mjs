@@ -1,4 +1,4 @@
-import { cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -42,8 +42,20 @@ export function copyStandaloneAssets({ projectRoot = process.cwd(), distDir = pr
   const ptyBuildSource = resolve(projectRoot, "node_modules", "node-pty", "build");
   const ptyBuildDestination = resolve(standaloneDir, "node_modules", "node-pty", "build");
   if (existsSync(ptyBuildSource)) {
-    cpSync(ptyBuildSource, ptyBuildDestination, { recursive: true, force: true });
-    console.log(`[standalone-assets] Copied node-pty build to ${ptyBuildDestination}`);
+    let same = false;
+    try {
+      if (existsSync(ptyBuildDestination) && realpathSync(ptyBuildSource) === realpathSync(ptyBuildDestination)) {
+        same = true;
+      }
+    } catch {
+      // ignore
+    }
+    if (!same) {
+      cpSync(ptyBuildSource, ptyBuildDestination, { recursive: true, force: true });
+      console.log(`[standalone-assets] Copied node-pty build to ${ptyBuildDestination}`);
+    } else {
+      console.log(`[standalone-assets] Skipping node-pty build copy (source and destination are identical)`);
+    }
   }
 }
 

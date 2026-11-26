@@ -25,4 +25,4 @@ export {
   createPairingCode, verifyPairingCode, consumePairingCode,
   createAgent, getAgent, getAllAgents, updateAgentStatus,
   revokeAgent, deleteAgent, verifyAgentToken,
-} from "@/lib/db/index.js";
+} from "./db/index.js";

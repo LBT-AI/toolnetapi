@@ -1,5 +1,5 @@
 import { SAML } from "@node-saml/node-saml";
-import { getSettings } from "@/lib/localDb";
+import { getSettings } from "../localDb.js";
 
 /**
  * Normalizes an X.509 certificate string into strict standard PEM format.

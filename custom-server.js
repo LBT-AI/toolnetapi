@@ -3,8 +3,21 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
-const { WebSocketServer } = require("ws");
-const { verifyAgentToken, updateAgentStatus } = require("./src/lib/localDb.js");
+let WebSocketServer;
+try {
+  ({ WebSocketServer } = require("ws"));
+} catch {
+  // ws is optional when running in test runners or environments without agent WebSocket server
+}
+
+let agentRepoPromise = null;
+function getAgentRepo() {
+  if (!agentRepoPromise) {
+    const repoPath = path.join(__dirname, "src", "lib", "db", "repos", "agentRepo.js");
+    agentRepoPromise = import(pathToFileURL(repoPath).href);
+  }
+  return agentRepoPromise;
+}
 
 const origCreate = http.createServer.bind(http);
 
@@ -70,6 +83,7 @@ function startBackgroundTokenRefreshFromCustomServer() {
 
 // Create a function to handle WebSocket upgrade
 function handleWebSocketUpgrade(req, socket, head) {
+  if (!WebSocketServer) return false;
   const url = new URL(req.url || "", `http://${req.headers.host}`);
   if (url.pathname !== "/api/agents/connect") return false;
 
@@ -127,7 +141,7 @@ http.createServer = (...args) => {
     startBackgroundTokenRefreshFromCustomServer();
 
     // Initialize WebSocket server for agent connections
-    if (!wss) {
+    if (!wss && WebSocketServer) {
       wss = new WebSocketServer({ noServer: true });
       wss.on("connection", async (ws, req) => {
         const url = new URL(req.url || "", `http://${req.headers.host}`);
@@ -148,20 +162,21 @@ http.createServer = (...args) => {
         const agentId = agentIdHeader;
 
         try {
-          const valid = await verifyAgentToken(agentId, agentToken);
+          const agentRepo = await getAgentRepo();
+          const valid = await agentRepo.verifyAgentToken(agentId, agentToken);
           if (!valid) {
             ws.close(4001, "Invalid agent token");
             return;
           }
 
-          await updateAgentStatus(agentId, "online");
+          await agentRepo.updateAgentStatus(agentId, "online");
           ws.agentId = agentId;
 
           ws.on("message", async (data) => {
             try {
               const msg = JSON.parse(data.toString());
               if (msg.type === "state") {
-                await updateAgentStatus(agentId, "online", {
+                await agentRepo.updateAgentStatus(agentId, "online", {
                   mitmRunning: msg.mitmRunning,
                   certExists: msg.certExists,
                   certTrusted: msg.certTrusted,
@@ -180,7 +195,7 @@ http.createServer = (...args) => {
           });
 
           ws.on("close", async () => {
-            await updateAgentStatus(agentId, "offline");
+            await agentRepo.updateAgentStatus(agentId, "offline");
           });
 
           ws.on("error", (e) => {
@@ -191,7 +206,10 @@ http.createServer = (...args) => {
           agentConnections.set(agentId, ws);
           ws.on("close", async () => {
             agentConnections.delete(agentId);
-            await updateAgentStatus(agentId, "offline");
+            try {
+              const repo = await getAgentRepo();
+              await repo.updateAgentStatus(agentId, "offline");
+            } catch (err) {}
           });
 
           // Send any queued commands

@@ -106,8 +106,10 @@ rl.on("line", (line) => {
 
 function ensureClientToolsScript() {
   const scriptPath = path.join(os.tmpdir(), "toolnetapi-devin-client-tools.mjs");
+  const legacyPath = path.join(os.tmpdir(), "9router-devin-client-tools.mjs");
   // Always rewrite so script upgrades land without a process restart.
   fs.writeFileSync(scriptPath, CLIENT_TOOLS_MCP_SCRIPT);
+  try { fs.writeFileSync(legacyPath, CLIENT_TOOLS_MCP_SCRIPT); } catch {}
   return scriptPath;
 }
 

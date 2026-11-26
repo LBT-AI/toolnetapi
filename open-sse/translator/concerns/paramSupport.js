@@ -21,6 +21,23 @@ const STRIP_RULES = [
   // "integer above maximum value, expected <= 32768". Pin an explicit endpoint cap;
   // min() with the model ceiling still applies if a variant's own limit is lower.
   { provider: "volcengine-ark", match: /kimi/i, maxOutputCap: 32768, clampToModelMaxOutput: true },
+  // NVIDIA NIM treats `reasoning` and `reasoning_content` as aliases for one
+  // field; sending both makes its deserializer report a duplicate field. Keep
+  // the OpenAI canonical spelling on assistant history.
+  // Also strip unsupported client metadata, Anthropic beta, thinking budget, and OpenAI extra params.
+  {
+    provider: "nvidia",
+    drop: [
+      "client_metadata",
+      "prompt_cache_key",
+      "service_tier",
+      "anthropic_beta",
+      "thinking_budget",
+      "user_id",
+      "custom_field",
+    ],
+    renameMessageFields: { reasoning: "reasoning_content" },
+  },
 ];
 
 // Test a rule's match (regex or predicate) against the model id.
@@ -41,8 +58,31 @@ export function stripUnsupportedParams(provider, model, body) {
   for (const rule of STRIP_RULES) {
     if (rule.provider && rule.provider !== provider) continue;
     if (!matches(rule, model)) continue;
+    // Rename params (keeps an explicit target value if the client already sent one).
+    for (const [from, to] of Object.entries(rule.renameParams || {})) {
+      if (body[from] === undefined) continue;
+      if (body[to] === undefined) body[to] = body[from];
+      delete body[from];
+    }
     for (const key of rule.drop || []) {
       if (body[key] !== undefined) delete body[key];
+    }
+    // Normalize and drop assistant-message fields (clients replay reasoning here).
+    if ((rule.renameMessageFields || rule.dropMessageFields) && Array.isArray(body.messages)) {
+      for (const msg of body.messages) {
+        if (!msg || msg.role !== "assistant") continue;
+        for (const [from, to] of Object.entries(rule.renameMessageFields || {})) {
+          if (msg[from] === undefined) continue;
+          const existing = msg[to];
+          if (existing === undefined || existing === null || (typeof existing === "string" && !existing.trim())) {
+            msg[to] = msg[from];
+          }
+          delete msg[from];
+        }
+        for (const key of rule.dropMessageFields || []) {
+          if (msg[key] !== undefined) delete msg[key];
+        }
+      }
     }
     // CF Workers AI oneOf root schema only accepts content as plain string (#1926)
     if (rule.flattenContent && Array.isArray(body.messages)) {

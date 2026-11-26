@@ -104,6 +104,7 @@ export const MODEL_CAPABILITIES = {
 
   // Kimi flagship + coding (platform + Kimi Code ids) — vision/video native
   "kimi-k3":           { vision: true, videoInput: true, reasoning: true, thinkingFormat: "kimi", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
+  "kimi-k3.1-pro":     { vision: true, videoInput: true, reasoning: true, thinkingFormat: "kimi", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
   "k3":                { vision: true, videoInput: true, reasoning: true, thinkingFormat: "kimi", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
   "kimi-for-coding":   { vision: true, videoInput: true, reasoning: true, thinkingFormat: "kimi", thinkingCanDisable: false, contextWindow: 262144, maxOutput: 65536 },
   "kimi-for-coding-highspeed": { vision: true, videoInput: true, reasoning: true, thinkingFormat: "kimi", thinkingCanDisable: false, contextWindow: 262144, maxOutput: 65536 },
@@ -112,7 +113,19 @@ export const MODEL_CAPABILITIES = {
   // OpenCode Free Muse Spark — multimodal (text+image per models.dev meta/muse-spark)
   // via OpenAI Responses input_image; reasoning supports up to xhigh.
   "muse-spark-1.2-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
+  // OpenCode serves the same weights under this free id from its OWN inference
+  // service, which validates the body strictly: the zai `thinking` object the
+  // *glm-5.3* pattern emits is answered 400 [unknown_parameter] invalid request
+  // body: json: unknown field "thinking" while reasoning_effort is accepted
+  // (probed live 2026-10-18 on /inference/v1 and /zen/v1).
+  "glm-5.3-flash-free": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 128000 },
   "muse-spark-1.3-contributor-free": { vision: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1048576, maxOutput: 131072 },
+  // Haiku 5.5 is adaptive-only, like the rest of the 5.x line; the *claude*haiku-5*
+  // pattern below still describes the extended-thinking shape and would 400 on the
+  // Claude API ("thinking.type.enabled" is not supported for this model).
+  "claude-haiku-5-5": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+  // OpenCode Free Union Alpha — multimodal (text+vision), 262K context, 131K max output
+  "union-alpha": { vision: true, contextWindow: 262144, maxOutput: 131072 },
 };
 
 const KIRO_GPT_5_6_CAPABILITIES = { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 272000, maxOutput: 128000 };
@@ -158,15 +171,20 @@ export const PROVIDER_CAPABILITIES = {
     "meta-llama/llama-prompt-guard-2-22m": { vision: false, tools: false, reasoning: false, contextWindow: 512, maxOutput: 512 },
   },
   "nvidia": {
-    "minimaxai/minimax-m3": { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
+    "minimaxai/minimax-m3": { tools: false, vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 },
     "z-ai/glm-5.2": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 128000 },
     "deepseek-ai/deepseek-v4-pro-0813": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
     "deepseek-ai/deepseek-v4-flash-0731": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
     "nvidia/nemotron-3.5-lightning-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    "nvidia/nemotron-3.5-bolt-e4b": { tools: true, contextWindow: 128000, maxOutput: 8192 },
     "nvidia/nemotron-3-super-120b-a12b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-30b-a3b": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { reasoning: true, thinkingFormat: "openai", contextWindow: 128000, maxOutput: 128000 },
+    // Hosted endpoint accepted 1,000,057 prompt tokens and the streamed Read/Edit/Read fixture (2026-11-13).
+    "nvidia/nemotron-3-ultra-550b-a55b": { tools: true, reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 8192 },
+    "poolside/laguna-xs-2.1": { tools: true, contextWindow: 200000, maxOutput: 32000 },
     "nvidia/riva-translate-4b-instruct-v2": { tools: false, reasoning: false, contextWindow: 8192, maxOutput: 4096 },
+    "meta/llama-3.3-70b-instruct": { tools: true, contextWindow: 128000, maxOutput: 4096 },
     "nvidia/riva-translate-1.6b": { tools: false, reasoning: false, contextWindow: 4096, maxOutput: 4096 },
   },
   "sambanova": {
@@ -243,6 +261,21 @@ export const PROVIDER_CAPABILITIES = {
     "deepseek-v4-pro":    { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 50000 },
     "deepseek-v4-flash":  { vision: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1000000, maxOutput: 50000 },
   },
+  // glm-5.3-flash on OpenCode Go is served by a backend that rejects the z.ai
+  // `thinking` object (400: unknown field "thinking") and wants reasoning_effort.
+  // Overrides the global entry, whose z.ai shape is correct for z.ai itself.
+  "opencode-go": {
+    "glm-5.3-flash": { vision: true, videoInput: true, pdf: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: false, contextWindow: 1000000, maxOutput: 131072 },
+    // OpenCode Go's claude-haiku-5-5 rejects `thinking.type.enabled` — the shape the
+    // global *claude*haiku* → claude-budget pattern sends — with 400: `"thinking.type.enabled"
+    // is not supported for this model. Use "thinking.type.adaptive" and "output_config.effort".
+    // claude-adaptive emits exactly that (adaptive switch + output_config.effort), so override
+    // the global haiku pattern for this provider only. Limits follow the model, not the
+    // pattern: the upstream catalog reports context_length 1000000 and the synced catalog
+    // maxOutput 128000 for this id (the provider override short-circuits before the
+    // catalog overlay, so maxOutput must be stated here too).
+    "claude-haiku-5-5": { vision: true, reasoning: true, search: true, thinkingFormat: "claude-adaptive", contextWindow: 1000000, maxOutput: 128000 },
+  },
   // Qoder — upstream exposes opaque internal ids (dfmodel, kmodel, …); the
   // registry `name` is display-only and capability lookup matches on the raw
   // id, so every qoder model would fall through to DEFAULT_CAPABILITIES
@@ -279,6 +312,17 @@ export const PROVIDER_CAPABILITIES = {
   "poolside": {
     "laguna-s-2.1":  { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 32000 },
     "laguna-xs-2.1": { reasoning: true, thinkingFormat: "openai", contextWindow: 200000, maxOutput: 32000 },
+  },
+  // OpenCode Free (oc) — the free lane's MiMo route is OpenRouter-backed and
+  // takes the plain OpenAI reasoning_effort enum verbatim; the global
+  // *mimo*v2.6* pattern describes Xiaomi's own API (DeepSeek-shaped
+  // `thinking` object, always on), which this lane ignores.
+  // deepseek-v4.1-flash-free: the backend rejects requests above ~330k prompt
+  // tokens (issue #5097). Cap the published context window at 330000 so clients
+  // compact correctly instead of hard-failing mid-session.
+  "opencode": {
+    "mimo-v2.6-flash-free": { vision: true, audioInput: true, videoInput: true, reasoning: true, thinkingFormat: "openai", thinkingCanDisable: true, contextWindow: 1048576, maxOutput: 131072 },
+    "deepseek-v4.1-flash-free": { vision: true, reasoning: true, thinkingFormat: "deepseek", contextWindow: 330000, maxOutput: 128000 },
   },
 };
 
@@ -384,10 +428,11 @@ export const PATTERN_CAPABILITIES = [
   { pattern: "*minimax-m2.7*",  caps: { reasoning: true, thinkingFormat: "minimax", thinkingCanDisable: false, contextWindow: 204800, maxOutput: 131072 } },
   { pattern: "*minimax*",       caps: { reasoning: true, thinkingFormat: "minimax", thinkingCanDisable: false, contextWindow: 200000, maxOutput: 131072 } },
 
-  // ── Xiaomi MiMo (vision, 1M / 262K ctx) ──────────────────────────
-  { pattern: "*mimo*v2.5*",     caps: { vision: true, audioInput: true, videoInput: true, contextWindow: 1048576, maxOutput: 131072 } },
-  { pattern: "*mimo*omni*",     caps: { vision: true, audioInput: true, contextWindow: 262144, maxOutput: 131072 } },
-  { pattern: "*mimo*",          caps: { vision: true, contextWindow: 262144, maxOutput: 131072 } },
+  // ── Xiaomi MiMo (vision + <think>-tag reasoning, always-on, can't disable) ──
+  { pattern: "*mimo*v2.6*",     caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 } },
+  { pattern: "*mimo*v2.5*",     caps: { vision: true, audioInput: true, videoInput: true, reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 1048576, maxOutput: 131072 } },
+  { pattern: "*mimo*omni*",     caps: { vision: true, audioInput: true, reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 262144, maxOutput: 131072 } },
+  { pattern: "*mimo*",          caps: { vision: true, reasoning: true, thinkingFormat: "deepseek", thinkingCanDisable: false, contextWindow: 262144, maxOutput: 131072 } },
 
   // ── Llama (4 = vision/1M; 3.x = text-only/128K) ──────────────────
   { pattern: "*llama-4*",       caps: { vision: true, contextWindow: 1000000 } },

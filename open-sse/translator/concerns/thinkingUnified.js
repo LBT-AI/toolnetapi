@@ -109,6 +109,14 @@ const NATIVE_ONLY_FORMATS = new Set(["gemini-level", "gemini-budget", "claude-bu
 
 // Resolve thinking format: provider override > capability > derive(targetFormat).
 function resolveFormat(targetFormat, model, provider) {
+  // A multi-endpoint provider can declare, per transports[] entry, the thinking shape that
+  // endpoint accepts. It wins over the model's thinkingFormat, which describes the Chat wire:
+  // strict /responses upstreams (Meta, OpenCode Go) reject Chat-shaped reasoning_effort /
+  // thinking:{type} and need reasoning:{effort,summary} instead.
+  const transportFmt = provider
+    ? PROVIDERS[provider]?.transports?.find((t) => t.format === targetFormat)?.thinkingFormat
+    : null;
+  if (transportFmt) return transportFmt;
   const providerFmt = provider ? PROVIDERS[provider]?.thinkingFormat : null;
   if (providerFmt) return providerFmt;
   const caps = getCapabilitiesForModel(provider, model);
@@ -240,6 +248,22 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels) {
       if (level) body.reasoning_effort = normalizeOpenAILevel(level, supportedLevels);
       break;
     }
+    case "openai-responses": {
+      // The Responses API nests effort: reasoning:{effort,summary}. A top-level
+      // reasoning_effort is rejected by strict upstreams (Meta: "unknown
+      // parameter `reasoning_effort`"). "none" is expressed by omitting reasoning.
+      if (none && canDisable) { delete body.reasoning; break; }
+      const level = toLevel(eff);
+      if (level) {
+        const current = body.reasoning && typeof body.reasoning === "object" && !Array.isArray(body.reasoning)
+          ? body.reasoning
+          : {};
+        body.reasoning = { ...current, effort: normalizeOpenAILevel(level, supportedLevels) };
+        if (!body.reasoning.summary) body.reasoning.summary = "auto";
+      }
+      delete body.reasoning_effort;
+      break;
+    }
     case "claude-adaptive": {
       if (none && canDisable) { body.thinking = { type: "disabled" }; break; }
       // Models that can disable thinking need the explicit adaptive switch.
@@ -285,9 +309,17 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels) {
     case "deepseek": {
       if (none && canDisable) { body.thinking = { type: "disabled" }; break; }
       body.thinking = { type: "enabled" };
-      // DeepSeek: low/medium→high, xhigh/max→max.
+      // DeepSeek's own API collapses low/medium→high and xhigh/max→max, so the wire
+      // stays on {high,max} for it. The declared levels win where they disagree:
+      // zen's free deepseek-v4.1-flash publishes low|high|max and its upstream takes
+      // the level verbatim, so collapsing "low" would make that level unreachable.
+      // Some backends (mimo v2.5-pro/v2.6 on opencode-go, probed live) 400 on "max"
+      // — clamp to high when the declared levels exclude it.
       const level = toLevel(eff);
-      body.reasoning_effort = level === "xhigh" || level === "max" ? "max" : "high";
+      const want = level === "xhigh" || level === "max" ? "max"
+        : (level === "low" || level === "minimal") && supportedLevels?.includes("low") ? "low"
+        : "high";
+      body.reasoning_effort = want === "max" && supportedLevels && !supportedLevels.includes("max") ? "high" : want;
       break;
     }
     case "kimi": {

@@ -2,13 +2,15 @@ import { Readable } from "stream";
 import { MEMORY_CONFIG } from "../config/runtimeConfig.js";
 import { dbg } from "./debugLog.js";
 
-const originalFetch = globalThis.fetch;
+// The module patches globalThis.fetch at the bottom. Under vi.resetModules()
+// (or any re-import) a fresh evaluation would otherwise capture the *patched*
+// fetch as `originalFetch`, so a proxied call re-enters proxyAwareFetch
+// without its proxyOptions and the directFetch branch fires on the direct
+// path. Keep the true native fetch on the patched function and reuse it.
+const originalFetch = globalThis.fetch?.__proxyFetchOriginal ?? globalThis.fetch;
 const proxyDispatchers = new Map();
 
 // ─── TLS fingerprinting via got-scraping (browser-like JA3) ───────────────
-// Disabled: not in use. Kept commented for future re-enable.
-// Restore the original block to re-enable per-host JA3 spoofing.
-/*
 let _gotScraping = null;
 let _gotScrapingChecked = false;
 const _gotScrapingLoggedHosts = new Set();
@@ -36,6 +38,30 @@ async function gotScrapingFetch(url, options) {
   const headers = headersInit instanceof Headers
     ? Object.fromEntries(headersInit.entries())
     : { ...headersInit };
+
+  const isStream = headers["accept"] === "text/event-stream" || headers["Accept"] === "text/event-stream";
+  if (!isStream && typeof gs === "function") {
+    const res = await gs({
+      url,
+      method,
+      headers,
+      body: method === "GET" || method === "HEAD" ? undefined : options.body,
+      throwHttpErrors: false,
+      retry: { limit: 0 },
+      followRedirect: false,
+    });
+    const resHeaders = new Headers();
+    for (const [k, v] of Object.entries(res.headers || {})) {
+      if (Array.isArray(v)) v.forEach((x) => resHeaders.append(k, String(x)));
+      else if (v != null) resHeaders.set(k, String(v));
+    }
+    const bodyContent = res.rawBody ? res.rawBody : (res.body ? res.body : "");
+    return new Response(bodyContent, {
+      status: res.statusCode,
+      statusText: res.statusMessage || "",
+      headers: resHeaders,
+    });
+  }
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -95,7 +121,6 @@ async function tryGotScrapingFetch(url, options) {
     return null;
   }
 }
-*/
 
 // DNS cache — use Map to avoid prototype pollution via malformed hostnames
 const DNS_CACHE = new Map();
@@ -310,6 +335,22 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
   const envProxyUrl = connectionProxyUrl ? null : normalizeProxyUrl(getEnvProxyUrl(targetUrl));
   const proxyUrl = connectionProxyUrl || envProxyUrl;
 
+  // Port of upstream 9router (fix(opencode): carry the selected proxy through
+  // the wreq-js transport): protocol adapters that own their transport
+  // (wreq-js TLS impersonation) cannot use an undici dispatcher: they must
+  // drive the proxy themselves. Only adapters that declare `proxyCapable`
+  // opt in — any other adapter keeps the undici path below.
+  if (proxyUrl && options?.directFetch?.proxyCapable === true) {
+    try {
+      return await options.directFetch(url, { ...options, proxyUrl }, proxyUrl);
+    } catch (err) {
+      if (proxyOptions?.strictProxy === true) {
+        throw new Error(`[ProxyFetch] Proxy required but failed (strictProxy=true): ${err.message}`);
+      }
+      throw err;
+    }
+  }
+
   // MITM DNS bypass: for known MITM-intercepted hosts, resolve real IP to avoid DNS spoof
   if (shouldBypassMitmDns(targetUrl)) {
     if (proxyUrl) {
@@ -348,8 +389,25 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
     }
   }
 
-  // got-scraping disabled — use native fetch directly
-  // (Re-enable per-host by wrapping with tryGotScrapingFetch when needed)
+  // Direct path for protocol adapters (upstream fetchWithTlsFallback):
+  // when no proxy resolved, the adapter carries the request itself instead
+  // of falling through to the undici/global fetch.
+  if (!proxyUrl && options.directFetch) {
+    return await options.directFetch(url, options);
+  }
+
+  try {
+    const parsed = new URL(targetUrl);
+    if (!proxyUrl && parsed.hostname === "api.anthropic.com") {
+      const isEventStream = options.headers?.["Accept"] === "text/event-stream" ||
+                            options.headers?.["accept"] === "text/event-stream";
+      if (!isEventStream) {
+        const res = await tryGotScrapingFetch(targetUrl, options);
+        if (res) return res;
+      }
+    }
+  } catch {}
+
   return originalFetch(url, options);
 }
 
@@ -360,7 +418,10 @@ async function patchedFetch(url, options = {}) {
   return proxyAwareFetch(url, options, null);
 }
 
-// Idempotency guard — only patch once to avoid wrapping multiple times
+// Idempotency guard — only patch once to avoid wrapping multiple times.
+// Tag the patched fetch with the native one so re-evaluations (resetModules)
+// recover the real fetch instead of chaining through the patch.
+patchedFetch.__proxyFetchOriginal = originalFetch;
 if (globalThis.fetch !== patchedFetch) {
   globalThis.fetch = patchedFetch;
 }

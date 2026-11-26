@@ -327,7 +327,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Dangerous-Direct-Browser-Access": "true",
     "Anthropic-Version": "2023-06-01",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -345,7 +345,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Dangerous-Direct-Browser-Access": "true",
     "Anthropic-Version": "2023-06-01",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -365,7 +365,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > claude → headers (
     "Anthropic-Version": "2023-06-01",
     "Authorization": "Bearer <TOK>",
     "Content-Type": "application/json",
-    "User-Agent": "claude-cli/2.1.92 (external, sdk-cli)",
+    "User-Agent": "claude-cli/2.1.258 (external, sdk-cli)",
     "X-App": "cli",
     "X-Stainless-Arch": "arm64",
     "X-Stainless-Helper-Method": "stream",
@@ -393,7 +393,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > cline → headers (a
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
   "nonStream": {
@@ -406,7 +406,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > cline → headers (a
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
   "oauth": {
@@ -420,7 +420,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > cline → headers (a
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
 }
@@ -439,7 +439,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > clinepass → header
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
   "nonStream": {
@@ -452,7 +452,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > clinepass → header
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
   "oauth": {
@@ -466,7 +466,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > clinepass → header
     "X-CORE-VERSION": "1.0.0",
     "X-IS-MULTIROOT": "false",
     "X-PLATFORM": "linux",
-    "X-PLATFORM-VERSION": "v22.23.1",
+    "X-PLATFORM-VERSION": "<PLATFORM-VERSION>",
     "X-Title": "Cline",
   },
 }
@@ -943,7 +943,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > kimi → headers (ap
     "Content-Type": "application/json",
     "X-Msh-Device-Id": "kimi-<TS>",
     "X-Msh-Device-Model": "Linux x64",
-    "X-Msh-Device-Name": "cs-linux-20260424064038903",
+    "X-Msh-Device-Name": "<DEVICE-NAME>",
     "X-Msh-Platform": "toolnetapi",
     "X-Msh-Version": "1.0.0",
     "x-api-key": "<CRED>",
@@ -954,7 +954,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > kimi → headers (ap
     "Content-Type": "application/json",
     "X-Msh-Device-Id": "kimi-<TS>",
     "X-Msh-Device-Model": "Linux x64",
-    "X-Msh-Device-Name": "cs-linux-20260424064038903",
+    "X-Msh-Device-Name": "<DEVICE-NAME>",
     "X-Msh-Platform": "toolnetapi",
     "X-Msh-Version": "1.0.0",
     "x-api-key": "<CRED>",
@@ -966,7 +966,7 @@ exports[`GOLDEN buildHeaders (default executor providers) > kimi → headers (ap
     "Content-Type": "application/json",
     "X-Msh-Device-Id": "kimi-<TS>",
     "X-Msh-Device-Model": "Linux x64",
-    "X-Msh-Device-Name": "cs-linux-20260424064038903",
+    "X-Msh-Device-Name": "<DEVICE-NAME>",
     "X-Msh-Platform": "toolnetapi",
     "X-Msh-Version": "1.0.0",
     "x-api-key": "<CRED>",
@@ -1196,6 +1196,25 @@ exports[`GOLDEN buildHeaders (default executor providers) > ollama → headers (
 `;
 
 exports[`GOLDEN buildHeaders (default executor providers) > openai → headers (apiKey / oauth) 1`] = `
+{
+  "apiKey": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+  "nonStream": {
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+  "oauth": {
+    "Accept": "text/event-stream",
+    "Authorization": "Bearer <TOK>",
+    "Content-Type": "application/json",
+  },
+}
+`;
+
+exports[`GOLDEN buildHeaders (default executor providers) > opencode-zen → headers (apiKey / oauth) 1`] = `
 {
   "apiKey": {
     "Accept": "text/event-stream",
@@ -1795,8 +1814,8 @@ exports[`GOLDEN buildUrl (default executor providers) > fireworks → url (strea
 
 exports[`GOLDEN buildUrl (default executor providers) > freebuff → url (stream + non-stream) 1`] = `
 {
-  "nonStream": "https://www.codebuff.com/api/v1/chat/completions",
-  "stream": "https://www.codebuff.com/api/v1/chat/completions",
+  "nonStream": "freebuff://pty/worker",
+  "stream": "freebuff://pty/worker",
 }
 `;
 
@@ -1965,6 +1984,13 @@ exports[`GOLDEN buildUrl (default executor providers) > openai → url (stream +
 {
   "nonStream": "https://api.openai.com/v1/chat/completions",
   "stream": "https://api.openai.com/v1/chat/completions",
+}
+`;
+
+exports[`GOLDEN buildUrl (default executor providers) > opencode-zen → url (stream + non-stream) 1`] = `
+{
+  "nonStream": "https://opencode.ai/zen/v1/chat/completions",
+  "stream": "https://opencode.ai/zen/v1/chat/completions",
 }
 `;
 

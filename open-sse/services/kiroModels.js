@@ -3,7 +3,7 @@
  *
  * Calls AWS CodeWhisperer's `ListAvailableModels` endpoint to get the live
  * catalog for an authenticated Kiro account, then expands each upstream model
- * into toolnetapi-shaped variants:
+ * into 9router-shaped variants:
  *
  *   {upstream}                          - base model
  *   {upstream}-thinking                 - same model, thinking on at request time
@@ -11,7 +11,7 @@
  *   {upstream}-thinking-agentic         - both
  *
  * The `-thinking` and `-agentic` suffixes do not exist on the Kiro upstream
- * API. They are toolnetapi fictions and the `openai-to-kiro` translator strips
+ * API. They are 9router fictions and the `openai-to-kiro` translator strips
  * them before the request leaves this process.
  *
  * The runtime UA is built to match what Kiro IDE itself sends, because the
@@ -22,12 +22,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { createHash } from "crypto";
 import { refreshKiroToken } from "./tokenRefresh.js";
-
-const KIRO_RUNTIME_SDK_VERSION = "1.0.0";
-const KIRO_AGENT_OS = "windows";
-const KIRO_AGENT_OS_VERSION = "10.0.26200";
-const KIRO_NODE_VERSION = "22.21.1";
-const KIRO_VERSION = "0.10.32";
+import { buildKiroIdentityHeaders } from "../shared/kiroIdentity.js";
 
 const DEFAULT_REGION = "us-east-1";
 const FETCH_TIMEOUT_MS = 30_000;
@@ -65,25 +60,8 @@ function regionFromProfileArn(profileArn) {
  * same account always presents the same machineId.
  */
 function buildKiroFingerprintHeaders(credentials) {
-  const seed =
-    credentials?.providerSpecificData?.clientId
-    || credentials?.refreshToken
-    || credentials?.providerSpecificData?.profileArn
-    || credentials?.accessToken
-    || "kiro-anonymous";
-  const machineId = createHash("sha256").update(String(seed)).digest("hex");
-
-  const userAgent =
-    `aws-sdk-js/${KIRO_RUNTIME_SDK_VERSION} ua/2.1 ` +
-    `os/${KIRO_AGENT_OS}#${KIRO_AGENT_OS_VERSION} ` +
-    `lang/js md/nodejs#${KIRO_NODE_VERSION} ` +
-    `api/codewhispererruntime#${KIRO_RUNTIME_SDK_VERSION} m/N,E ` +
-    `KiroIDE-${KIRO_VERSION}-${machineId}`;
-  const amzUserAgent = `aws-sdk-js/${KIRO_RUNTIME_SDK_VERSION} KiroIDE-${KIRO_VERSION}-${machineId}`;
-
   return {
-    "User-Agent": userAgent,
-    "x-amz-user-agent": amzUserAgent,
+    ...buildKiroIdentityHeaders(credentials, "runtime"),
     "x-amzn-kiro-agent-mode": "vibe",
     "x-amzn-codewhisperer-optout": "true",
     "amz-sdk-request": "attempt=1; max=1",
@@ -93,7 +71,7 @@ function buildKiroFingerprintHeaders(credentials) {
 }
 
 /**
- * Build the synthetic toolnetapi variant set for a single upstream Kiro model.
+ * Build the synthetic 9router variant set for a single upstream Kiro model.
  *
  * Returns objects shaped for `PROVIDER_MODELS` (`{ id, name }`) so they can
  * be slotted directly into the existing model registry.
@@ -218,7 +196,7 @@ function cacheKey(credentials) {
 
 /**
  * Resolve the live Kiro model catalog for a credential and expand each entry
- * into toolnetapi variants (`-thinking`, `-agentic`, `-thinking-agentic`).
+ * into 9router variants (`-thinking`, `-agentic`, `-thinking-agentic`).
  *
  * On any error (network, 4xx, 5xx), returns `null` so callers can fall back
  * to the static catalog without taking down the dashboard or `/v1/models`.

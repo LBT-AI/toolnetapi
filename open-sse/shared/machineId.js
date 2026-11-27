@@ -1,12 +1,19 @@
 import nodeMachineId from "node-machine-id";
-const { machineIdSync } = nodeMachineId;
 import crypto from "node:crypto";
+
+// ESM/CJS interop: webpack may wrap the default export differently
+const machineIdSync = typeof nodeMachineId?.machineIdSync === "function"
+  ? nodeMachineId.machineIdSync
+  : (typeof nodeMachineId?.default?.machineIdSync === "function"
+    ? nodeMachineId.default.machineIdSync
+    : null);
 
 let cachedRawId = null;
 
 function loadRawMachineId() {
   if (cachedRawId) return cachedRawId;
   try {
+    if (!machineIdSync) throw new Error("machineIdSync not available");
     cachedRawId = machineIdSync();
   } catch {
     cachedRawId = crypto.randomUUID();

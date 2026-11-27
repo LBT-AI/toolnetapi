@@ -268,11 +268,19 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
  * @param {string|null} model - The specific model that triggered the error
  * @returns {{ shouldFallback: boolean, cooldownMs: number }}
  */
+// Max cooldown for noAuth providers (proxies, not real accounts)
+const NOAUTH_MAX_COOLDOWN_MS = 5000;
+const NOAUTH_MAX_BACKOFF_LEVEL = 1;
+
 export async function markAccountUnavailable(connectionId, status, errorText, provider = null, model = null, resetsAtMs = null) {
   if (!connectionId || connectionId === "noauth") return { shouldFallback: false, cooldownMs: 0 };
   const connections = await getProviderConnections({ provider });
   const conn = connections.find(c => c.id === connectionId);
   const backoffLevel = conn?.backoffLevel || 0;
+
+  // Detect noAuth providers (opencode, etc.) — connections are proxies, not accounts
+  const providerId = resolveProviderId(provider);
+  const isFreeNoAuth = !!FREE_PROVIDERS[providerId]?.noAuth || !!CLI_FREE_PROVIDERS[providerId]?.noAuth;
 
   // GitHub premium-request exhaustion is account-wide until the next UTC month.
   const githubResetAtMs = githubMonthlyResetMs(status, errorText, provider);
@@ -291,9 +299,18 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
       : Math.min(resetsAtMs - Date.now(), MAX_RATE_LIMIT_COOLDOWN_MS);
     newBackoffLevel = 0;
   } else {
-    ({ shouldFallback, cooldownMs, newBackoffLevel } = checkFallbackError(status, errorText, backoffLevel));
+    // For noAuth providers, feed backoff level 0 to prevent escalation
+    const effectiveBackoff = isFreeNoAuth ? 0 : backoffLevel;
+    ({ shouldFallback, cooldownMs, newBackoffLevel } = checkFallbackError(status, errorText, effectiveBackoff));
   }
   if (!shouldFallback) return { shouldFallback: false, cooldownMs: 0 };
+
+  // noAuth providers: cap cooldown and backoff — connections are proxies, not quota-bearing accounts.
+  // Long lockouts on noAuth paralyze the entire provider when upstream sheds load.
+  if (isFreeNoAuth) {
+    cooldownMs = Math.min(cooldownMs, NOAUTH_MAX_COOLDOWN_MS);
+    newBackoffLevel = Math.min(newBackoffLevel ?? 0, NOAUTH_MAX_BACKOFF_LEVEL);
+  }
 
   const reason = typeof errorText === "string" ? errorText.slice(0, 100) : "Provider error";
   const lockUpdate = buildModelLockUpdate(githubResetAtMs ? null : model, cooldownMs);
@@ -309,7 +326,8 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
 
   // 429 rate limit, 404 (model-specific), and 5xx transient errors do NOT invalidate the account credentials.
   // Only permanent auth errors (401/402/403) or GitHub monthly account exhaustion set testStatus: "unavailable".
-  if (isPermanentAuthError || githubResetAtMs) {
+  // noAuth providers: never mark as "unavailable" — they have no credentials to invalidate.
+  if (!isFreeNoAuth && (isPermanentAuthError || githubResetAtMs)) {
     updatePayload.testStatus = "unavailable";
   }
 

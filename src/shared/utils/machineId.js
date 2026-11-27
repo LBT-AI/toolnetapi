@@ -1,8 +1,14 @@
-import { machineIdSync } from 'node-machine-id';
+import nodeMachineId from 'node-machine-id';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DATA_DIR } from '@/lib/dataDir';
+
+const machineIdSync = typeof nodeMachineId?.machineIdSync === 'function'
+  ? nodeMachineId.machineIdSync
+  : (typeof nodeMachineId?.default?.machineIdSync === 'function'
+    ? nodeMachineId.default.machineIdSync
+    : null);
 
 const MACHINE_ID_FILE = path.join(DATA_DIR, 'machine-id');
 const AUTH_DIR = path.join(DATA_DIR, 'auth');
@@ -20,8 +26,11 @@ function loadRawMachineId() {
     if (cachedRawId) return cachedRawId;
   } catch {}
   try {
-    cachedRawId = machineIdSync();
-  } catch {
+    if (machineIdSync) {
+      cachedRawId = machineIdSync();
+    }
+  } catch {}
+  if (!cachedRawId) {
     cachedRawId = crypto.randomUUID();
   }
   try {

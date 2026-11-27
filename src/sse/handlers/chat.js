@@ -31,6 +31,11 @@ import {
   selectModelFromPoolWithQuota,
   getConnectionModelPools,
 } from "@/lib/alibaba/modelPool.js";
+import { resolveProviderId, FREE_PROVIDERS, CLI_FREE_PROVIDERS } from "@/shared/constants/providers.js";
+
+// noAuth providers (e.g. opencode) use proxies, not separate accounts.
+// Cycling through all 100+ on a genuine upstream outage wastes time and locks everything.
+const NOAUTH_MAX_FALLBACK_ATTEMPTS = 5;
 
 /**
  * Handle chat completion request
@@ -266,7 +271,19 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastError = null;
   let lastStatus = null;
 
+  // Detect noAuth providers to limit fallback attempts
+  const resolvedProviderId = resolveProviderId(provider);
+  const isFreeNoAuth = !!FREE_PROVIDERS[resolvedProviderId]?.noAuth || !!CLI_FREE_PROVIDERS[resolvedProviderId]?.noAuth;
+
   while (true) {
+    // noAuth providers: stop cascading after N attempts — connections are proxies,
+    // not separate quota-bearing accounts. If upstream returns 429 for all of them,
+    // it's a genuine rate limit, not a per-account issue.
+    if (isFreeNoAuth && excludeConnectionIds.size >= NOAUTH_MAX_FALLBACK_ATTEMPTS) {
+      log.warn("CHAT", `[${provider}/${model}] noAuth fallback limit (${NOAUTH_MAX_FALLBACK_ATTEMPTS}) reached — upstream rate limited`);
+      return unavailableResponse(HTTP_STATUS.TOO_MANY_REQUESTS || 429, lastError || `[${provider}/${model}] Rate limited`, null, `retry after a few seconds`);
+    }
+
     const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
 
     // All accounts unavailable

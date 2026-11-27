@@ -34,8 +34,12 @@ import {
 import { resolveProviderId, FREE_PROVIDERS, CLI_FREE_PROVIDERS } from "@/shared/constants/providers.js";
 
 // noAuth providers (e.g. opencode) use proxies, not separate accounts.
-// Cycling through all 100+ on a genuine upstream outage wastes time and locks everything.
-const NOAUTH_MAX_FALLBACK_ATTEMPTS = 5;
+// Each proxy is a separate daily quota bucket (1 IP = 1 "account").
+// Rotate through ALL available proxies — the full pool size (100+) — before giving up.
+// A large value here is intentional: the auth layer's modelLock skips already-exhausted
+// IPs, so only unlocked IPs are tried. This lets the system drain the pool cleanly
+// and return a proper "all accounts exhausted" error only when every IP is spent.
+const NOAUTH_MAX_FALLBACK_ATTEMPTS = 150;
 
 /**
  * Handle chat completion request

@@ -515,6 +515,27 @@ export class OpenCodeExecutor extends BaseExecutor {
     return `${base}/inference/v1/chat/completions`;
   }
 
+  /**
+   * Parse upstream error — extracts retry-after for FreeUsageLimitError so the
+   * auth layer can lock this proxy IP for the full daily reset window instead of
+   * the generic 5-second noAuth cap.
+   */
+  parseError(response, bodyText) {
+    const status = response?.status ?? 0;
+    // Read retry-after header (seconds until daily quota resets at 00:00 UTC)
+    const retryAfterSec = parseInt(response?.headers?.get?.("retry-after") ?? "", 10);
+    let resetsAtMs;
+    if (retryAfterSec > 0) {
+      resetsAtMs = Date.now() + retryAfterSec * 1000;
+    }
+    let message = bodyText || `HTTP ${status}`;
+    try {
+      const json = JSON.parse(bodyText);
+      message = json?.error?.message || json?.message || message;
+    } catch { /* keep raw */ }
+    return { status, message, resetsAtMs };
+  }
+
   buildHeaders(credentials, stream = true, url = "") {
     const raw = credentials?.rawHeaders || {};
     const lower = {};

@@ -306,9 +306,14 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   if (!shouldFallback) return { shouldFallback: false, cooldownMs: 0 };
 
   // noAuth providers: cap cooldown and backoff — connections are proxies, not quota-bearing accounts.
-  // Long lockouts on noAuth paralyze the entire provider when upstream sheds load.
+  // EXCEPTION: when the upstream sends an explicit retry-after (resetsAtMs), the caller passes it in and
+  // we honour it in full — this is a per-IP daily quota (OpenCode FreeUsageLimitError) that the proxy
+  // should stay locked for so the system can rotate to the next IP naturally.
+  // For transient load-shedding with no resetsAtMs we still cap to NOAUTH_MAX_COOLDOWN_MS.
   if (isFreeNoAuth) {
-    cooldownMs = Math.min(cooldownMs, NOAUTH_MAX_COOLDOWN_MS);
+    if (!resetsAtMs || resetsAtMs <= Date.now()) {
+      cooldownMs = Math.min(cooldownMs, NOAUTH_MAX_COOLDOWN_MS);
+    }
     newBackoffLevel = Math.min(newBackoffLevel ?? 0, NOAUTH_MAX_BACKOFF_LEVEL);
   }
 
